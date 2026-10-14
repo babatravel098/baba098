@@ -528,7 +528,6 @@
             doc.save(`Booking_Receipt_${b.name}.pdf`);
         }
 
-        // --- FRESH GST INVOICE BUTTON FUNCTION ---
         function openFreshGstModal() {
             document.getElementById('modalTitle').innerText = "🧾 Create Fresh GST Tax Invoice";
             document.getElementById('invCustomerName').value = '';
@@ -549,7 +548,6 @@
             document.getElementById('gstModal').classList.remove('hidden');
         }
 
-        // --- EXISTING BOOKING GST INVOICE MODAL ---
         function openVyaparGstModal(b) {
             document.getElementById('modalTitle').innerText = "🧾 Edit & Generate GST Tax Invoice";
             document.getElementById('invCustomerName').value = b.name || '';
@@ -692,43 +690,53 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            // Header Top
+            // --- EXACT COMPANY HEADER AS REQUESTED ---
             doc.setFont("helvetica", "bold");
             doc.setFontSize(14);
-            doc.text("Tax Invoice", 105, 12, { align: "center" });
+            doc.text("BABA TOUR AND TRAVELS", 105, 12, { align: "center" });
 
-            // Bill To
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            doc.text("Opposite Gorakhpur Railway Station Gate Number 6, Gorakhpur, Uttar Pradesh-273001", 105, 17, { align: "center" });
+            doc.text("Phone no.: 8726667104 Email: babatourandtravel098@gmail.com", 105, 22, { align: "center" });
+            doc.text("GSTIN: 09AARPU5006D1ZI, State: 09-Uttar Pradesh", 105, 27, { align: "center" });
+            doc.text("Website: www.babatourandtravel.com", 105, 32, { align: "center" });
+
+            // Divider Line
+            doc.setDrawColor(150, 150, 150);
+            doc.line(14, 35, 196, 35);
+
+            // Bill To & Invoice Details Section
+            doc.setFont("helvetica", "bold");
             doc.setFontSize(10);
-            doc.text("Bill To:", 14, 20);
+            doc.text("Bill To:", 14, 42);
+            doc.text("Invoice Details:", 130, 42);
+
             doc.setFont("helvetica", "normal");
             doc.setFontSize(9);
-            doc.text(`${customerName}`, 14, 25);
-            doc.text(`GSTIN: ${customerGstin}`, 14, 30);
-            doc.text(`State: ${invState}`, 14, 35);
+            doc.text(`${customerName}`, 14, 48);
+            doc.text(`GSTIN: ${customerGstin}`, 14, 53);
+            doc.text(`State: ${invState}`, 14, 58);
 
-            // Invoice Details Right
-            doc.setFont("helvetica", "bold");
-            doc.text("Invoice Details:", 130, 20);
-            doc.setFont("helvetica", "normal");
-            doc.text(`Invoice No: 2026-2027/41`, 130, 25);
-            doc.text(`Date: ${invDate}`, 130, 30);
-            doc.text(`Place of Supply: ${invState}`, 130, 35);
+            doc.text(`Invoice No: 2026-2027/41`, 130, 48);
+            doc.text(`Date: ${invDate}`, 130, 53);
+            doc.text(`Place of Supply: ${invState}`, 130, 58);
 
             // Table Header
             doc.setFillColor(30, 58, 138);
-            doc.rect(14, 42, 182, 8, "F");
+            doc.rect(14, 66, 182, 8, "F");
             doc.setTextColor(255, 255, 255);
             doc.setFont("helvetica", "bold");
-            doc.text("Si.", 18, 47);
-            doc.text("Particulars / Description", 30, 47);
-            doc.text("KM", 120, 47);
-            doc.text("Rate", 145, 47);
-            doc.text("Amount", 175, 47);
+            doc.text("Si.", 18, 71);
+            doc.text("Particulars / Description", 30, 71);
+            doc.text("KM", 120, 71);
+            doc.text("Rate", 145, 71);
+            doc.text("Amount", 175, 71);
 
             // Table Rows
             doc.setTextColor(0, 0, 0);
             doc.setFont("helvetica", "normal");
-            let y = 56;
+            let y = 80;
             itemsList.forEach((it, idx) => {
                 doc.text(`${idx + 1}`, 18, y);
                 doc.text(`${it.name} - ${it.desc}`, 30, y, { maxWidth: 85 });
@@ -785,32 +793,19 @@
 
             y = Math.max(y + 15, rY + 5);
 
-            // Terms & Conditions
+            // Terms & Conditions & Bank Details
             doc.setFont("helvetica", "bold");
             doc.text("Terms & Conditions:", 14, y);
+            doc.text("Bank Details:", 125, y);
+
             doc.setFont("helvetica", "normal");
             doc.setFontSize(8);
             doc.text(termsText, 14, y + 5, { maxWidth: 100 });
-
-            // Bank Details
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(9);
-            doc.text("Bank Details:", 125, y);
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(8);
             doc.text("Bank: Kotak Mahindra Bank, Gorakhpur\nA/c No: 3411664106 | IFSC: KKBK0005297\nName: Baba Tour & Travel", 125, y + 5);
 
-            // Company Footer
-            doc.setFillColor(30, 58, 138);
-            doc.rect(10, 245, 190, 24, "F");
-            doc.setTextColor(255, 255, 255);
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(10);
-            doc.text("BABA TOUR AND TRAVELS", 105, 252, { align: "center" });
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(8);
-            doc.text("Opposite Gorakhpur Railway Station Gate Number 6, Gorakhpur, UP - 273001", 105, 257, { align: "center" });
-            doc.text("Phone: 8726667104, 9026060471, 9415966902 | Email: babatourandtravel098@gmail.com | GSTIN: 09AARPU5006D1ZI", 105, 262, { align: "center" });
+            // System generated note at bottom
+            doc.setFontSize(7);
+            doc.text("This is a system generated invoice and does not require physical signature or stamp.", 105, 275, { align: "center" });
 
             doc.save(`GST_Invoice_${customerName}.pdf`);
             closeGstModal();
