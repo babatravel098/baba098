@@ -60,6 +60,13 @@
                         <input type="date" id="invDate" class="w-full border p-2 rounded mt-1">
                     </div>
                     <div>
+                        <label class="font-semibold text-gray-700">Invoice Number (Auto)</label>
+                        <input type="text" id="invNumberDisplay" readonly class="w-full border p-2 rounded mt-1 font-mono font-bold bg-gray-100 text-blue-900">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-lg border">
+                    <div>
                         <label class="font-semibold text-gray-700">State of Supply</label>
                         <select id="invState" class="w-full border p-2 rounded mt-1 bg-white">
                             <option value="09-Uttar Pradesh">09-Uttar Pradesh</option>
@@ -396,6 +403,7 @@
         
         let allBookingsData = [];
         let currentTab = 'new';
+        let currentInvoiceNo = "2026-2027/41"; // Default starting invoice number
 
         window.onload = function() {
             if (sessionStorage.getItem('baba_logged_in') === 'true') {
@@ -403,6 +411,7 @@
                 document.getElementById('mainContent').classList.remove('hidden');
                 updateDriverNight();
                 fetchBookings();
+                loadLastInvoiceNumber();
             }
         };
 
@@ -418,6 +427,7 @@
                 document.getElementById('mainContent').classList.remove('hidden');
                 updateDriverNight();
                 fetchBookings();
+                loadLastInvoiceNumber();
             } else {
                 errDiv.classList.remove('hidden');
             }
@@ -426,6 +436,16 @@
         function handleLogout() {
             sessionStorage.removeItem('baba_logged_in');
             location.reload();
+        }
+
+        function loadLastInvoiceNumber() {
+            let lastNum = localStorage.getItem('baba_last_inv_num');
+            if (lastNum) {
+                let nextVal = parseInt(lastNum) + 1;
+                currentInvoiceNo = `2026-2027/${nextVal}`;
+            } else {
+                currentInvoiceNo = "2026-2027/41";
+            }
         }
 
         function updateDriverNight() {
@@ -591,10 +611,12 @@
         }
 
         function openFreshGstModal() {
+            loadLastInvoiceNumber();
             document.getElementById('modalTitle').innerText = "🧾 Create Fresh GST Tax Invoice";
             document.getElementById('invCustomerName').value = '';
             document.getElementById('invCustomerGstin').value = '';
             document.getElementById('invDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('invNumberDisplay').value = currentInvoiceNo;
             
             const tableBody = document.getElementById('invoiceItemsTable');
             tableBody.innerHTML = '';
@@ -613,10 +635,12 @@
         }
 
         function openVyaparGstModal(b) {
+            loadLastInvoiceNumber();
             document.getElementById('modalTitle').innerText = "🧾 Edit & Generate GST Tax Invoice";
             document.getElementById('invCustomerName').value = b.name || '';
             document.getElementById('invCustomerGstin').value = b.clientGstin || '';
             document.getElementById('invDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('invNumberDisplay').value = currentInvoiceNo;
             
             const tableBody = document.getElementById('invoiceItemsTable');
             tableBody.innerHTML = '';
@@ -755,7 +779,7 @@
 
             const gstPayload = {
                 action: "addGst",
-                invoiceNo: "2026-2027/41",
+                invoiceNo: currentInvoiceNo,
                 customerName: customerName,
                 clientGstin: customerGstin,
                 state: invState,
@@ -773,7 +797,14 @@
                 body: JSON.stringify(gstPayload)
             })
             .then(() => {
-                alert('✅ GST Invoice saved & synced to Google Sheet successfully!');
+                alert('✅ GST Invoice ' + currentInvoiceNo + ' saved & synced to Google Sheet successfully!');
+                
+                // Increment invoice number for next time
+                let parts = currentInvoiceNo.split('/');
+                let nextNum = parseInt(parts[1]) + 1;
+                localStorage.setItem('baba_last_inv_num', parseInt(parts[1]));
+                currentInvoiceNo = `2026-2027/${nextNum}`;
+                document.getElementById('invNumberDisplay').value = currentInvoiceNo;
             })
             .catch(err => {
                 console.error(err);
@@ -855,7 +886,7 @@
             doc.text(`GSTIN: ${customerGstin}`, 14, 53);
             doc.text(`State: ${invState}`, 14, 58);
 
-            doc.text(`Invoice No: 2026-2027/41`, 130, 48);
+            doc.text(`Invoice No: ${currentInvoiceNo}`, 130, 48);
             doc.text(`Date: ${invDate}`, 130, 53);
             doc.text(`Place of Supply: ${invState}`, 130, 58);
 
@@ -962,7 +993,7 @@
             doc.setFontSize(7);
             doc.text("This is a system generated invoice and does not require physical signature or stamp.", 105, 275, { align: "center" });
 
-            doc.save(`GST_Invoice_${customerName}.pdf`);
+            doc.save(`GST_Invoice_${customerName}_${currentInvoiceNo.replace('/', '_')}.pdf`);
             closeGstModal();
         }
 
