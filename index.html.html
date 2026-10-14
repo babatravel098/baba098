@@ -403,7 +403,7 @@
         
         let allBookingsData = [];
         let currentTab = 'new';
-        let currentInvoiceNo = "2026-2027/41"; // Default starting invoice number
+        let currentInvoiceNo = "2026-2027/41";
 
         window.onload = function() {
             if (sessionStorage.getItem('baba_logged_in') === 'true') {
@@ -468,10 +468,7 @@
             tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Loading data from cloud...</td></tr>`;
 
             fetch(SCRIPT_URL)
-            .then(response => {
-                if (!response.ok) throw new Error("Network response was not ok");
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 if(!data) data = [];
                 allBookingsData = data.reverse();
@@ -799,10 +796,10 @@
             .then(() => {
                 alert('✅ GST Invoice ' + currentInvoiceNo + ' saved & synced to Google Sheet successfully!');
                 
-                // Increment invoice number for next time
+                // Increment invoice number
                 let parts = currentInvoiceNo.split('/');
                 let nextNum = parseInt(parts[1]) + 1;
-                localStorage.setItem('baba_last_inv_num', parseInt(parts[1]));
+                localStorage.setItem('baba_last_inv_num', nextNum);
                 currentInvoiceNo = `2026-2027/${nextNum}`;
                 document.getElementById('invNumberDisplay').value = currentInvoiceNo;
             })
