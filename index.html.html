@@ -394,7 +394,6 @@
         
         let allBookingsData = [];
         let currentTab = 'new';
-        let currentInvoiceType = "Non-GST";
 
         window.onload = function() {
             if (sessionStorage.getItem('baba_logged_in') === 'true') {
@@ -590,7 +589,6 @@
         }
 
         function openFreshGstModal() {
-            currentInvoiceType = "GST";
             document.getElementById('modalTitle').innerText = "🧾 Create Fresh GST Tax Invoice";
             document.getElementById('invCustomerName').value = '';
             document.getElementById('invCustomerGstin').value = '';
@@ -613,7 +611,6 @@
         }
 
         function openVyaparGstModal(b) {
-            currentInvoiceType = "GST";
             document.getElementById('modalTitle').innerText = "🧾 Edit & Generate GST Tax Invoice";
             document.getElementById('invCustomerName').value = b.name || '';
             document.getElementById('invCustomerGstin').value = b.clientGstin || '';
@@ -763,46 +760,6 @@
                 grandTotal = Math.round(grandTotal);
             }
             let balanceDue = grandTotal - received;
-
-            // Sync with Google Sheet GSTR-1 Register
-            const gstrPayload = {
-                action: "add",
-                name: customerName,
-                phone: "9999999999",
-                address: "Client Address",
-                pickup: "Gorakhpur",
-                drop: "Local",
-                tourRoute: "GST Invoice Generated",
-                startDate: invDate,
-                endDate: invDate,
-                vehicle: "Commercial",
-                agreedKm: "0",
-                driverNight: "N/A",
-                parkingInc: "N/A",
-                tollInc: "N/A",
-                checkpostInc: "N/A",
-                total: grandTotal,
-                advance: received,
-                staff: "Admin",
-                clientGstin: customerGstin,
-                invoiceType: "GST",
-                gstrData: {
-                    invoiceNo: "2026-2027/41",
-                    state: invState,
-                    taxableAmt: taxableAmt.toFixed(2),
-                    sgst: (!isIgst && taxRatePercent > 0) ? (taxTotal / 2).toFixed(2) : "0.00",
-                    cgst: (!isIgst && taxRatePercent > 0) ? (taxTotal / 2).toFixed(2) : "0.00",
-                    igst: isIgst ? taxTotal.toFixed(2) : "0.00",
-                    grandTotal: grandTotal.toFixed(2)
-                },
-                timestamp: new Date().toLocaleString()
-            };
-
-            fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify(gstrPayload)
-            });
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
@@ -980,7 +937,6 @@
                 advance: advance,
                 staff: document.getElementById('staffName').value,
                 clientGstin: document.getElementById('clientGstin').value,
-                invoiceType: "Non-GST",
                 timestamp: new Date().toLocaleString()
             };
 
