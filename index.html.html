@@ -391,6 +391,7 @@
 
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQSDa1PdP9-7UKovVE4ZOd9cS2vRvrNX1zQtp-v1p9lu-7MRqLTklSTLBIlm_INa_7kA/exec";
+        const GST_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxhGEW-3Qk1BMvfQkCL0wbmFND5sy725VAgNQ3bA0aSpY7hzrJwyp_TNzNIvd-F_hRPnQ/exec";
         
         let allBookingsData = [];
         let currentTab = 'new';
@@ -761,6 +762,27 @@
             }
             let balanceDue = grandTotal - received;
 
+            // Send to Separate GST Google Sheet
+            const gstPayload = {
+                action: "addGst",
+                invoiceNo: "2026-2027/41",
+                customerName: customerName,
+                clientGstin: customerGstin,
+                state: invState,
+                taxableAmt: taxableAmt.toFixed(2),
+                sgst: (!isIgst && taxRatePercent > 0) ? (taxTotal / 2).toFixed(2) : "0.00",
+                cgst: (!isIgst && taxRatePercent > 0) ? (taxTotal / 2).toFixed(2) : "0.00",
+                igst: isIgst ? taxTotal.toFixed(2) : "0.00",
+                grandTotal: grandTotal.toFixed(2),
+                timestamp: new Date().toLocaleString()
+            };
+
+            fetch(GST_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify(gstPayload)
+            });
+
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
@@ -943,6 +965,7 @@
             .then(() => {
                 alert('Booking saved!');
                 this.reset();
+                updateDriverNight();
                 btn.innerText = "Save Booking & Generate Receipt";
                 btn.disabled = false;
                 setTimeout(fetchBookings, 2000);
