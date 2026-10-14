@@ -788,12 +788,10 @@
                 timestamp: new Date().toLocaleString()
             });
 
-            fetch(`${GST_SCRIPT_URL}?${params.toString()}`)
-            .then(response => response.json())
-            .then(res => {
+            fetch(`${GST_SCRIPT_URL}?${params.toString()}`, { mode: 'no-cors' })
+            .then(() => {
                 alert('✅ GST Invoice ' + currentInvoiceNo + ' saved & synced to Google Sheet successfully!');
                 
-                // Increment invoice number
                 let parts = currentInvoiceNo.split('/');
                 let nextNum = parseInt(parts[1]) + 1;
                 localStorage.setItem('baba_last_inv_num', nextNum);
