@@ -448,7 +448,10 @@
             tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Loading data from cloud...</td></tr>`;
 
             fetch(SCRIPT_URL)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) throw new Error("Network response was not ok");
+                return response.json();
+            })
             .then(data => {
                 if(!data) data = [];
                 allBookingsData = data.reverse();
@@ -716,7 +719,6 @@
             document.getElementById('invBalanceDue').innerText = `₹${balance.toFixed(2)}`;
         }
 
-        // --- DEDICATED SAVE & SYNC TO SHEET FUNCTION ---
         function saveGstToSheet() {
             const customerName = document.getElementById('invCustomerName').value || "Client";
             const customerGstin = document.getElementById('invCustomerGstin').value || "Unregistered";
@@ -939,4 +941,70 @@
                 rY += 6;
             };
             addSum("Sub Total", taxableAmt.toFixed(2));
-            if(taxRatePercent > 0) add
+            if(taxRatePercent > 0) addSum(displayTaxLabel, taxTotal.toFixed(2));
+            if(discountAmount > 0) addSum("Discount", `-${discountAmount.toFixed(2)}`);
+            addSum("Grand Total", grandTotal.toFixed(2), true);
+            addSum("Received", received.toFixed(2));
+            addSum("Balance Due", balanceDue.toFixed(2), true);
+
+            y = Math.max(y + 15, rY + 5);
+
+            // Terms & Conditions & Bank Details
+            doc.setFont("helvetica", "bold");
+            doc.text("Terms & Conditions:", 14, y);
+            doc.text("Bank Details:", 125, y);
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            doc.text(termsText, 14, y + 5, { maxWidth: 100 });
+            doc.text("Bank: Kotak Mahindra Bank, Gorakhpur\nA/c No: 3411664106 | IFSC: KKBK0005297\nName: Baba Tour & Travel", 125, y + 5);
+
+            doc.setFontSize(7);
+            doc.text("This is a system generated invoice and does not require physical signature or stamp.", 105, 275, { align: "center" });
+
+            doc.save(`GST_Invoice_${customerName}.pdf`);
+            closeGstModal();
+        }
+
+        document.getElementById('bookingForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.innerText = "Saving..."; btn.disabled = true;
+
+            const formData = {
+                action: "add",
+                name: document.getElementById('custName').value,
+                phone: document.getElementById('custPhone').value,
+                address: document.getElementById('custAddress').value,
+                pickup: document.getElementById('pickup').value,
+                drop: document.getElementById('drop').value,
+                tourRoute: document.getElementById('tourRoute').value,
+                startDate: document.getElementById('startDate').value,
+                endDate: document.getElementById('endDate').value,
+                vehicle: document.getElementById('vehicleSelect').value,
+                agreedKm: document.getElementById('agreedKm').value,
+                extraKmRate: document.getElementById('extraKmRate').value,
+                extraDayRate: document.getElementById('extraDayRate').value,
+                driverNight: document.getElementById('driverNight').value,
+                parkingInc: document.getElementById('parkingInc').value,
+                tollInc: document.getElementById('tollInc').value,
+                checkpostInc: document.getElementById('checkpostInc').value,
+                total: parseFloat(document.getElementById('totalAmount').value) || 0,
+                advance: parseFloat(document.getElementById('advanceAmount').value) || 0,
+                staff: document.getElementById('staffName').value,
+                timestamp: new Date().toLocaleString()
+            };
+
+            fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(formData) })
+            .then(() => {
+                alert('Booking saved!');
+                this.reset();
+                updateDriverNight();
+                btn.innerText = "Save Booking & Generate Receipt";
+                btn.disabled = false;
+                setTimeout(fetchBookings, 2000);
+            });
+        });
+    </script>
+</body>
+</html>
