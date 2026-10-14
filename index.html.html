@@ -36,7 +36,7 @@
         </div>
     </div>
 
-    <!-- Advanced GST Invoice Generator Modal (Vyapar Style with HSN) -->
+    <!-- Advanced GST Invoice Generator Modal (Vyapar Style with Multi-GST & IGST) -->
     <div id="gstModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-5xl w-full space-y-4 max-h-[95vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b pb-3">
@@ -104,7 +104,7 @@
                         <div>
                             <label class="font-semibold text-gray-700">Add Terms & Conditions</label>
                             <textarea id="invTerms" rows="3" class="w-full border p-2 rounded mt-1">1. Extra locations / routes added during tour will be charged extra.
-2. For GST bill after booking, 5% extra GST will be charged on total amount.</textarea>
+2. For GST bill after booking, extra GST will be charged on total amount.</textarea>
                         </div>
                     </div>
 
@@ -120,8 +120,18 @@
                             </div>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span class="font-semibold">Tax Rate:</span>
-                            <input type="text" value="GST @ 5% (SGST 2.5% + CGST 2.5%)" disabled class="border p-1 rounded bg-gray-100 text-gray-600 text-right w-1/2">
+                            <span class="font-semibold">Select GST Slab:</span>
+                            <select id="invTaxRate" onchange="calculateInvoiceTotals()" class="border p-1 rounded bg-white w-1/2 font-semibold">
+                                <option value="0.05" selected>GST @ 5% (SGST/CGST 2.5%+2.5%)</option>
+                                <option value="0.05_igst">IGST @ 5% (Interstate)</option>
+                                <option value="0.12">GST @ 12% (SGST/CGST 6%+6%)</option>
+                                <option value="0.12_igst">IGST @ 12% (Interstate)</option>
+                                <option value="0.18">GST @ 18% (SGST/CGST 9%+9%)</option>
+                                <option value="0.18_igst">IGST @ 18% (Interstate)</option>
+                                <option value="0.28">GST @ 28% (SGST/CGST 14%+14%)</option>
+                                <option value="0.28_igst">IGST @ 28% (Interstate)</option>
+                                <option value="0">0% (Tax Exempted)</option>
+                            </select>
                         </div>
                         <div class="flex justify-between items-center">
                             <span class="font-semibold">Driver Night (₹):</span>
@@ -544,6 +554,7 @@
             document.getElementById('invChallan').value = 0;
             document.getElementById('invDiscVal').value = 0;
             document.getElementById('invReceived').value = 0;
+            document.getElementById('invTaxRate').value = "0.05";
 
             calculateInvoiceTotals();
             document.getElementById('gstModal').classList.remove('hidden');
@@ -569,6 +580,7 @@
             document.getElementById('invChallan').value = 0;
             document.getElementById('invDiscVal').value = 0;
             document.getElementById('invReceived').value = b.advance || 0;
+            document.getElementById('invTaxRate').value = "0.05";
 
             calculateInvoiceTotals();
             document.getElementById('gstModal').classList.remove('hidden');
@@ -631,7 +643,11 @@
             let challan = parseFloat(document.getElementById('invChallan').value) || 0;
 
             let taxable = subTotal - discountAmount + driverNight + tollTax + challan;
-            let tax = taxable * 0.05; // 5% GST
+            
+            let taxRateVal = document.getElementById('invTaxRate').value;
+            let taxRatePercent = parseFloat(taxRateVal) || 0;
+
+            let tax = taxable * taxRatePercent;
             let total = taxable + tax;
 
             let roundOffVal = 0;
@@ -656,6 +672,9 @@
             const invState = document.getElementById('invState').value;
             const termsText = document.getElementById('invTerms').value;
             const received = parseFloat(document.getElementById('invReceived').value) || 0;
+            const taxRateVal = document.getElementById('invTaxRate').value;
+            const taxRatePercent = parseFloat(taxRateVal) || 0;
+            const isIgst = taxRateVal.includes('igst');
 
             let subTotal = 0;
             let itemsList = [];
@@ -681,8 +700,7 @@
             let challan = parseFloat(document.getElementById('invChallan').value) || 0;
 
             let taxableAmt = subTotal - discountAmount + driverNight + tollTax + challan;
-            let taxTotal = taxableAmt * 0.05;
-            let halfTax = (taxTotal / 2).toFixed(2);
+            let taxTotal = taxableAmt * taxRatePercent;
             let grandTotal = taxableAmt + taxTotal;
 
             if (document.getElementById('invRoundOff').checked) {
@@ -751,113 +769,4 @@
             });
 
             if (driverNight > 0) { doc.text("-", 18, y); doc.text("Driver Night Charges", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${driverNight.toFixed(2)}`, 175, y); y += 8; }
-            if (tollTax > 0) { doc.text("-", 18, y); doc.text("Toll Tax", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${tollTax.toFixed(2)}`, 175, y); y += 8; }
-            if (challan > 0) { doc.text("-", 18, y); doc.text("Challan / Other Charges", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${challan.toFixed(2)}`, 175, y); y += 8; }
-
-            doc.line(14, y, 196, y);
-            y += 6;
-
-            // Tax Summary Table
-            doc.setFillColor(240, 240, 240);
-            doc.rect(14, y, 100, 6, "F");
-            doc.setFont("helvetica", "bold");
-            doc.text("Tax Type", 18, y + 4);
-            doc.text("Taxable Amt", 50, y + 4);
-            doc.text("Rate", 80, y + 4);
-            doc.text("Tax", 98, y + 4);
-
-            y += 6;
-            doc.setFont("helvetica", "normal");
-            doc.text("SGST", 18, y + 4);
-            doc.text(`${taxableAmt.toFixed(2)}`, 50, y + 4);
-            doc.text("2.5%", 80, y + 4);
-            doc.text(`${halfTax}`, 98, y + 4);
-
-            y += 6;
-            doc.text("CGST", 18, y + 4);
-            doc.text(`${taxableAmt.toFixed(2)}`, 50, y + 4);
-            doc.text("2.5%", 80, y + 4);
-            doc.text(`${halfTax}`, 98, y + 4);
-
-            // Right Amounts Summary
-            let rY = y - 12;
-            const addSum = (lbl, val, bold=false) => {
-                if(bold) doc.setFont("helvetica", "bold");
-                else doc.setFont("helvetica", "normal");
-                doc.text(lbl, 125, rY);
-                doc.text(`Rs. ${val}`, 175, rY);
-                rY += 6;
-            };
-            addSum("Sub Total", taxableAmt.toFixed(2));
-            addSum("Tax (5% GST)", taxTotal.toFixed(2));
-            if(discountAmount > 0) addSum("Discount", `-${discountAmount.toFixed(2)}`);
-            addSum("Grand Total", grandTotal.toFixed(2), true);
-            addSum("Received", received.toFixed(2));
-            addSum("Balance Due", balanceDue.toFixed(2), true);
-
-            y = Math.max(y + 15, rY + 5);
-
-            // Terms & Conditions & Bank Details
-            doc.setFont("helvetica", "bold");
-            doc.text("Terms & Conditions:", 14, y);
-            doc.text("Bank Details:", 125, y);
-
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(8);
-            doc.text(termsText, 14, y + 5, { maxWidth: 100 });
-            doc.text("Bank: Kotak Mahindra Bank, Gorakhpur\nA/c No: 3411664106 | IFSC: KKBK0005297\nName: Baba Tour & Travel", 125, y + 5);
-
-            doc.setFontSize(7);
-            doc.text("This is a system generated invoice and does not require physical signature or stamp.", 105, 275, { align: "center" });
-
-            doc.save(`GST_Invoice_${customerName}.pdf`);
-            closeGstModal();
-        }
-
-        function deleteBooking(phone, timestamp) {
-            if(confirm('Kya aap is booking ko delete karna chahte hain?')) {
-                const deleteData = { action: "delete", phone: phone, timestamp: timestamp };
-                fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(deleteData) })
-                .then(() => { alert('Deleted successfully!'); setTimeout(fetchBookings, 2000); });
-            }
-        }
-
-        document.getElementById('bookingForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const btn = document.getElementById('submitBtn');
-            btn.innerText = "Saving..."; btn.disabled = true;
-
-            const total = parseFloat(document.getElementById('totalAmount').value) || 0;
-            const advance = parseFloat(document.getElementById('advanceAmount').value) || 0;
-            const formData = {
-                action: "add",
-                name: document.getElementById('custName').value,
-                phone: document.getElementById('custPhone').value,
-                address: document.getElementById('custAddress').value,
-                pickup: document.getElementById('pickup').value,
-                drop: document.getElementById('drop').value,
-                tourRoute: document.getElementById('tourRoute').value,
-                startDate: document.getElementById('startDate').value,
-                endDate: document.getElementById('endDate').value,
-                vehicle: document.getElementById('vehicleSelect').value,
-                agreedKm: document.getElementById('agreedKm').value,
-                total: total,
-                advance: advance,
-                staff: document.getElementById('staffName').value,
-                clientGstin: document.getElementById('clientGstin').value,
-                timestamp: new Date().toLocaleString()
-            };
-
-            fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(formData) })
-            .then(() => {
-                alert('Booking saved!');
-                generatePDF(formData);
-                this.reset();
-                btn.innerText = "Save Booking & Generate Receipt";
-                btn.disabled = false;
-                setTimeout(fetchBookings, 2000);
-            });
-        });
-    </script>
-</body>
-</html>
+            if (tollTax > 0) { doc.text("-", 18, y); doc.text("Toll Tax", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${tollTax.toFixed(2)}`, 175, y); y += 8
