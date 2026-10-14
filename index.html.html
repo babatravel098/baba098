@@ -769,4 +769,129 @@
             });
 
             if (driverNight > 0) { doc.text("-", 18, y); doc.text("Driver Night Charges", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${driverNight.toFixed(2)}`, 175, y); y += 8; }
-            if (tollTax > 0) { doc.text("-", 18, y); doc.text("Toll Tax", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${tollTax.toFixed(2)}`, 175, y); y += 8
+            if (tollTax > 0) { doc.text("-", 18, y); doc.text("Toll Tax", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${tollTax.toFixed(2)}`, 175, y); y += 8; }
+            if (challan > 0) { doc.text("-", 18, y); doc.text("Challan / Other Charges", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${challan.toFixed(2)}`, 175, y); y += 8; }
+
+            doc.line(14, y, 196, y);
+            y += 6;
+
+            // Tax Summary Table (Dynamic SGST/CGST or IGST)
+            doc.setFillColor(240, 240, 240);
+            doc.rect(14, y, 100, 6, "F");
+            doc.setFont("helvetica", "bold");
+            doc.text("Tax Type", 18, y + 4);
+            doc.text("Taxable Amt", 50, y + 4);
+            doc.text("Rate", 80, y + 4);
+            doc.text("Tax", 98, y + 4);
+
+            y += 6;
+            doc.setFont("helvetica", "normal");
+            if (isIgst) {
+                let igstRate = (taxRatePercent * 100).toFixed(0) + "%";
+                doc.text("IGST", 18, y + 4);
+                doc.text(`${taxableAmt.toFixed(2)}`, 50, y + 4);
+                doc.text(igstRate, 80, y + 4);
+                doc.text(`${taxTotal.toFixed(2)}`, 98, y + 4);
+            } else if (taxRatePercent > 0) {
+                let halfRate = (taxRatePercent * 50).toFixed(1) + "%";
+                let halfTax = (taxTotal / 2).toFixed(2);
+                doc.text("SGST", 18, y + 4);
+                doc.text(`${taxableAmt.toFixed(2)}`, 50, y + 4);
+                doc.text(halfRate, 80, y + 4);
+                doc.text(`${halfTax}`, 98, y + 4);
+
+                y += 6;
+                doc.text("CGST", 18, y + 4);
+                doc.text(`${taxableAmt.toFixed(2)}`, 50, y + 4);
+                doc.text(halfRate, 80, y + 4);
+                doc.text(`${halfTax}`, 98, y + 4);
+            } else {
+                doc.text("Exempted", 18, y + 4);
+                doc.text(`${taxableAmt.toFixed(2)}`, 50, y + 4);
+                doc.text("0%", 80, y + 4);
+                doc.text("0.00", 98, y + 4);
+            }
+
+            // Right Amounts Summary
+            let rY = y - (isIgst ? 6 : 12);
+            let displayTaxLabel = isIgst ? "IGST Total" : "Tax (" + (taxRatePercent * 100) + "% GST)";
+            const addSum = (lbl, val, bold=false) => {
+                if(bold) doc.setFont("helvetica", "bold");
+                else doc.setFont("helvetica", "normal");
+                doc.text(lbl, 125, rY);
+                doc.text(`Rs. ${val}`, 175, rY);
+                rY += 6;
+            };
+            addSum("Sub Total", taxableAmt.toFixed(2));
+            if(taxRatePercent > 0) addSum(displayTaxLabel, taxTotal.toFixed(2));
+            if(discountAmount > 0) addSum("Discount", `-${discountAmount.toFixed(2)}`);
+            addSum("Grand Total", grandTotal.toFixed(2), true);
+            addSum("Received", received.toFixed(2));
+            addSum("Balance Due", balanceDue.toFixed(2), true);
+
+            y = Math.max(y + 15, rY + 5);
+
+            // Terms & Conditions & Bank Details
+            doc.setFont("helvetica", "bold");
+            doc.text("Terms & Conditions:", 14, y);
+            doc.text("Bank Details:", 125, y);
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            doc.text(termsText, 14, y + 5, { maxWidth: 100 });
+            doc.text("Bank: Kotak Mahindra Bank, Gorakhpur\nA/c No: 3411664106 | IFSC: KKBK0005297\nName: Baba Tour & Travel", 125, y + 5);
+
+            doc.setFontSize(7);
+            doc.text("This is a system generated invoice and does not require physical signature or stamp.", 105, 275, { align: "center" });
+
+            doc.save(`GST_Invoice_${customerName}.pdf`);
+            closeGstModal();
+        }
+
+        function deleteBooking(phone, timestamp) {
+            if(confirm('Kya aap is booking ko delete karna chahte hain?')) {
+                const deleteData = { action: "delete", phone: phone, timestamp: timestamp };
+                fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(deleteData) })
+                .then(() => { alert('Deleted successfully!'); setTimeout(fetchBookings, 2000); });
+            }
+        }
+
+        document.getElementById('bookingForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.innerText = "Saving..."; btn.disabled = true;
+
+            const total = parseFloat(document.getElementById('totalAmount').value) || 0;
+            const advance = parseFloat(document.getElementById('advanceAmount').value) || 0;
+            const formData = {
+                action: "add",
+                name: document.getElementById('custName').value,
+                phone: document.getElementById('custPhone').value,
+                address: document.getElementById('custAddress').value,
+                pickup: document.getElementById('pickup').value,
+                drop: document.getElementById('drop').value,
+                tourRoute: document.getElementById('tourRoute').value,
+                startDate: document.getElementById('startDate').value,
+                endDate: document.getElementById('endDate').value,
+                vehicle: document.getElementById('vehicleSelect').value,
+                agreedKm: document.getElementById('agreedKm').value,
+                total: total,
+                advance: advance,
+                staff: document.getElementById('staffName').value,
+                clientGstin: document.getElementById('clientGstin').value,
+                timestamp: new Date().toLocaleString()
+            };
+
+            fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(formData) })
+            .then(() => {
+                alert('Booking saved!');
+                generatePDF(formData);
+                this.reset();
+                btn.innerText = "Save Booking & Generate Receipt";
+                btn.disabled = false;
+                setTimeout(fetchBookings, 2000);
+            });
+        });
+    </script>
+</body>
+</html>
