@@ -915,8 +915,6 @@
             const btn = document.getElementById('submitBtn');
             btn.innerText = "Saving..."; btn.disabled = true;
 
-            const total = parseFloat(document.getElementById('totalAmount').value) || 0;
-            const advance = parseFloat(document.getElementById('advanceAmount').value) || 0;
             const formData = {
                 action: "add",
                 name: document.getElementById('custName').value,
@@ -935,8 +933,8 @@
                 parkingInc: document.getElementById('parkingInc').value,
                 tollInc: document.getElementById('tollInc').value,
                 checkpostInc: document.getElementById('checkpostInc').value,
-                total: total,
-                advance: advance,
+                total: parseFloat(document.getElementById('totalAmount').value) || 0,
+                advance: parseFloat(document.getElementById('advanceAmount').value) || 0,
                 staff: document.getElementById('staffName').value,
                 timestamp: new Date().toLocaleString()
             };
@@ -944,9 +942,7 @@
             fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(formData) })
             .then(() => {
                 alert('Booking saved!');
-                generatePDF(formData);
                 this.reset();
-                updateDriverNight();
                 btn.innerText = "Save Booking & Generate Receipt";
                 btn.disabled = false;
                 setTimeout(fetchBookings, 2000);
