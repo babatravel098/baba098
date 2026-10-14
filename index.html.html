@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Baba Tour & Travels - Live Dashboard & Google Sheet Sync</title>
+    <title>Baba Tour & Travels - Secure Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- jsPDF Library for generating professional PDF receipts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -13,195 +13,226 @@
 </head>
 <body class="bg-slate-100 font-sans">
 
-    <!-- Header -->
-    <header class="bg-blue-900 text-white p-4 shadow-md flex justify-between items-center">
-        <h1 class="text-xl font-bold">🚐 Baba Tour & Travels, Gorakhpur</h1>
-        <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold">🟢 Live Cloud Synced</span>
-    </header>
-
-    <main class="max-w-7xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- Left: New Booking Form -->
-        <section class="bg-white p-5 rounded-xl shadow-md lg:col-span-1 h-fit">
-            <h2 class="text-lg font-semibold mb-4 text-blue-900 border-b pb-2">➕ New Booking Entry</h2>
-            <form id="bookingForm" class="space-y-3">
+    <!-- Login Modal Screen -->
+    <div id="loginModal" class="fixed inset-0 bg-blue-950 z-50 flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full space-y-6">
+            <div class="text-center">
+                <h2 class="text-2xl font-bold text-blue-900">🚐 Baba Tour & Travels</h2>
+                <p class="text-xs text-gray-500 mt-1">Gorakhpur | Secure Staff Login</p>
+            </div>
+            <form id="loginForm" class="space-y-4" onsubmit="handleLogin(event)">
                 <div>
-                    <label class="text-xs font-semibold text-gray-600">ग्राहक का नाम (Customer Name)</label>
-                    <input type="text" id="custName" required class="w-full border p-2 rounded text-sm">
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="text-xs font-semibold text-gray-600">मोबाइल नंबर (Mobile)</label>
-                        <input type="tel" id="custPhone" required class="w-full border p-2 rounded text-sm">
-                    </div>
-                    <div>
-                        <label class="text-xs font-semibold text-gray-600">Booking Office (Staff Name)</label>
-                        <input type="text" id="staffName" placeholder="Ankit / Staff" required class="w-full border p-2 rounded text-sm">
-                    </div>
+                    <label class="text-xs font-semibold text-gray-600">Username</label>
+                    <input type="text" id="loginUser" required class="w-full border p-3 rounded-lg text-sm mt-1 focus:ring-2 focus:ring-blue-600 outline-none" placeholder="Enter username">
                 </div>
                 <div>
-                    <label class="text-xs font-semibold text-gray-600">ग्राहक पूरा पता (Customer Address)</label>
-                    <input type="text" id="custAddress" required class="w-full border p-2 rounded text-sm">
+                    <label class="text-xs font-semibold text-gray-600">Password</label>
+                    <input type="password" id="loginPass" required class="w-full border p-3 rounded-lg text-sm mt-1 focus:ring-2 focus:ring-blue-600 outline-none" placeholder="Enter password">
                 </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="text-xs font-semibold text-gray-600">पिकअप (Pickup Location)</label>
-                        <input type="text" id="pickup" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Gorakhpur">
-                    </div>
-                    <div>
-                        <label class="text-xs font-semibold text-gray-600">ड्रॉप / गंतव्य (Drop / Destination)</label>
-                        <input type="text" id="drop" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Masrooe">
-                    </div>
-                </div>
-                <div>
-                    <label class="text-xs font-semibold text-gray-600">यात्रा का पूरा रूट / Via (Visiting Places)</label>
-                    <input type="text" id="tourRoute" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Gorakhpur - Ayodhya - Varanasi">
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="text-xs font-semibold text-gray-600">यात्रा शुरू (From Date)</label>
-                        <input type="date" id="startDate" required class="w-full border p-2 rounded text-sm">
-                    </div>
-                    <div>
-                        <label class="text-xs font-semibold text-gray-600">वापसी तारीख (To Date)</label>
-                        <input type="date" id="endDate" required class="w-full border p-2 rounded text-sm">
-                    </div>
-                </div>
-                <div>
-                   <label class="text-xs font-semibold text-gray-600">गाड़ी चुनें (Vehicle Name)</label>
-                    <select id="vehicleSelect" onchange="updateDriverNight()" class="w-full border p-2 rounded text-sm bg-white font-medium text-blue-900">
-                        <optgroup label="🚍 Buses (Driver Night: ₹800)">
-                            <option value="56 Seater Bus">56 Seater Bus</option>
-                            <option value="45 Seater Bus">45 Seater Bus</option>
-                            <option value="42 Seater Bus">42 Seater Bus</option>
-                            <option value="35 Seater Bus">35 Seater Bus</option>
-                            <option value="32 Seater Bus">32 Seater Bus</option>
-                        </optgroup>
-                        <optgroup label="🚐 Tempo Travellers & Vans (Driver Night: ₹500)">
-                            <option value="Force Urbania">Force Urbania</option>
-                            <option value="26 Seater Traveller (1)">26 Seater Traveller (Vehicle 1)</option>
-                            <option value="26 Seater Traveller (2)">26 Seater Traveller (Vehicle 2)</option>
-                            <option value="20 Seater Traveller">20 Seater Traveller</option>
-                            <option value="17 Seater Force">17 Seater Force</option>
-                            <option value="12 Seater Traveller">12 Seater Traveller</option>
-                            <option value="Mahindra Supro / Van">Mahindra Supro / Van</option>
-                        </optgroup>
-                        <optgroup label="🚙 SUVs & MUVs (Driver Night: ₹400)">
-                            <option value="Innova Crysta / Hycross">Innova Crysta / Hycross</option>
-                            <option value="Mahindra Marazzo">Mahindra Marazzo</option>
-                            <option value="Force Trax Cruiser">Force Trax Cruiser</option>
-                            <option value="Ertiga">Ertiga</option>
-                            <option value="Kia Carens">Kia Carens</option>
-                            <option value="Toyota Rumion">Toyota Rumion</option>
-                        </optgroup>
-                        <optgroup label="🚗 Sedans & Hatchbacks (Driver Night: ₹300)">
-                            <option value="Maruti Dzire">Maruti Dzire</option>
-                            <option value="Honda Amaze">Honda Amaze</option>
-                            <option value="Hyundai Aura">Hyundai Aura</option>
-                            <option value="Tata Tigor">Tata Tigor</option>
-                            <option value="Maruti WagonR / Swift">Maruti WagonR / Swift</option>
-                            <option value="Hyundai i10 / Tata Tiago">Hyundai i10 / Tata Tiago</option>
-                        </optgroup>
-                    </select>
-                </div>
-                <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2 rounded border">
-                    <div>
-                        <label class="text-[10px] font-semibold text-gray-600">तय KM</label>
-                        <input type="text" id="agreedKm" placeholder="500 KM" class="w-full border p-1 rounded text-xs">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-semibold text-gray-600">Extra KM (₹)</label>
-                        <input type="number" id="extraKmRate" placeholder="18" class="w-full border p-1 rounded text-xs">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-semibold text-gray-600">Extra Day (₹)</label>
-                        <input type="number" id="extraDayRate" placeholder="2500" class="w-full border p-1 rounded text-xs">
-                    </div>
-                </div>
-
-                <!-- Tour Exclusions / Inclusions Options -->
-                <div class="bg-amber-50 p-2 rounded border border-amber-200 space-y-2">
-                    <p class="text-[11px] font-bold text-amber-900">Tour Terms & Charges Status:</p>
-                    <div class="grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                            <label class="text-[11px] font-semibold text-gray-700">Driver Night:</label>
-                            <select id="driverNight" class="w-full border p-1 rounded bg-white text-xs font-bold text-orange-800">
-                                <option value="₹800 Per Night">₹800 Per Night (Bus)</option>
-                                <option value="₹500 Per Night">₹500 Per Night (Traveller)</option>
-                                <option value="₹400 Per Night">₹400 Per Night (SUV/MUV)</option>
-                                <option value="₹300 Per Night">₹300 Per Night (Sedan/Hatch)</option>
-                                <option value="Included in Total">Included in Total</option>
-                                <option value="Not Applicable">Not Applicable</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="text-[11px] font-semibold text-gray-700">Parking:</label>
-                            <select id="parkingInc" class="w-full border p-1 rounded bg-white text-xs">
-                                <option value="Excluded (Extra)">Excluded (Extra)</option>
-                                <option value="Included">Included</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="text-[11px] font-semibold text-gray-700">Toll Tax:</label>
-                            <select id="tollInc" class="w-full border p-1 rounded bg-white text-xs">
-                                <option value="Excluded (Extra)">Excluded (Extra)</option>
-                                <option value="Included">Included</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="text-[11px] font-semibold text-gray-700">Checkpost:</label>
-                            <select id="checkpostInc" class="w-full border p-1 rounded bg-white text-xs">
-                                <option value="Excluded (Extra)">Excluded (Extra)</option>
-                                <option value="Included">Included</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="text-xs font-semibold text-gray-600">कुल रकम (Total ₹)</label>
-                        <input type="number" id="totalAmount" required class="w-full border p-2 rounded text-sm font-bold text-blue-900">
-                    </div>
-                    <div>
-                        <label class="text-xs font-semibold text-gray-600">एडवांस (Advance ₹)</label>
-                        <input type="number" id="advanceAmount" required class="w-full border p-2 rounded text-sm font-bold text-green-700">
-                    </div>
-                </div>
-                <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white p-2.5 rounded font-semibold hover:bg-blue-700 transition shadow">Save Booking & Generate PDF</button>
+                <div id="loginError" class="text-red-500 text-xs text-center hidden">Galat Username ya Password! Kripya dobara koshish karein.</div>
+                <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-md">Login to Dashboard</button>
             </form>
-        </section>
+            <div class="text-center text-[10px] text-gray-400">
+                Authorized access only. Baba Tour and Travels, Gorakhpur.
+            </div>
+        </div>
+    </div>
 
-        <!-- Right: Live Bookings Table from Google Sheet -->
-        <section class="bg-white p-5 rounded-xl shadow-md lg:col-span-2">
-            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 border-b pb-2 gap-2">
-                <h2 class="text-lg font-semibold text-blue-900">📋 Bookings Management</h2>
-                <div class="flex gap-2">
-                    <button onclick="switchTab('new')" id="newTabBtn" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow">🆕 New Bookings</button>
-                    <button onclick="switchTab('completed')" id="completedTabBtn" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold">✅ Completed Bookings</button>
-                    <button onclick="fetchBookings()" class="bg-blue-100 text-blue-800 px-2.5 py-1.5 rounded text-xs font-semibold">🔄</button>
-                </div>
+    <!-- Main Content (Hidden until login) -->
+    <div id="mainContent" class="hidden">
+        <!-- Header -->
+        <header class="bg-blue-900 text-white p-4 shadow-md flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <h1 class="text-xl font-bold">🚐 Baba Tour & Travels, Gorakhpur</h1>
+                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold">🟢 Live Cloud Synced</span>
             </div>
+            <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition">🚪 Logout</button>
+        </header>
+
+        <main class="max-w-7xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            <div class="overflow-x-auto max-h-[600px]">
-                <table class="w-full text-left border-collapse text-xs">
-                    <thead>
-                        <tr class="bg-slate-200 text-slate-700 sticky top-0">
-                            <th class="p-2">Customer</th>
-                            <th class="p-2">Route & Places</th>
-                            <th class="p-2">Vehicle & Terms</th>
-                            <th class="p-2">Payment</th>
-                            <th class="p-2">Staff</th>
-                            <th class="p-2">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="bookingTableBody">
-                        <tr><td colspan="6" class="text-center p-6 text-gray-400">Loading bookings...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    </main>
+            <!-- Left: New Booking Form -->
+            <section class="bg-white p-5 rounded-xl shadow-md lg:col-span-1 h-fit">
+                <h2 class="text-lg font-semibold mb-4 text-blue-900 border-b pb-2">➕ New Booking Entry</h2>
+                <form id="bookingForm" class="space-y-3">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">ग्राहक का नाम (Customer Name)</label>
+                        <input type="text" id="custName" required class="w-full border p-2 rounded text-sm">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600">मोबाइल नंबर (Mobile)</label>
+                            <input type="tel" id="custPhone" required class="w-full border p-2 rounded text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600">Booking Office (Staff Name)</label>
+                            <input type="text" id="staffName" placeholder="Ankit / Staff" required class="w-full border p-2 rounded text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">ग्राहक पूरा पता (Customer Address)</label>
+                        <input type="text" id="custAddress" required class="w-full border p-2 rounded text-sm">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600">पिकअप (Pickup Location)</label>
+                            <input type="text" id="pickup" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Gorakhpur">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600">ड्रॉप / गंतव्य (Drop / Destination)</label>
+                            <input type="text" id="drop" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Masrooe">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">यात्रा का पूरा रूट / Via (Visiting Places)</label>
+                        <input type="text" id="tourRoute" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Gorakhpur - Ayodhya - Varanasi">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600">यात्रा शुरू (From Date)</label>
+                            <input type="date" id="startDate" required class="w-full border p-2 rounded text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600">वापसी तारीख (To Date)</label>
+                            <input type="date" id="endDate" required class="w-full border p-2 rounded text-sm">
+                        </div>
+                    </div>
+                    <div>
+                       <label class="text-xs font-semibold text-gray-600">गाड़ी चुनें (Vehicle Name)</label>
+                        <select id="vehicleSelect" onchange="updateDriverNight()" class="w-full border p-2 rounded text-sm bg-white font-medium text-blue-900">
+                            <optgroup label="🚍 Buses (Driver Night: ₹800)">
+                                <option value="56 Seater Bus">56 Seater Bus</option>
+                                <option value="45 Seater Bus">45 Seater Bus</option>
+                                <option value="42 Seater Bus">42 Seater Bus</option>
+                                <option value="35 Seater Bus">35 Seater Bus</option>
+                                <option value="32 Seater Bus">32 Seater Bus</option>
+                            </optgroup>
+                            <optgroup label="🚐 Tempo Travellers & Vans (Driver Night: ₹500)">
+                                <option value="Force Urbania">Force Urbania</option>
+                                <option value="26 Seater Traveller (1)">26 Seater Traveller (Vehicle 1)</option>
+                                <option value="26 Seater Traveller (2)">26 Seater Traveller (Vehicle 2)</option>
+                                <option value="20 Seater Traveller">20 Seater Traveller</option>
+                                <option value="17 Seater Force">17 Seater Force</option>
+                                <option value="12 Seater Traveller">12 Seater Traveller</option>
+                                <option value="Mahindra Supro / Van">Mahindra Supro / Van</option>
+                            </optgroup>
+                            <optgroup label="🚙 SUVs & MUVs (Driver Night: ₹400)">
+                                <option value="Innova Crysta / Hycross">Innova Crysta / Hycross</option>
+                                <option value="Mahindra Marazzo">Mahindra Marazzo</option>
+                                <option value="Force Trax Cruiser">Force Trax Cruiser</option>
+                                <option value="Ertiga">Ertiga</option>
+                                <option value="Kia Carens">Kia Carens</option>
+                                <option value="Toyota Rumion">Toyota Rumion</option>
+                            </optgroup>
+                            <optgroup label="🚗 Sedans & Hatchbacks (Driver Night: ₹300)">
+                                <option value="Maruti Dzire">Maruti Dzire</option>
+                                <option value="Honda Amaze">Honda Amaze</option>
+                                <option value="Hyundai Aura">Hyundai Aura</option>
+                                <option value="Tata Tigor">Tata Tigor</option>
+                                <option value="Maruti WagonR / Swift">Maruti WagonR / Swift</option>
+                                <option value="Hyundai i10 / Tata Tiago">Hyundai i10 / Tata Tiago</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2 rounded border">
+                        <div>
+                            <label class="text-[10px] font-semibold text-gray-600">तय KM</label>
+                            <input type="text" id="agreedKm" placeholder="500 KM" class="w-full border p-1 rounded text-xs">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-semibold text-gray-600">Extra KM (₹)</label>
+                            <input type="number" id="extraKmRate" placeholder="18" class="w-full border p-1 rounded text-xs">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-semibold text-gray-600">Extra Day (₹)</label>
+                            <input type="number" id="extraDayRate" placeholder="2500" class="w-full border p-1 rounded text-xs">
+                        </div>
+                    </div>
+
+                    <!-- Tour Exclusions / Inclusions Options -->
+                    <div class="bg-amber-50 p-2 rounded border border-amber-200 space-y-2">
+                        <p class="text-[11px] font-bold text-amber-900">Tour Terms & Charges Status:</p>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <label class="text-[11px] font-semibold text-gray-700">Driver Night:</label>
+                                <select id="driverNight" class="w-full border p-1 rounded bg-white text-xs font-bold text-orange-800">
+                                    <option value="₹800 Per Night">₹800 Per Night (Bus)</option>
+                                    <option value="₹500 Per Night">₹500 Per Night (Traveller)</option>
+                                    <option value="₹400 Per Night">₹400 Per Night (SUV/MUV)</option>
+                                    <option value="₹300 Per Night">₹300 Per Night (Sedan/Hatch)</option>
+                                    <option value="Included in Total">Included in Total</option>
+                                    <option value="Not Applicable">Not Applicable</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[11px] font-semibold text-gray-700">Parking:</label>
+                                <select id="parkingInc" class="w-full border p-1 rounded bg-white text-xs">
+                                    <option value="Excluded (Extra)">Excluded (Extra)</option>
+                                    <option value="Included">Included</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[11px] font-semibold text-gray-700">Toll Tax:</label>
+                                <select id="tollInc" class="w-full border p-1 rounded bg-white text-xs">
+                                    <option value="Excluded (Extra)">Excluded (Extra)</option>
+                                    <option value="Included">Included</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[11px] font-semibold text-gray-700">Checkpost:</label>
+                                <select id="checkpostInc" class="w-full border p-1 rounded bg-white text-xs">
+                                    <option value="Excluded (Extra)">Excluded (Extra)</option>
+                                    <option value="Included">Included</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600">कुल रकम (Total ₹)</label>
+                            <input type="number" id="totalAmount" required class="w-full border p-2 rounded text-sm font-bold text-blue-900">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600">एडवांस (Advance ₹)</label>
+                            <input type="number" id="advanceAmount" required class="w-full border p-2 rounded text-sm font-bold text-green-700">
+                        </div>
+                    </div>
+                    <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white p-2.5 rounded font-semibold hover:bg-blue-700 transition shadow">Save Booking & Generate PDF</button>
+                </form>
+            </section>
+
+            <!-- Right: Live Bookings Table from Google Sheet -->
+            <section class="bg-white p-5 rounded-xl shadow-md lg:col-span-2">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-4 border-b pb-2 gap-2">
+                    <h2 class="text-lg font-semibold text-blue-900">📋 Bookings Management</h2>
+                    <div class="flex gap-2">
+                        <button onclick="switchTab('new')" id="newTabBtn" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow">🆕 New Bookings</button>
+                        <button onclick="switchTab('completed')" id="completedTabBtn" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold">✅ Completed Bookings</button>
+                        <button onclick="fetchBookings()" class="bg-blue-100 text-blue-800 px-2.5 py-1.5 rounded text-xs font-semibold">🔄</button>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto max-h-[600px]">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-200 text-slate-700 sticky top-0">
+                                <th class="p-2">Customer</th>
+                                <th class="p-2">Route & Places</th>
+                                <th class="p-2">Vehicle & Terms</th>
+                                <th class="p-2">Payment</th>
+                                <th class="p-2">Staff</th>
+                                <th class="p-2">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bookingTableBody">
+                            <tr><td colspan="6" class="text-center p-6 text-gray-400">Loading bookings...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
 
     <!-- Floating Quick Call & WhatsApp Buttons -->
     <div style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 12px;">
@@ -221,10 +252,38 @@
         let allBookingsData = [];
         let currentTab = 'new';
 
+        // Check if already logged in during this session
         window.onload = function() {
-            updateDriverNight();
-            fetchBookings();
+            if (sessionStorage.getItem('baba_logged_in') === 'true') {
+                document.getElementById('loginModal').style.display = 'none';
+                document.getElementById('mainContent').classList.remove('hidden');
+                updateDriverNight();
+                fetchBookings();
+            }
         };
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+            const errDiv = document.getElementById('loginError');
+
+            // Aap yahan apna username aur password badal sakte hain
+            if (user === 'admin' && pass === 'baba123') {
+                sessionStorage.setItem('baba_logged_in', 'true');
+                document.getElementById('loginModal').style.display = 'none';
+                document.getElementById('mainContent').classList.remove('hidden');
+                updateDriverNight();
+                fetchBookings();
+            } else {
+                errDiv.classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem('baba_logged_in');
+            location.reload();
+        }
 
         function updateDriverNight() {
             const vehicle = document.getElementById('vehicleSelect').value;
