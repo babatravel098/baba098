@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="manifest" href="manifest.json">
 </head>
 <body class="bg-slate-100 font-sans">
 
@@ -532,12 +531,12 @@
                         <b>📍 Pickup:</b> ${b.pickup || 'N/A'}<br>
                         <b>🎯 Drop:</b> ${b.drop || 'N/A'}<br>
                         <b>🗺️ Route:</b> <span class="text-blue-800 font-semibold">${b.tourRoute || 'N/A'}</span><br>
-                        <span class="text-gray-500">📅 ${b.startDate \vert{}\vert{} ''} to${b.endDate || ''}</span>
+                        <span class="text-gray-500">📅 ${b.startDate || ''} to ${b.endDate || ''}</span>
                     </td>
                     <td class="p-2">
                         <span class="bg-green-100 text-green-800 px-1.5 py-0.5 rounded font-semibold">${b.vehicle || 'N/A'}</span><br>
                         <span class="text-gray-500 text-[10px]">KM: ${b.agreedKm || 'N/A'}</span><br>
-                        <span class="text-amber-700 text-[9px]">Night: ${b.driverNight \vert{}\vert{} 'N/A'} \vert{} Toll:${b.tollInc || 'N/A'}</span>
+                        <span class="text-amber-700 text-[9px]">Night: ${b.driverNight || 'N/A'} | Toll: ${b.tollInc || 'N/A'}</span>
                     </td>
                     <td class="p-2">
                         Tot: <b>₹${b.total || 0}</b><br>
@@ -549,7 +548,6 @@
                         <button onclick='sendWhatsApp(${JSON.stringify(b)})' class="block w-full text-center bg-green-600 text-white px-2 py-0.5 rounded font-semibold cursor-pointer">WhatsApp</button>
                         <button onclick='generatePDF(${JSON.stringify(b)})' class="block w-full text-center bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold hover:bg-blue-200 cursor-pointer">Receipt</button>
                         <button onclick='openVyaparGstModal(${JSON.stringify(b)})' class="block w-full text-center bg-purple-600 text-white px-2 py-0.5 rounded font-semibold hover:bg-purple-700 cursor-pointer">GST Invoice</button>
-                        <button onclick="deleteBooking('${b.phone}', '${b.timestamp}')" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold hover:bg-red-200 cursor-pointer">Delete</button>
                     </td>
                 `;
                 tbody.appendChild(row);
@@ -563,10 +561,10 @@
                            `📋 *Booking Details:*%0A` +
                            `• Customer Name: ${b.name || ''}%0A` +
                            `• Route: ${b.tourRoute || 'N/A'}%0A` +
-                           `• Journey Date: ${b.startDate \vert{}\vert{} ''} to${b.endDate || ''}%0A` +
+                           `• Journey Date: ${b.startDate || ''} to ${b.endDate || ''}%0A` +
                            `• Vehicle: ${b.vehicle || ''}%0A` +
-                           `• Driver Night: ${b.driverNight \vert{}\vert{} ''} \vert{} Toll:${b.tollInc || ''}%0A` +
-                           `• Total: ₹${b.total || 0}/- | Advance: ₹${b.advance \vert{}\vert{} 0}/- \vert{} Balance: ₹${balance}/-%0A%0A` +
+                           `• Driver Night: ${b.driverNight || ''} | Toll: ${b.tollInc || ''}%0A` +
+                           `• Total: ₹${b.total || 0}/- | Advance: ₹${b.advance || 0}/- | Balance: ₹${balance}/-%0A%0A` +
                            `🏢 *Baba Tour and Travels* (Railway Station Road, Gorakhpur)%0A` +
                            `🧾 GSTIN: 09AARPU5006D1ZI | Ph: 8726667104`;
             window.open(`https://wa.me/91${b.phone}?text=${waText}`, '_blank');
@@ -595,7 +593,7 @@
             addLine("Pickup Location", b.pickup);
             addLine("Drop / Destination", b.drop);
             addLine("Tour Route", b.tourRoute);
-            addLine("Journey Date", `${b.startDate} to${b.endDate}`);
+            addLine("Journey Date", `${b.startDate} to ${b.endDate}`);
             addLine("Selected Vehicle", b.vehicle);
             addLine("Driver Night Status", b.driverNight);
             addLine("Parking Status", b.parkingInc);
@@ -642,7 +640,7 @@
             const tableBody = document.getElementById('invoiceItemsTable');
             tableBody.innerHTML = '';
             
-            let itemDesc = `${b.pickup || 'GORAKHPUR'} TO ${b.drop \vert{}\vert{} 'LOCAL'}, VEHICLE -${b.vehicle || 'INNOVA'}`;
+            let itemDesc = `${b.pickup || 'GORAKHPUR'} TO ${b.drop || 'LOCAL'}, VEHICLE - ${b.vehicle || 'INNOVA'}`;
             let kmVal = parseInt(b.agreedKm) || 500;
             let priceVal = parseFloat(b.total) || 4050;
 
@@ -674,4 +672,123 @@
             const tr = document.createElement('tr');
             tr.className = "border-b item-row";
             tr.innerHTML = `
-                <td class="p-2 text-center row-
+                <td class="p-2 text-center row-num">${rowCount}</td>
+                <td class="p-2"><input type="text" class="w-full border p-1 rounded item-name" value="${item}" placeholder="Item name"></td>
+                <td class="p-2"><input type="text" class="w-full border p-1 rounded item-hsn font-mono text-center" value="${hsn}" placeholder="HSN"></td>
+                <td class="p-2"><input type="text" class="w-full border p-1 rounded item-desc" value="${desc}" placeholder="Description"></td>
+                <td class="p-2"><input type="number" class="w-full border p-1 rounded item-km" value="${km}" placeholder="KM" oninput="calculateInvoiceTotals()"></td>
+                <td class="p-2"><input type="number" class="w-full border p-1 rounded item-qty" value="${qty}" placeholder="1" oninput="calculateInvoiceTotals()"></td>
+                <td class="p-2"><input type="number" class="w-full border p-1 rounded item-price" value="${price}" placeholder="0" oninput="calculateInvoiceTotals()"></td>
+                <td class="p-2 text-right font-semibold item-amount">₹0.00</td>
+                <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-red-500 font-bold hover:text-red-700 cursor-pointer">✕</button></td>
+            `;
+            tableBody.appendChild(tr);
+            calculateInvoiceTotals();
+        }
+
+        function removeRow(btn) {
+            btn.closest('tr').remove();
+            const rows = document.querySelectorAll('#invoiceItemsTable .item-row');
+            rows.forEach((r, idx) => {
+                r.querySelector('.row-num').innerText = idx + 1;
+            });
+            calculateInvoiceTotals();
+        }
+
+        function calculateInvoiceTotals() {
+            let subTotal = 0;
+            const rows = document.querySelectorAll('#invoiceItemsTable .item-row');
+            rows.forEach(r => {
+                let qty = parseFloat(r.querySelector('.item-qty').value) || 0;
+                let price = parseFloat(r.querySelector('.item-price').value) || 0;
+                let amt = qty * price;
+                r.querySelector('.item-amount').innerText = `₹${amt.toFixed(2)}`;
+                subTotal += amt;
+            });
+
+            let discVal = parseFloat(document.getElementById('invDiscVal').value) || 0;
+            let discType = document.getElementById('invDiscType').value;
+            let discountAmount = discType === 'percent' ? (subTotal * discVal / 100) : discVal;
+
+            let driverNight = parseFloat(document.getElementById('invDriverNight').value) || 0;
+            let tollTax = parseFloat(document.getElementById('invTollTax').value) || 0;
+            let parking = parseFloat(document.getElementById('invParking').value) || 0;
+            let challan = parseFloat(document.getElementById('invChallan').value) || 0;
+
+            let taxable = subTotal - discountAmount + driverNight + tollTax + parking + challan;
+            
+            let taxRateVal = document.getElementById('invTaxRate').value;
+            let taxRatePercent = parseFloat(taxRateVal) || 0;
+
+            let tax = taxable * taxRatePercent;
+            let total = taxable + tax;
+
+            let roundOffVal = 0;
+            if (document.getElementById('invRoundOff').checked) {
+                let roundedTotal = Math.round(total);
+                roundOffVal = roundedTotal - total;
+                total = roundedTotal;
+            }
+
+            document.getElementById('invRoundOffVal').innerText = `₹${roundOffVal.toFixed(2)}`;
+            document.getElementById('invGrandTotal').innerText = `₹${total.toFixed(2)}`;
+
+            let received = parseFloat(document.getElementById('invReceived').value) || 0;
+            let balance = total - received;
+            document.getElementById('invBalanceDue').innerText = `₹${balance.toFixed(2)}`;
+        }
+
+        function saveGstToSheet() {
+            const customerName = document.getElementById('invCustomerName').value || "Client";
+            const customerGstin = document.getElementById('invCustomerGstin').value || "Unregistered";
+            const invDate = document.getElementById('invDate').value || new Date().toLocaleDateString();
+            const invState = document.getElementById('invState').value;
+            const taxRateVal = document.getElementById('invTaxRate').value;
+            const taxRatePercent = parseFloat(taxRateVal) || 0;
+            const isIgst = taxRateVal.includes('igst');
+
+            let subTotal = 0;
+            const rows = document.querySelectorAll('#invoiceItemsTable .item-row');
+            rows.forEach(r => {
+                let qty = parseFloat(r.querySelector('.item-qty').value) || 1;
+                let price = parseFloat(r.querySelector('.item-price').value) || 0;
+                subTotal += (qty * price);
+            });
+
+            let discVal = parseFloat(document.getElementById('invDiscVal').value) || 0;
+            let discType = document.getElementById('invDiscType').value;
+            let discountAmount = discType === 'percent' ? (subTotal * discVal / 100) : discVal;
+
+            let driverNight = parseFloat(document.getElementById('invDriverNight').value) || 0;
+            let tollTax = parseFloat(document.getElementById('invTollTax').value) || 0;
+            let parking = parseFloat(document.getElementById('invParking').value) || 0;
+            let challan = parseFloat(document.getElementById('invChallan').value) || 0;
+
+            let taxableAmt = subTotal - discountAmount + driverNight + tollTax + parking + challan;
+            let taxTotal = taxableAmt * taxRatePercent;
+            let grandTotal = taxableAmt + taxTotal;
+
+            if (document.getElementById('invRoundOff').checked) {
+                grandTotal = Math.round(grandTotal);
+            }
+
+            const params = new URLSearchParams({
+                action: "addGst",
+                invoiceNo: currentInvoiceNo,
+                customerName: customerName,
+                clientGstin: customerGstin,
+                state: invState,
+                taxableAmt: taxableAmt.toFixed(2),
+                sgst: (!isIgst && taxRatePercent > 0) ? (taxTotal / 2).toFixed(2) : "0.00",
+                cgst: (!isIgst && taxRatePercent > 0) ? (taxTotal / 2).toFixed(2) : "0.00",
+                igst: isIgst ? taxTotal.toFixed(2) : "0.00",
+                grandTotal: grandTotal.toFixed(2),
+                timestamp: new Date().toLocaleString()
+            });
+
+            fetch(`${GST_SCRIPT_URL}?${params.toString()}`, { mode: 'no-cors' })
+            .then(() => {
+                alert('✅ GST Invoice ' + currentInvoiceNo + ' saved & synced to Google Sheet successfully!');
+                
+                let parts = currentInvoiceNo.split('/');
+                let nextNum = parseInt(parts[1]) +
