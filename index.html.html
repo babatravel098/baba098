@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Baba Tour & Travels - Secure Login</title>
+    <title>Baba Tour & Travels - GST Invoice Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- jsPDF Library for generating professional PDF receipts -->
+    <!-- jsPDF Library for generating professional PDF receipts and GST Tax Invoices -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- FontAwesome for Floating Call & WhatsApp Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -38,6 +38,58 @@
         </div>
     </div>
 
+    <!-- GST Invoice Edit Modal Form -->
+    <div id="gstModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-lg w-full space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="text-lg font-bold text-blue-900">📝 Edit & Generate GST Tax Invoice</h3>
+                <button onclick="closeGstModal()" class="text-gray-500 hover:text-red-600 font-bold text-lg">✕</button>
+            </div>
+            <form id="gstForm" onsubmit="submitGstInvoice(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="font-semibold text-gray-700">Client / Company Name</label>
+                    <input type="text" id="gstClientName" required class="w-full border p-2 rounded mt-1 font-semibold">
+                </div>
+                <div>
+                    <label class="font-semibold text-gray-700">Client Address</label>
+                    <input type="text" id="gstClientAddress" required class="w-full border p-2 rounded mt-1">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="font-semibold text-gray-700">Client GSTIN</label>
+                        <input type="text" id="gstClientGstin" class="w-full border p-2 rounded mt-1 uppercase font-mono" placeholder="09AACCI3895A1ZL">
+                    </div>
+                    <div>
+                        <label class="font-semibold text-gray-700">Invoice No.</label>
+                        <input type="text" id="gstInvoiceNo" value="2026-2027/40" required class="w-full border p-2 rounded mt-1">
+                    </div>
+                </div>
+                <div>
+                    <label class="font-semibold text-gray-700">Particulars (Description of Service)</label>
+                    <textarea id="gstParticulars" rows="2" required class="w-full border p-2 rounded mt-1"></textarea>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="font-semibold text-gray-700">Total Amount (₹)</label>
+                        <input type="number" id="gstTotal" required class="w-full border p-2 rounded mt-1 font-bold text-blue-900">
+                    </div>
+                    <div>
+                        <label class="font-semibold text-gray-700">Received / Advance (₹)</label>
+                        <input type="number" id="gstReceived" required class="w-full border p-2 rounded mt-1 font-bold text-green-700">
+                    </div>
+                    <div>
+                        <label class="font-semibold text-gray-700">Tax Rate</label>
+                        <input type="text" id="gstRate" value="5% (SGST 2.5% + CGST 2.5%)" disabled class="w-full border p-2 rounded mt-1 bg-gray-100 text-gray-600">
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" class="flex-1 bg-purple-600 text-white p-2.5 rounded font-semibold hover:bg-purple-700 transition cursor-pointer">📥 Download GST Invoice PDF</button>
+                    <button type="button" onclick="closeGstModal()" class="bg-gray-300 text-gray-700 px-4 py-2.5 rounded font-semibold hover:bg-gray-400 transition cursor-pointer">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Main Content (Hidden until login) -->
     <div id="mainContent" class="hidden">
         <!-- Header -->
@@ -58,6 +110,10 @@
                     <div>
                         <label class="text-xs font-semibold text-gray-600">ग्राहक का नाम (Customer Name)</label>
                         <input type="text" id="custName" required class="w-full border p-2 rounded text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">Client / Company GSTIN (Optional)</label>
+                        <input type="text" id="clientGstin" placeholder="e.g. 09AACCI3895A1ZL" class="w-full border p-2 rounded text-sm uppercase font-mono">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
@@ -198,7 +254,7 @@
                             <input type="number" id="advanceAmount" required class="w-full border p-2 rounded text-sm font-bold text-green-700">
                         </div>
                     </div>
-                    <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white p-2.5 rounded font-semibold hover:bg-blue-700 transition shadow cursor-pointer">Save Booking & Generate PDF</button>
+                    <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white p-2.5 rounded font-semibold hover:bg-blue-700 transition shadow cursor-pointer">Save Booking & Generate Receipt</button>
                 </form>
             </section>
 
@@ -383,7 +439,8 @@
                     <td class="p-2 text-gray-600">${b.staff || '-'}</td>
                     <td class="p-2 space-y-1">
                         <button onclick='sendWhatsApp(${JSON.stringify(b)})' class="block w-full text-center bg-green-600 text-white px-2 py-0.5 rounded font-semibold cursor-pointer">WhatsApp</button>
-                        <button onclick='generatePDF(${JSON.stringify(b)})' class="block w-full text-center bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold hover:bg-blue-200 cursor-pointer">PDF</button>
+                        <button onclick='generatePDF(${JSON.stringify(b)})' class="block w-full text-center bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold hover:bg-blue-200 cursor-pointer">Receipt</button>
+                        <button onclick='openGstModal(${JSON.stringify(b)})' class="block w-full text-center bg-purple-600 text-white px-2 py-0.5 rounded font-semibold hover:bg-purple-700 cursor-pointer">GST Invoice</button>
                         <button onclick="deleteBooking('${b.phone}', '${b.timestamp}')" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold hover:bg-red-200 cursor-pointer">Delete</button>
                     </td>
                 `;
@@ -403,30 +460,20 @@
                            `• Tour Route: ${b.tourRoute || 'N/A'}%0A` +
                            `• Journey Date (DOJ): ${b.startDate || ''} to ${b.endDate || ''}%0A` +
                            `• Vehicle Name: ${b.vehicle || ''}%0A` +
-                           `• Agreed KM: ${b.agreedKm || 'As per deal'} (Extra KM: ₹${b.extraKmRate || 18}/KM)%0A%0A` +
+                           `• Agreed KM: ${b.agreedKm || 'As per deal'}%0A%0A` +
                            `💰 *Payment Summary:*%0A` +
                            `• Total Amount: ₹${b.total || 0}/-%0A` +
                            `• Advance Paid: ₹${b.advance || 0}/-%0A` +
                            `• Balance Due: ₹${balance}/-%0A%0A` +
-                           `⚙️ *Inclusions & Terms:*%0A` +
-                           `• Driver Night Charge: ${b.driverNight || ''}%0A` +
-                           `• Parking: ${b.parkingInc || ''}%0A` +
-                           `• Toll Tax: ${b.tollInc || ''}%0A` +
-                           `• Checkpost: ${b.checkpostInc || ''}%0A` +
-                           `• Note: Extra locations/routes added during tour will be charged extra. For GST bill after booking, 5% extra GST will be applicable.%0A%0A` +
-                           `💬 *Direct WhatsApp Chat Link:*%0A` +
-                           `https://wa.me/message/CPOLYJU4RQ2UH1%0A%0A` +
-                           `👤 Office Booking Staff: ${b.staff || ''}%0A` +
                            `🏢 *Baba Tour and Travels* (Railway Station Road, Gorakhpur)%0A` +
                            `🧾 GST No: 09AARPU5006D1ZI%0A` +
                            `📞 Helpline / WhatsApp: 8726667104, 9026060471, 9415966902%0A` +
-                           `📧 Email: babatourandtravel098@gmail.com%0A` +
-                           `🌐 Website: www.babatourandtravel.com%0A` +
-                           `⚠️ For any complaint or query, please contact our helpline numbers above.`;
+                           `🌐 Website: www.babatourandtravel.com`;
             
             window.open(`https://wa.me/91${b.phone}?text=${waText}`, '_blank');
         }
 
+        // Standard Receipt PDF
         function generatePDF(b) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
@@ -464,37 +511,165 @@
             addLine("Selected Vehicle", b.vehicle);
             addLine("Agreed KM Limit", b.agreedKm);
             addLine("Extra KM Charge", `Rs. ${b.extraKmRate || 18} / KM`);
-            addLine("Extra Day Charge", `Rs. ${b.extraDayRate || 2500} / Day`);
-            addLine("Driver Night Charge", `${b.driverNight} (After 9 PM, Per Night)`);
-            addLine("Parking Status", b.parkingInc);
-            addLine("Toll Tax Status", b.tollInc);
-            addLine("Checkpost Status", b.checkpostInc);
+            addLine("Driver Night Charge", `${b.driverNight}`);
             addLine("Total Amount", `Rs. ${b.total}/-`);
             addLine("Advance Paid", `Rs. ${b.advance}/-`);
             addLine("Balance Amount", `Rs. ${balance}/-`);
             addLine("Office Booking Staff", b.staff);
             addLine("Booking Date/Time", b.timestamp);
 
-            y += 4;
+            doc.save(`Baba_Booking_${b.name}.pdf`);
+        }
+
+        // --- GST INVOICE MODAL CONTROLS ---
+        function openGstModal(b) {
+            document.getElementById('gstClientName').value = b.name || '';
+            document.getElementById('gstClientAddress').value = b.address || 'Gorakhpur, Uttar Pradesh';
+            document.getElementById('gstClientGstin').value = b.clientGstin || '';
+            
+            let partText = `${b.pickup || 'GORAKHPUR'} TO ${b.drop || 'LOCAL'}, DATE ${b.startDate || ''}, VEHICLE - ${b.vehicle || 'INNOVA'}`;
+            document.getElementById('gstParticulars').value = partText;
+            document.getElementById('gstTotal').value = b.total || 0;
+            document.getElementById('gstReceived').value = b.advance || 0;
+
+            document.getElementById('gstModal').classList.remove('hidden');
+        }
+
+        function closeGstModal() {
+            document.getElementById('gstModal').classList.add('hidden');
+        }
+
+        function submitGstInvoice(e) {
+            e.preventDefault();
+            
+            const clientName = document.getElementById('gstClientName').value;
+            const clientAddress = document.getElementById('gstClientAddress').value;
+            const clientGstin = document.getElementById('gstClientGstin').value || 'Unregistered';
+            const invoiceNo = document.getElementById('gstInvoiceNo').value;
+            const particulars = document.getElementById('gstParticulars').value;
+            const totalAmt = parseFloat(document.getElementById('gstTotal').value) || 0;
+            const receivedAmt = parseFloat(document.getElementById('gstReceived').value) || 0;
+            const balanceAmt = totalAmt - receivedAmt;
+
+            let taxableAmt = (totalAmt / 1.05).toFixed(2);
+            let taxTotal = (totalAmt - taxableAmt).toFixed(2);
+            let halfTax = (taxTotal / 2).toFixed(2);
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.text("Tax Invoice", 105, 15, { align: "center" });
+
+            // Bill To Box
+            doc.setFontSize(10);
+            doc.text("Bill To", 14, 25);
+            doc.setFont("helvetica", "normal");
             doc.setFontSize(9);
-            doc.setTextColor(180, 0, 0);
-            doc.text("Terms & Conditions:", 20, y);
-            y += 5;
-            doc.setTextColor(60, 60, 60);
-            doc.setFontSize(8);
-            doc.text("1. Extra locations / routes added during tour will be charged extra.", 20, y);
-            y += 4;
-            doc.text("2. For GST bill after booking, 5% extra GST will be charged on total amount.", 20, y);
+            doc.text(`${clientName}`, 14, 31);
+            doc.text(`${clientAddress}`, 14, 36);
+            doc.text(`Uttar Pradesh, India`, 14, 41);
+            doc.text(`GSTIN: ${clientGstin}`, 14, 46);
+            doc.text(`State: 09-Uttar Pradesh`, 14, 51);
 
-            y += 8;
-            doc.setFontSize(8);
-            doc.setTextColor(150, 0, 0);
-            doc.text("Note: For any complaint or query, please contact: 9415966902 / 8726667104", 105, y, { align: "center" });
-            y += 4;
-            doc.setTextColor(50, 50, 50);
-            doc.text("Email: babatourandtravel098@gmail.com | Web: www.babatourandtravel.com", 105, y, { align: "center" });
+            // Invoice Details Right Box
+            doc.setFont("helvetica", "bold");
+            doc.text("Invoice Details", 130, 25);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Invoice No.: ${invoiceNo}`, 130, 31);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 130, 36);
+            doc.text(`Place of supply: 09-Uttar Pradesh`, 130, 41);
 
-            doc.save(`Baba_Tour_Booking_${b.name}.pdf`);
+            // Table Header
+            doc.setFillColor(240, 240, 240);
+            doc.rect(14, 58, 182, 8, "F");
+            doc.setFont("helvetica", "bold");
+            doc.text("Si.No.", 18, 63);
+            doc.text("Particulars", 35, 63);
+            doc.text("Rate", 150, 63);
+            doc.text("Amount", 175, 63);
+
+            // Table Row
+            doc.setFont("helvetica", "normal");
+            doc.text("1", 18, 73);
+            doc.text(particulars, 35, 73, { maxWidth: 110 });
+            doc.text(`${totalAmt.toFixed(2)}`, 150, 73);
+            doc.text(`Rs. ${totalAmt.toFixed(2)}`, 175, 73);
+
+            // Total Line
+            doc.line(14, 82, 196, 82);
+            doc.setFont("helvetica", "bold");
+            doc.text("Total", 35, 87);
+            doc.text(`Rs. ${totalAmt.toFixed(2)}`, 175, 87);
+            doc.line(14, 91, 196, 91);
+
+            // Tax Breakdown Table
+            doc.setFillColor(240, 240, 240);
+            doc.rect(14, 97, 182, 8, "F");
+            doc.text("Tax type", 18, 102);
+            doc.text("Taxable amount", 65, 102);
+            doc.text("Rate", 120, 102);
+            doc.text("Tax amount", 160, 102);
+
+            doc.setFont("helvetica", "normal");
+            doc.text("SGST", 18, 111);
+            doc.text(`${taxableAmt}`, 65, 111);
+            doc.text("2.5%", 120, 111);
+            doc.text(`${halfTax}`, 160, 111);
+
+            doc.text("CGST", 18, 118);
+            doc.text(`${taxableAmt}`, 65, 118);
+            doc.text("2.5%", 120, 118);
+            doc.text(`${halfTax}`, 160, 118);
+
+            doc.line(14, 124, 196, 124);
+
+            // Amounts Summary Box
+            let startY = 132;
+            const addSummaryLine = (label, val, isBold = false) => {
+                if(isBold) doc.setFont("helvetica", "bold");
+                else doc.setFont("helvetica", "normal");
+                doc.text(label, 120, startY);
+                doc.text(`Rs. ${val}`, 175, startY);
+                startY += 6;
+            };
+
+            addSummaryLine("Sub Total", taxableAmt);
+            addSummaryLine("Tax (5%)", taxTotal);
+            addSummaryLine("Round off", "0.00");
+            addSummaryLine("Total", totalAmt.toFixed(2), true);
+            addSummaryLine("Received", receivedAmt.toFixed(2));
+            addSummaryLine("Balance", balanceAmt.toFixed(2), true);
+
+            // Bank Details Box
+            doc.setFont("helvetica", "bold");
+            doc.text("Bank Details", 14, 132);
+            doc.setFont("helvetica", "normal");
+            doc.text("Name: KOTAK MAHINDRA BANK LIMITED, GORAKHPUR", 14, 138);
+            doc.text("Account No.: 3411664106", 14, 144);
+            doc.text("IFSC code: KKBK0005297", 14, 150);
+            doc.text("Account holder's name: Baba Tour & Travel", 14, 156);
+
+            // Signature & Footer
+            doc.setFont("helvetica", "bold");
+            doc.text("For: BABA TOUR AND TRAVELS", 130, 175);
+            
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            doc.text("This is a system generated invoice and does not require physical signature or stamp.", 105, 195, { align: "center" });
+
+            // Company Footer at bottom
+            doc.setFillColor(30, 58, 138);
+            doc.rect(10, 202, 190, 22, "F");
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(9);
+            doc.text("BABA TOUR AND TRAVELS", 105, 209, { align: "center" });
+            doc.text("Opposite Gorakhpur Railway Station Gate Number 6, Gorakhpur, UP - 273001", 105, 214, { align: "center" });
+            doc.text("Phone: 8726667104 | Email: babatourandtravel098@gmail.com | GSTIN: 09AARPU5006D1ZI", 105, 219, { align: "center" });
+
+            doc.save(`GST_Tax_Invoice_${clientName}.pdf`);
+            closeGstModal();
         }
 
         function deleteBooking(phone, timestamp) {
@@ -525,7 +700,7 @@
             e.preventDefault();
             
             const btn = document.getElementById('submitBtn');
-            btn.innerText = "Saving & Generating PDF...";
+            btn.innerText = "Saving & Generating Receipt...";
             btn.disabled = true;
 
             const total = parseFloat(document.getElementById('totalAmount').value) || 0;
@@ -539,7 +714,7 @@
             const endDate = document.getElementById('endDate').value;
             const vehicle = document.getElementById('vehicleSelect').value;
             const staff = document.getElementById('staffName').value;
-            const balance = total - advance;
+            const clientGstin = document.getElementById('clientGstin').value;
 
             const formData = {
                 action: "add",
@@ -562,6 +737,7 @@
                 total: total,
                 advance: advance,
                 staff: staff,
+                clientGstin: clientGstin,
                 timestamp: new Date().toLocaleString()
             };
 
@@ -571,17 +747,16 @@
                 body: JSON.stringify(formData)
             })
             .then(() => {
-                alert('Booking successfully saved and PDF generation started!');
-                
+                alert('Booking successfully saved!');
                 generatePDF(formData);
 
-                if(confirm('Kya aap customer ko WhatsApp par professional confirmation message bhejna chahte hain?')) {
+                if(confirm('Kya aap customer ko WhatsApp par confirmation message bhejna chahte hain?')) {
                     sendWhatsApp(formData);
                 }
 
                 this.reset();
                 updateDriverNight();
-                btn.innerText = "Save Booking & Generate PDF";
+                btn.innerText = "Save Booking & Generate Receipt";
                 btn.disabled = false;
                 
                 setTimeout(fetchBookings, 2000);
@@ -589,7 +764,7 @@
             .catch(error => {
                 console.error('Error!', error);
                 alert('Kuch dikkat aayi, kripya dobara koshish karein.');
-                btn.innerText = "Save Booking & Generate PDF";
+                btn.innerText = "Save Booking & Generate Receipt";
                 btn.disabled = false;
             });
         });
