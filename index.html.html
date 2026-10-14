@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Baba Tour & Travels - WhatsApp OTP Login</title>
+    <title>Baba Tour & Travels - Secure Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- jsPDF Library for generating professional PDF receipts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -13,44 +13,27 @@
 </head>
 <body class="bg-slate-100 font-sans">
 
-    <!-- Login Modal with WhatsApp OTP -->
+    <!-- Login Modal Screen -->
     <div id="loginModal" class="fixed inset-0 bg-blue-950 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full space-y-5">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full space-y-6">
             <div class="text-center">
                 <h2 class="text-2xl font-bold text-blue-900">🚐 Baba Tour & Travels</h2>
-                <p class="text-xs text-gray-500 mt-1">Gorakhpur | Secure WhatsApp OTP Login</p>
+                <p class="text-xs text-gray-500 mt-1">Gorakhpur | Secure Staff Login</p>
             </div>
-
-            <!-- Step 1: Enter Mobile / Username -->
-            <div id="step1Container" class="space-y-4">
+            <form id="loginForm" class="space-y-4" onsubmit="handleLogin(event)">
                 <div>
-                    <label class="text-xs font-semibold text-gray-600">Authorized Mobile Number / Username</label>
-                    <input type="text" id="loginUser" class="w-full border p-3 rounded-lg text-sm mt-1 focus:ring-2 focus:ring-blue-600 outline-none" placeholder="Enter mobile or admin">
-                </div>
-                <button type="button" onclick="sendOtpAction()" class="w-full bg-green-600 text-white p-3 rounded-lg font-semibold hover:bg-green-700 transition shadow-md flex items-center justify-center gap-2 cursor-pointer">
-                    <i class="fa-brands fa-whatsapp text-lg"></i> Get WhatsApp OTP
-                </button>
-                <div id="step1Error" class="text-red-500 text-xs text-center hidden font-semibold">Kripya sahi registered mobile number ya username dalein!</div>
-            </div>
-
-            <!-- Step 2: Enter OTP -->
-            <div id="step2Container" class="space-y-4 hidden">
-                <div class="bg-green-50 p-3 rounded-lg border border-green-200 text-center">
-                    <p class="text-xs text-green-800 font-medium">WhatsApp par OTP bhej diya gaya hai!</p>
-                    <p class="text-xs font-bold text-blue-900 mt-1">Aapka Generated OTP yeh raha:</p>
-                    <div id="displayOtpBox" class="text-2xl font-mono font-bold text-green-700 bg-white py-2 px-4 rounded shadow-inner mt-2 inline-block border">----</div>
+                    <label class="text-xs font-semibold text-gray-600">Username</label>
+                    <input type="text" id="loginUser" required class="w-full border p-3 rounded-lg text-sm mt-1 focus:ring-2 focus:ring-blue-600 outline-none" placeholder="Enter username">
                 </div>
                 <div>
-                    <label class="text-xs font-semibold text-gray-600">Enter 4-Digit OTP</label>
-                    <input type="text" id="enteredOtp" maxlength="4" class="w-full border p-3 rounded-lg text-center text-lg font-bold tracking-widest mt-1 focus:ring-2 focus:ring-blue-600 outline-none" placeholder="1234">
+                    <label class="text-xs font-semibold text-gray-600">Password</label>
+                    <input type="password" id="loginPass" required class="w-full border p-3 rounded-lg text-sm mt-1 focus:ring-2 focus:ring-blue-600 outline-none" placeholder="Enter password">
                 </div>
-                <div id="step2Error" class="text-red-500 text-xs text-center hidden font-semibold">Galat OTP! Kripya sahi OTP dalein.</div>
-                <button type="button" onclick="verifyOTP()" class="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-md cursor-pointer">Verify & Login</button>
-                <button type="button" onclick="resetLogin()" class="w-full text-gray-500 text-xs hover:underline text-center">← Back to Mobile Entry</button>
-            </div>
-
-            <div class="text-center text-[10px] text-gray-400 border-t pt-3">
-                Baba Tour and Travels, Railway Station Road, Gorakhpur.
+                <div id="loginError" class="text-red-500 text-xs text-center hidden font-semibold">Galat Username ya Password! Kripya dobara koshish karein.</div>
+                <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-md cursor-pointer">Login to Dashboard</button>
+            </form>
+            <div class="text-center text-[10px] text-gray-400">
+                Authorized access only. Baba Tour and Travels, Gorakhpur.
             </div>
         </div>
     </div>
@@ -266,9 +249,6 @@
         
         let allBookingsData = [];
         let currentTab = 'new';
-        let generatedOtpCode = "";
-
-        const ALLOWED_USERS = ["8726667104", "9026060471", "9415966902", "admin", "ankit"];
 
         window.onload = function() {
             if (sessionStorage.getItem('baba_logged_in') === 'true') {
@@ -279,50 +259,21 @@
             }
         };
 
-        function sendOtpAction() {
-            const userVal = document.getElementById('loginUser').value.trim();
-            const errDiv = document.getElementById('step1Error');
+        function handleLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+            const errDiv = document.getElementById('loginError');
 
-            if (!ALLOWED_USERS.includes(userVal)) {
-                errDiv.classList.remove('hidden');
-                return;
-            }
-            errDiv.classList.add('hidden');
-
-            // Generate 4-digit random OTP
-            generatedOtpCode = Math.floor(1000 + Math.random() * 9000).toString();
-            document.getElementById('displayOtpBox').innerText = generatedOtpCode;
-
-            // Switch to Step 2
-            document.getElementById('step1Container').classList.add('hidden');
-            document.getElementById('step2Container').classList.remove('hidden');
-
-            if (userVal.length === 10 && !isNaN(userVal)) {
-                const waMsg = `🚐 *Baba Tour & Travels* Login OTP:%0AYour secure verification code is: *${generatedOtpCode}*%0AValid for this login session.`;
-                window.open(`https://wa.me/91${userVal}?text=${waMsg}`, '_blank');
-            }
-        }
-
-        function verifyOTP() {
-            const entered = document.getElementById('enteredOtp').value.trim();
-            const errDiv2 = document.getElementById('step2Error');
-
-            if (entered === generatedOtpCode) {
+            if (user === 'admin' && pass === 'baba123') {
                 sessionStorage.setItem('baba_logged_in', 'true');
                 document.getElementById('loginModal').style.display = 'none';
                 document.getElementById('mainContent').classList.remove('hidden');
                 updateDriverNight();
                 fetchBookings();
             } else {
-                errDiv2.classList.remove('hidden');
+                errDiv.classList.remove('hidden');
             }
-        }
-
-        function resetLogin() {
-            document.getElementById('step2Container').classList.add('hidden');
-            document.getElementById('step1Container').classList.remove('hidden');
-            document.getElementById('enteredOtp').value = '';
-            document.getElementById('step2Error').classList.add('hidden');
         }
 
         function handleLogout() {
