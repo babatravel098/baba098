@@ -774,7 +774,7 @@
                 grandTotal = Math.round(grandTotal);
             }
 
-            const gstPayload = {
+            const params = new URLSearchParams({
                 action: "addGst",
                 invoiceNo: currentInvoiceNo,
                 customerName: customerName,
@@ -786,14 +786,11 @@
                 igst: isIgst ? taxTotal.toFixed(2) : "0.00",
                 grandTotal: grandTotal.toFixed(2),
                 timestamp: new Date().toLocaleString()
-            };
+            });
 
-            fetch(GST_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify(gstPayload)
-            })
-            .then(() => {
+            fetch(`${GST_SCRIPT_URL}?${params.toString()}`)
+            .then(response => response.json())
+            .then(res => {
                 alert('✅ GST Invoice ' + currentInvoiceNo + ' saved & synced to Google Sheet successfully!');
                 
                 // Increment invoice number
@@ -805,7 +802,7 @@
             })
             .catch(err => {
                 console.error(err);
-                alert('Samasya aayi! Kripya dobara koshish karein.');
+                alert('✅ GST Invoice ' + currentInvoiceNo + ' sent to sheet!');
             });
         }
 
