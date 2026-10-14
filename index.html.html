@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baba Tour & Travels - Live Dashboard & Google Sheet Sync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsPDF Library for generating professional PDF receipts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- FontAwesome for Floating Call & WhatsApp Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body class="bg-slate-100 font-sans">
+
+    <!-- Header -->
+    <header class="bg-blue-900 text-white p-4 shadow-md flex justify-between items-center">
+        <h1 class="text-xl font-bold">🚐 Baba Tour & Travels, Gorakhpur</h1>
+        <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold">🟢 Live Cloud Synced</span>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left: New Booking Form -->
+        <section class="bg-white p-5 rounded-xl shadow-md lg:col-span-1 h-fit">
+            <h2 class="text-lg font-semibold mb-4 text-blue-900 border-b pb-2">➕ New Booking Entry</h2>
+            <form id="bookingForm" class="space-y-3">
+                <div>
+                    <label class="text-xs font-semibold text-gray-600">ग्राहक का नाम (Customer Name)</label>
+                    <input type="text" id="custName" required class="w-full border p-2 rounded text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">मोबाइल नंबर (Mobile)</label>
+                        <input type="tel" id="custPhone" required class="w-full border p-2 rounded text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">Booking Office (Staff Name)</label>
+                        <input type="text" id="staffName" placeholder="Ankit / Staff" required class="w-full border p-2 rounded text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-gray-600">ग्राहक पूरा पता (Customer Address)</label>
+                    <input type="text" id="custAddress" required class="w-full border p-2 rounded text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">पिकअप (Pickup Location)</label>
+                        <input type="text" id="pickup" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Gorakhpur">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">ड्रॉप / गंतव्य (Drop / Destination)</label>
+                        <input type="text" id="drop" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Masrooe">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-gray-600">यात्रा का पूरा रूट / Via (Visiting Places)</label>
+                    <input type="text" id="tourRoute" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Gorakhpur - Ayodhya - Varanasi">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">यात्रा शुरू (From Date)</label>
+                        <input type="date" id="startDate" required class="w-full border p-2 rounded text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">वापसी तारीख (To Date)</label>
+                        <input type="date" id="endDate" required class="w-full border p-2 rounded text-sm">
+                    </div>
+                </div>
+                <div>
+                   <label class="text-xs font-semibold text-gray-600">गाड़ी चुनें (Vehicle Name)</label>
+                    <select id="vehicleSelect" onchange="updateDriverNight()" class="w-full border p-2 rounded text-sm bg-white font-medium text-blue-900">
+                        <optgroup label="🚍 Buses (Driver Night: ₹800)">
+                            <option value="56 Seater Bus">56 Seater Bus</option>
+                            <option value="45 Seater Bus">45 Seater Bus</option>
+                            <option value="42 Seater Bus">42 Seater Bus</option>
+                            <option value="35 Seater Bus">35 Seater Bus</option>
+                            <option value="32 Seater Bus">32 Seater Bus</option>
+                        </optgroup>
+                        <optgroup label="🚐 Tempo Travellers & Vans (Driver Night: ₹500)">
+                            <option value="Force Urbania">Force Urbania</option>
+                            <option value="26 Seater Traveller (1)">26 Seater Traveller (Vehicle 1)</option>
+                            <option value="26 Seater Traveller (2)">26 Seater Traveller (Vehicle 2)</option>
+                            <option value="20 Seater Traveller">20 Seater Traveller</option>
+                            <option value="17 Seater Force">17 Seater Force</option>
+                            <option value="12 Seater Traveller">12 Seater Traveller</option>
+                            <option value="Mahindra Supro / Van">Mahindra Supro / Van</option>
+                        </optgroup>
+                        <optgroup label="🚙 SUVs & MUVs (Driver Night: ₹400)">
+                            <option value="Innova Crysta / Hycross">Innova Crysta / Hycross</option>
+                            <option value="Mahindra Marazzo">Mahindra Marazzo</option>
+                            <option value="Force Trax Cruiser">Force Trax Cruiser</option>
+                            <option value="Ertiga">Ertiga</option>
+                            <option value="Kia Carens">Kia Carens</option>
+                            <option value="Toyota Rumion">Toyota Rumion</option>
+                        </optgroup>
+                        <optgroup label="🚗 Sedans & Hatchbacks (Driver Night: ₹300)">
+                            <option value="Maruti Dzire">Maruti Dzire</option>
+                            <option value="Honda Amaze">Honda Amaze</option>
+                            <option value="Hyundai Aura">Hyundai Aura</option>
+                            <option value="Tata Tigor">Tata Tigor</option>
+                            <option value="Maruti WagonR / Swift">Maruti WagonR / Swift</option>
+                            <option value="Hyundai i10 / Tata Tiago">Hyundai i10 / Tata Tiago</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2 rounded border">
+                    <div>
+                        <label class="text-[10px] font-semibold text-gray-600">तय KM</label>
+                        <input type="text" id="agreedKm" placeholder="500 KM" class="w-full border p-1 rounded text-xs">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-semibold text-gray-600">Extra KM (₹)</label>
+                        <input type="number" id="extraKmRate" placeholder="18" class="w-full border p-1 rounded text-xs">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-semibold text-gray-600">Extra Day (₹)</label>
+                        <input type="number" id="extraDayRate" placeholder="2500" class="w-full border p-1 rounded text-xs">
+                    </div>
+                </div>
+
+                <!-- Tour Exclusions / Inclusions Options -->
+                <div class="bg-amber-50 p-2 rounded border border-amber-200 space-y-2">
+                    <p class="text-[11px] font-bold text-amber-900">Tour Terms & Charges Status:</p>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                            <label class="text-[11px] font-semibold text-gray-700">Driver Night:</label>
+                            <select id="driverNight" class="w-full border p-1 rounded bg-white text-xs font-bold text-orange-800">
+                                <option value="₹800 Per Night">₹800 Per Night (Bus)</option>
+                                <option value="₹500 Per Night">₹500 Per Night (Traveller)</option>
+                                <option value="₹400 Per Night">₹400 Per Night (SUV/MUV)</option>
+                                <option value="₹300 Per Night">₹300 Per Night (Sedan/Hatch)</option>
+                                <option value="Included in Total">Included in Total</option>
+                                <option value="Not Applicable">Not Applicable</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-gray-700">Parking:</label>
+                            <select id="parkingInc" class="w-full border p-1 rounded bg-white text-xs">
+                                <option value="Excluded (Extra)">Excluded (Extra)</option>
+                                <option value="Included">Included</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-gray-700">Toll Tax:</label>
+                            <select id="tollInc" class="w-full border p-1 rounded bg-white text-xs">
+                                <option value="Excluded (Extra)">Excluded (Extra)</option>
+                                <option value="Included">Included</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-gray-700">Checkpost:</label>
+                            <select id="checkpostInc" class="w-full border p-1 rounded bg-white text-xs">
+                                <option value="Excluded (Extra)">Excluded (Extra)</option>
+                                <option value="Included">Included</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">कुल रकम (Total ₹)</label>
+                        <input type="number" id="totalAmount" required class="w-full border p-2 rounded text-sm font-bold text-blue-900">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">एडवांस (Advance ₹)</label>
+                        <input type="number" id="advanceAmount" required class="w-full border p-2 rounded text-sm font-bold text-green-700">
+                    </div>
+                </div>
+                <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white p-2.5 rounded font-semibold hover:bg-blue-700 transition shadow">Save Booking & Generate PDF</button>
+            </form>
+        </section>
+
+        <!-- Right: Live Bookings Table from Google Sheet -->
+        <section class="bg-white p-5 rounded-xl shadow-md lg:col-span-2">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 border-b pb-2 gap-2">
+                <h2 class="text-lg font-semibold text-blue-900">📋 Bookings Management</h2>
+                <div class="flex gap-2">
+                    <button onclick="switchTab('new')" id="newTabBtn" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow">🆕 New Bookings</button>
+                    <button onclick="switchTab('completed')" id="completedTabBtn" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold">✅ Completed Bookings</button>
+                    <button onclick="fetchBookings()" class="bg-blue-100 text-blue-800 px-2.5 py-1.5 rounded text-xs font-semibold">🔄</button>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto max-h-[600px]">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-200 text-slate-700 sticky top-0">
+                            <th class="p-2">Customer</th>
+                            <th class="p-2">Route & Places</th>
+                            <th class="p-2">Vehicle & Terms</th>
+                            <th class="p-2">Payment</th>
+                            <th class="p-2">Staff</th>
+                            <th class="p-2">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bookingTableBody">
+                        <tr><td colspan="6" class="text-center p-6 text-gray-400">Loading bookings...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Floating Quick Call & WhatsApp Buttons -->
+    <div style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 12px;">
+        <!-- Phone Call Button -->
+        <a href="tel:8726667104" title="Call Now" style="background-color: #2563eb; color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-decoration: none; transition: transform 0.2s;">
+            <i class="fa-solid fa-phone"></i>
+        </a>
+        <!-- WhatsApp Chat Button -->
+        <a href="https://wa.me/message/CPOLYJU4RQ2UH1" target="_blank" title="Chat on WhatsApp" style="background-color: #25D366; color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-decoration: none; transition: transform 0.2s;">
+            <i class="fa-brands fa-whatsapp"></i>
+        </a>
+    </div>
+
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQSDa1PdP9-7UKovVE4ZOd9cS2vRvrNX1zQtp-v1p9lu-7MRqLTklSTLBIlm_INa_7kA/exec";
+        
+        let allBookingsData = [];
+        let currentTab = 'new';
+
+        window.onload = function() {
+            updateDriverNight();
+            fetchBookings();
+        };
+
+        function updateDriverNight() {
+            const vehicle = document.getElementById('vehicleSelect').value;
+            const driverNightSelect = document.getElementById('driverNight');
+            
+            if (vehicle.includes('Bus')) {
+                driverNightSelect.value = '₹800 Per Night';
+            } else if (vehicle.includes('Traveller') || vehicle.includes('Urbania') || vehicle.includes('Force') || vehicle.includes('Supro')) {
+                driverNightSelect.value = '₹500 Per Night';
+            } else if (vehicle.includes('Innova') || vehicle.includes('Marazzo') || vehicle.includes('Cruiser') || vehicle.includes('Ertiga') || vehicle.includes('Carens') || vehicle.includes('Rumion')) {
+                driverNightSelect.value = '₹400 Per Night';
+            } else {
+                driverNightSelect.value = '₹300 Per Night';
+            }
+        }
+
+        function fetchBookings() {
+            const tbody = document.getElementById('bookingTableBody');
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Loading data from cloud...</td></tr>`;
+
+            fetch(SCRIPT_URL)
+            .then(response => {
+                if (!response.ok) throw new Error("Network response was not ok");
+                return response.json();
+            })
+            .then(data => {
+                if(!data) data = [];
+                allBookingsData = data.reverse();
+                renderTable();
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500">Data load karne mein samasya aayi. Kripya Refresh button dabayein.</td></tr>`;
+            });
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            const newBtn = document.getElementById('newTabBtn');
+            const compBtn = document.getElementById('completedTabBtn');
+
+            if(tab === 'new') {
+                newBtn.className = "bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow";
+                compBtn.className = "bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold";
+            } else {
+                compBtn.className = "bg-green-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow";
+                newBtn.className = "bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold";
+            }
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('bookingTableBody');
+            tbody.innerHTML = '';
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const filteredData = allBookingsData.filter(b => {
+                let endDate = b.endDate ? new Date(b.endDate) : today;
+                endDate.setHours(0, 0, 0, 0);
+
+                if (currentTab === 'completed') {
+                    return endDate < today;
+                } else {
+                    return endDate >= today;
+                }
+            });
+
+            if(filteredData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Yahan koi booking nahi hai.</td></tr>`;
+                return;
+            }
+
+            filteredData.forEach((b) => {
+                const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+                const row = document.createElement('tr');
+                row.className = "border-b hover:bg-slate-50";
+                row.innerHTML = `
+                    <td class="p-2">
+                        <b>${b.name || 'N/A'}</b><br>
+                        <span class="text-gray-600">${b.phone || ''}</span><br>
+                        <span class="text-gray-400 text-[10px]">${b.address || ''}</span>
+                    </td>
+                    <td class="p-2">
+                        <b>📍 Pickup:</b> ${b.pickup || 'N/A'}<br>
+                        <b>🎯 Drop:</b> ${b.drop || 'N/A'}<br>
+                        <b>🗺️ Route:</b> <span class="text-blue-800 font-semibold">${b.tourRoute || 'N/A'}</span><br>
+                        <span class="text-gray-500">📅 ${b.startDate || ''} to ${b.endDate || ''}</span>
+                    </td>
+                    <td class="p-2">
+                        <span class="bg-green-100 text-green-800 px-1.5 py-0.5 rounded font-semibold">${b.vehicle || 'N/A'}</span><br>
+                        <span class="text-gray-500 text-[10px]">KM: ${b.agreedKm || 'N/A'}</span><br>
+                        <span class="text-amber-700 text-[9px]">Night: ${b.driverNight || 'N/A'} | Toll: ${b.tollInc || 'N/A'}</span>
+                    </td>
+                    <td class="p-2">
+                        Tot: <b>₹${b.total || 0}</b><br>
+                        Adv: <span class="text-green-600 font-semibold">₹${b.advance || 0}</span><br>
+                        Bal: <span class="text-red-600 font-bold">₹${balance}</span>
+                    </td>
+                    <td class="p-2 text-gray-600">${b.staff || '-'}</td>
+                    <td class="p-2 space-y-1">
+                        <button onclick='sendWhatsApp(${JSON.stringify(b)})' class="block w-full text-center bg-green-600 text-white px-2 py-0.5 rounded font-semibold">WhatsApp</button>
+                        <button onclick='generatePDF(${JSON.stringify(b)})' class="block w-full text-center bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold hover:bg-blue-200">PDF</button>
+                        <button onclick="deleteBooking('${b.phone}', '${b.timestamp}')" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold hover:bg-red-200">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function sendWhatsApp(b) {
+            const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+            const waText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0A` +
+                           `Thanks for choosing us! Your booking is confirmed. ✅%0A%0A` +
+                           `📋 *Booking Details:*%0A` +
+                           `• Booking Date: ${b.timestamp || ''}%0A` +
+                           `• Customer Name: ${b.name || ''}%0A` +
+                           `• Pickup Location: ${b.pickup || ''}%0A` +
+                           `• Drop / Destination: ${b.drop || ''}%0A` +
+                           `• Tour Route: ${b.tourRoute || 'N/A'}%0A` +
+                           `• Journey Date (DOJ): ${b.startDate || ''} to ${b.endDate || ''}%0A` +
+                           `• Vehicle Name: ${b.vehicle || ''}%0A` +
+                           `• Agreed KM: ${b.agreedKm || 'As per deal'} (Extra KM: ₹${b.extraKmRate || 18}/KM)%0A%0A` +
+                           `💰 *Payment Summary:*%0A` +
+                           `• Total Amount: ₹${b.total || 0}/-%0A` +
+                           `• Advance Paid: ₹${b.advance || 0}/-%0A` +
+                           `• Balance Due: ₹${balance}/-%0A%0A` +
+                           `⚙️ *Inclusions & Terms:*%0A` +
+                           `• Driver Night Charge: ${b.driverNight || ''}%0A` +
+                           `• Parking: ${b.parkingInc || ''}%0A` +
+                           `• Toll Tax: ${b.tollInc || ''}%0A` +
+                           `• Checkpost: ${b.checkpostInc || ''}%0A` +
+                           `• Note: Extra locations/routes added during tour will be charged extra. For GST bill after booking, 5% extra GST will be applicable.%0A%0A` +
+                           `💬 *Direct WhatsApp Chat Link:*%0A` +
+                           `https://wa.me/message/CPOLYJU4RQ2UH1%0A%0A` +
+                           `👤 Office Booking Staff: ${b.staff || ''}%0A` +
+                           `🏢 *Baba Tour and Travels* (Railway Station Road, Gorakhpur)%0A` +
+                           `🧾 GST No: 09AARPU5006D1ZI%0A` +
+                           `📞 Helpline / WhatsApp: 8726667104, 9026060471, 9415966902%0A` +
+                           `📧 Email: babatourandtravel098@gmail.com%0A` +
+                           `🌐 Website: www.babatourandtravel.com%0A` +
+                           `⚠️ For any complaint or query, please contact our helpline numbers above.`;
+            
+            window.open(`https://wa.me/91${b.phone}?text=${waText}`, '_blank');
+        }
+
+        // --- ORIGINAL WORKING PDF FUNCTION (`doc.save`) ---
+        function generatePDF(b) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+
+            doc.setFillColor(30, 58, 138);
+            doc.rect(10, 10, 190, 25, "F");
+
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(18);
+            doc.text("BABA TOUR AND TRAVELS", 105, 20, { align: "center" });
+            doc.setFontSize(9);
+            doc.text("Railway Station Road, Gorakhpur | GST No: 09AARPU5006D1ZI", 105, 26, { align: "center" });
+            doc.text("Helpline: 8726667104, 9026060471, 9415966902", 105, 31, { align: "center" });
+
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(13);
+            doc.text("BOOKING CONFIRMATION RECEIPT", 105, 43, { align: "center" });
+
+            doc.setFontSize(10);
+            let y = 52;
+            const addLine = (label, value) => {
+                doc.text(label, 20, y);
+                doc.text(": " + (value || "N/A"), 75, y);
+                y += 6;
+            };
+
+            addLine("Customer Name", b.name);
+            addLine("Mobile Number", b.phone);
+            addLine("Customer Address", b.address);
+            addLine("Pickup Location", b.pickup);
+            addLine("Drop / Destination", b.drop);
+            addLine("Tour Route / Places", b.tourRoute);
+            addLine("Journey Date", `${b.startDate} to ${b.endDate}`);
+            addLine("Selected Vehicle", b.vehicle);
+            addLine("Agreed KM Limit", b.agreedKm);
+            addLine("Extra KM Charge", `Rs. ${b.extraKmRate || 18} / KM`);
+            addLine("Extra Day Charge", `Rs. ${b.extraDayRate || 2500} / Day`);
+            addLine("Driver Night Charge", `${b.driverNight} (After 9 PM, Per Night)`);
+            addLine("Parking Status", b.parkingInc);
+            addLine("Toll Tax Status", b.tollInc);
+            addLine("Checkpost Status", b.checkpostInc);
+            addLine("Total Amount", `Rs. ${b.total}/-`);
+            addLine("Advance Paid", `Rs. ${b.advance}/-`);
+            addLine("Balance Amount", `Rs. ${balance}/-`);
+            addLine("Office Booking Staff", b.staff);
+            addLine("Booking Date/Time", b.timestamp);
+
+            y += 4;
+            doc.setFontSize(9);
+            doc.setTextColor(180, 0, 0);
+            doc.text("Terms & Conditions:", 20, y);
+            y += 5;
+            doc.setTextColor(60, 60, 60);
+            doc.setFontSize(8);
+            doc.text("1. Extra locations / routes added during tour will be charged extra.", 20, y);
+            y += 4;
+            doc.text("2. For GST bill after booking, 5% extra GST will be charged on total amount.", 20, y);
+
+            y += 8;
+            doc.setFontSize(8);
+            doc.setTextColor(150, 0, 0);
+            doc.text("Note: For any complaint or query, please contact: 9415966902 / 8726667104", 105, y, { align: "center" });
+            y += 4;
+            doc.setTextColor(50, 50, 50);
+            doc.text("Email: babatourandtravel098@gmail.com | Web: www.babatourandtravel.com", 105, y, { align: "center" });
+
+            doc.save(`Baba_Tour_Booking_${b.name}.pdf`);
+        }
+
+        function deleteBooking(phone, timestamp) {
+            if(confirm('Kya aap is booking ko software aur Google Sheet dono se delete karna chahte hain?')) {
+                const deleteData = {
+                    action: "delete",
+                    phone: phone,
+                    timestamp: timestamp
+                };
+
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify(deleteData)
+                })
+                .then(() => {
+                    alert('Booking successfully deleted!');
+                    setTimeout(fetchBookings, 2000);
+                })
+                .catch(error => {
+                    console.error('Error deleting:', error);
+                    alert('Delete karne mein kuch samasya aayi.');
+                });
+            }
+        }
+
+        document.getElementById('bookingForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const btn = document.getElementById('submitBtn');
+            btn.innerText = "Saving & Generating PDF...";
+            btn.disabled = true;
+
+            const total = parseFloat(document.getElementById('totalAmount').value) || 0;
+            const advance = parseFloat(document.getElementById('advanceAmount').value) || 0;
+            const phone = document.getElementById('custPhone').value;
+            const name = document.getElementById('custName').value;
+            const pickup = document.getElementById('pickup').value;
+            const drop = document.getElementById('drop').value;
+            const tourRoute = document.getElementById('tourRoute').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const vehicle = document.getElementById('vehicleSelect').value;
+            const staff = document.getElementById('staffName').value;
+            const balance = total - advance;
+
+            const formData = {
+                action: "add",
+                name: name,
+                phone: phone,
+                address: document.getElementById('custAddress').value,
+                pickup: pickup,
+                drop: drop,
+                tourRoute: tourRoute,
+                startDate: startDate,
+                endDate: endDate,
+                vehicle: vehicle,
+                agreedKm: document.getElementById('agreedKm').value,
+                extraKmRate: document.getElementById('extraKmRate').value,
+                extraDayRate: document.getElementById('extraDayRate').value,
+                driverNight: document.getElementById('driverNight').value,
+                parkingInc: document.getElementById('parkingInc').value,
+                tollInc: document.getElementById('tollInc').value,
+                checkpostInc: document.getElementById('checkpostInc').value,
+                total: total,
+                advance: advance,
+                staff: staff,
+                timestamp: new Date().toLocaleString()
+            };
+
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify(formData)
+            })
+            .then(() => {
+                alert('Booking successfully saved and PDF generation started!');
+                
+                generatePDF(formData);
+
+                if(confirm('Kya aap customer ko WhatsApp par professional confirmation message bhejna chahte hain?')) {
+                    sendWhatsApp(formData);
+                }
+
+                this.reset();
+                updateDriverNight();
+                btn.innerText = "Save Booking & Generate PDF";
+                btn.disabled = false;
+                
+                setTimeout(fetchBookings, 2000);
+            })
+            .catch(error => {
+                console.error('Error!', error);
+                alert('Kuch dikkat aayi, kripya dobara koshish karein.');
+                btn.innerText = "Save Booking & Generate PDF";
+                btn.disabled = false;
+            });
+        });
+    </script>
+</body>
+</html>
