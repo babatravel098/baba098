@@ -388,4 +388,505 @@
     </div>
 
     <!-- Floating Quick Call & WhatsApp Buttons -->
-    <div style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap:
+    <div style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 12px;">
+        <a href="tel:8726667104" title="Call Now" style="background-color: #2563eb; color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-decoration: none;">
+            <i class="fa-solid fa-phone"></i>
+        </a>
+        <a href="https://wa.me/message/CPOLYJU4RQ2UH1" target="_blank" title="Chat on WhatsApp" style="background-color: #25D366; color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-decoration: none;">
+            <i class="fa-brands fa-whatsapp"></i>
+        </a>
+    </div>
+
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQSDa1PdP9-7UKovVE4ZOd9cS2vRvrNX1zQtp-v1p9lu-7MRqLTklSTLBIlm_INa_7kA/exec";
+        const GST_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxhGEW-3Qk1BMvfQkCL0wbmFND5sy725VAgNQ3bA0aSpY7hzrJwyp_TNzNIvd-F_hRPnQ/exec";
+        
+        let allBookingsData = [];
+        let currentTab = 'new';
+        let currentInvoiceNo = "2026-2027/41";
+
+        window.onload = function() {
+            if (sessionStorage.getItem('baba_logged_in') === 'true') {
+                document.getElementById('loginModal').style.display = 'none';
+                document.getElementById('mainContent').classList.remove('hidden');
+                updateDriverNight();
+                fetchBookings();
+                loadLastInvoiceNumber();
+            }
+        };
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+            const errDiv = document.getElementById('loginError');
+
+            if (user === 'admin' && pass === 'baba123') {
+                sessionStorage.setItem('baba_logged_in', 'true');
+                document.getElementById('loginModal').style.display = 'none';
+                document.getElementById('mainContent').classList.remove('hidden');
+                updateDriverNight();
+                fetchBookings();
+                loadLastInvoiceNumber();
+            } else {
+                errDiv.classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem('baba_logged_in');
+            location.reload();
+        }
+
+        function loadLastInvoiceNumber() {
+            let lastNum = localStorage.getItem('baba_last_inv_num');
+            if (lastNum) {
+                let nextVal = parseInt(lastNum) + 1;
+                currentInvoiceNo = `2026-2027/${nextVal}`;
+            } else {
+                currentInvoiceNo = "2026-2027/41";
+            }
+        }
+
+        function updateDriverNight() {
+            const vehicle = document.getElementById('vehicleSelect').value;
+            const driverNightSelect = document.getElementById('driverNight');
+            if(!driverNightSelect) return;
+            if (vehicle.includes('Bus')) {
+                driverNightSelect.value = '₹800 Per Night';
+            } else if (vehicle.includes('Traveller') || vehicle.includes('Urbania') || vehicle.includes('Force') || vehicle.includes('Supro')) {
+                driverNightSelect.value = '₹500 Per Night';
+            } else if (vehicle.includes('Innova') || vehicle.includes('Marazzo') || vehicle.includes('Cruiser') || vehicle.includes('Ertiga') || vehicle.includes('Carens') || vehicle.includes('Rumion')) {
+                driverNightSelect.value = '₹400 Per Night';
+            } else {
+                driverNightSelect.value = '₹300 Per Night';
+            }
+        }
+
+        function fetchBookings() {
+            const tbody = document.getElementById('bookingTableBody');
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Loading data from cloud...</td></tr>`;
+
+            fetch(SCRIPT_URL)
+            .then(response => response.json())
+            .then(data => {
+                if(!data) data = [];
+                allBookingsData = data.reverse();
+                renderTable();
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500">Data load karne mein samasya aayi. Kripya Refresh button dabayein.</td></tr>`;
+            });
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            const newBtn = document.getElementById('newTabBtn');
+            const compBtn = document.getElementById('completedTabBtn');
+
+            if(tab === 'new') {
+                newBtn.className = "bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow";
+                compBtn.className = "bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold";
+            } else {
+                compBtn.className = "bg-green-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow";
+                newBtn.className = "bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold";
+            }
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('bookingTableBody');
+            tbody.innerHTML = '';
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const filteredData = allBookingsData.filter(b => {
+                let endDate = b.endDate ? new Date(b.endDate) : today;
+                endDate.setHours(0, 0, 0, 0);
+
+                if (currentTab === 'completed') {
+                    return endDate < today;
+                } else {
+                    return endDate >= today;
+                }
+            });
+
+            if(filteredData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Yahan koi booking nahi hai.</td></tr>`;
+                return;
+            }
+
+            filteredData.forEach((b) => {
+                const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+                const row = document.createElement('tr');
+                row.className = "border-b hover:bg-slate-50";
+                row.innerHTML = `
+                    <td class="p-2">
+                        <b>${b.name || 'N/A'}</b><br>
+                        <span class="text-gray-600">${b.phone || ''}</span><br>
+                        <span class="text-gray-400 text-[10px]">${b.address || ''}</span>
+                    </td>
+                    <td class="p-2">
+                        <b>📍 Pickup:</b> ${b.pickup || 'N/A'}<br>
+                        <b>🎯 Drop:</b> ${b.drop || 'N/A'}<br>
+                        <b>🗺️ Route:</b> <span class="text-blue-800 font-semibold">${b.tourRoute || 'N/A'}</span><br>
+                        <span class="text-gray-500">📅 ${b.startDate || ''} to ${b.endDate || ''}</span>
+                    </td>
+                    <td class="p-2">
+                        <span class="bg-green-100 text-green-800 px-1.5 py-0.5 rounded font-semibold">${b.vehicle || 'N/A'}</span><br>
+                        <span class="text-gray-500 text-[10px]">KM: ${b.agreedKm || 'N/A'}</span><br>
+                        <span class="text-amber-700 text-[9px]">Night: ${b.driverNight || 'N/A'} | Toll: ${b.tollInc || 'N/A'}</span>
+                    </td>
+                    <td class="p-2">
+                        Tot: <b>₹${b.total || 0}</b><br>
+                        Adv: <span class="text-green-600 font-semibold">₹${b.advance || 0}</span><br>
+                        Bal: <span class="text-red-600 font-bold">₹${balance}</span>
+                    </td>
+                    <td class="p-2 text-gray-600">${b.staff || '-'}</td>
+                    <td class="p-2 space-y-1">
+                        <button onclick='sendWhatsApp(${JSON.stringify(b)})' class="block w-full text-center bg-green-600 text-white px-2 py-0.5 rounded font-semibold cursor-pointer">WhatsApp</button>
+                        <button onclick='generatePDF(${JSON.stringify(b)})' class="block w-full text-center bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold hover:bg-blue-200 cursor-pointer">Receipt</button>
+                        <button onclick='openVyaparGstModal(${JSON.stringify(b)})' class="block w-full text-center bg-purple-600 text-white px-2 py-0.5 rounded font-semibold hover:bg-purple-700 cursor-pointer">GST Invoice</button>
+                        <button onclick="deleteBooking('${b.phone}', '${b.timestamp}')" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold hover:bg-red-200 cursor-pointer">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function sendWhatsApp(b) {
+            const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+            const waText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0A` +
+                           `Thanks for choosing us! Your booking is confirmed. ✅%0A%0A` +
+                           `📋 *Booking Details:*%0A` +
+                           `• Customer Name: ${b.name || ''}%0A` +
+                           `• Route: ${b.tourRoute || 'N/A'}%0A` +
+                           `• Journey Date: ${b.startDate || ''} to ${b.endDate || ''}%0A` +
+                           `• Vehicle: ${b.vehicle || ''}%0A` +
+                           `• Driver Night: ${b.driverNight || ''} | Toll: ${b.tollInc || ''}%0A` +
+                           `• Total: ₹${b.total || 0}/- | Advance: ₹${b.advance || 0}/- | Balance: ₹${balance}/-%0A%0A` +
+                           `🏢 *Baba Tour and Travels* (Railway Station Road, Gorakhpur)%0A` +
+                           `🧾 GSTIN: 09AARPU5006D1ZI | Ph: 8726667104`;
+            window.open(`https://wa.me/91${b.phone}?text=${waText}`, '_blank');
+        }
+
+        function generatePDF(b) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+            doc.setFillColor(30, 58, 138);
+            doc.rect(10, 10, 190, 25, "F");
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(18);
+            doc.text("BABA TOUR AND TRAVELS", 105, 20, { align: "center" });
+            doc.setFontSize(9);
+            doc.text("Railway Station Road, Gorakhpur | GST No: 09AARPU5006D1ZI", 105, 26, { align: "center" });
+            doc.text("Helpline: 8726667104, 9026060471, 9415966902", 105, 31, { align: "center" });
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(13);
+            doc.text("BOOKING CONFIRMATION RECEIPT", 105, 43, { align: "center" });
+            doc.setFontSize(10);
+            let y = 52;
+            const addLine = (l, v) => { doc.text(l, 20, y); doc.text(": " + (v || "N/A"), 75, y); y += 6; };
+            addLine("Customer Name", b.name);
+            addLine("Mobile Number", b.phone);
+            addLine("Pickup Location", b.pickup);
+            addLine("Drop / Destination", b.drop);
+            addLine("Tour Route", b.tourRoute);
+            addLine("Journey Date", `${b.startDate} to ${b.endDate}`);
+            addLine("Selected Vehicle", b.vehicle);
+            addLine("Driver Night Status", b.driverNight);
+            addLine("Parking Status", b.parkingInc);
+            addLine("Toll Tax Status", b.tollInc);
+            addLine("Checkpost Status", b.checkpostInc);
+            addLine("Total Amount", `Rs. ${b.total}/-`);
+            addLine("Advance Paid", `Rs. ${b.advance}/-`);
+            addLine("Balance Amount", `Rs. ${balance}/-`);
+            doc.save(`Booking_Receipt_${b.name}.pdf`);
+        }
+
+        function openFreshGstModal() {
+            loadLastInvoiceNumber();
+            document.getElementById('modalTitle').innerText = "🧾 Create Fresh GST Tax Invoice";
+            document.getElementById('invCustomerName').value = '';
+            document.getElementById('invCustomerGstin').value = '';
+            document.getElementById('invDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('invNumberDisplay').value = currentInvoiceNo;
+            
+            const tableBody = document.getElementById('invoiceItemsTable');
+            tableBody.innerHTML = '';
+            addRowData('', '9964', '', '', 1, 0);
+
+            document.getElementById('invDriverNight').value = 0;
+            document.getElementById('invTollTax').value = 0;
+            document.getElementById('invParking').value = 0;
+            document.getElementById('invChallan').value = 0;
+            document.getElementById('invDiscVal').value = 0;
+            document.getElementById('invReceived').value = 0;
+            document.getElementById('invTaxRate').value = "0.05";
+
+            calculateInvoiceTotals();
+            document.getElementById('gstModal').classList.remove('hidden');
+        }
+
+        function openVyaparGstModal(b) {
+            loadLastInvoiceNumber();
+            document.getElementById('modalTitle').innerText = "🧾 Edit & Generate GST Tax Invoice";
+            document.getElementById('invCustomerName').value = b.name || '';
+            document.getElementById('invCustomerGstin').value = b.clientGstin || '';
+            document.getElementById('invDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('invNumberDisplay').value = currentInvoiceNo;
+            
+            const tableBody = document.getElementById('invoiceItemsTable');
+            tableBody.innerHTML = '';
+            
+            let itemDesc = `${b.pickup || 'GORAKHPUR'} TO ${b.drop || 'LOCAL'}, VEHICLE - ${b.vehicle || 'INNOVA'}`;
+            let kmVal = parseInt(b.agreedKm) || 500;
+            let priceVal = parseFloat(b.total) || 4050;
+
+            addRowData(itemDesc, '9964', 'Tour Service', kmVal, 1, priceVal);
+
+            document.getElementById('invDriverNight').value = 0;
+            document.getElementById('invTollTax').value = 0;
+            document.getElementById('invParking').value = 0;
+            document.getElementById('invChallan').value = 0;
+            document.getElementById('invDiscVal').value = 0;
+            document.getElementById('invReceived').value = b.advance || 0;
+            document.getElementById('invTaxRate').value = "0.05";
+
+            calculateInvoiceTotals();
+            document.getElementById('gstModal').classList.remove('hidden');
+        }
+
+        function closeGstModal() {
+            document.getElementById('gstModal').classList.add('hidden');
+        }
+
+        function addInvoiceRow() {
+            addRowData('', '9964', '', '', 1, 0);
+        }
+
+        function addRowData(item, hsn, desc, km, qty, price) {
+            const tableBody = document.getElementById('invoiceItemsTable');
+            const rowCount = tableBody.rows.length + 1;
+            const tr = document.createElement('tr');
+            tr.className = "border-b item-row";
+            tr.innerHTML = `
+                <td class="p-2 text-center row-num">${rowCount}</td>
+                <td class="p-2"><input type="text" class="w-full border p-1 rounded item-name" value="${item}" placeholder="Item name"></td>
+                <td class="p-2"><input type="text" class="w-full border p-1 rounded item-hsn font-mono text-center" value="${hsn}" placeholder="HSN"></td>
+                <td class="p-2"><input type="text" class="w-full border p-1 rounded item-desc" value="${desc}" placeholder="Description"></td>
+                <td class="p-2"><input type="number" class="w-full border p-1 rounded item-km" value="${km}" placeholder="KM" oninput="calculateInvoiceTotals()"></td>
+                <td class="p-2"><input type="number" class="w-full border p-1 rounded item-qty" value="${qty}" placeholder="1" oninput="calculateInvoiceTotals()"></td>
+                <td class="p-2"><input type="number" class="w-full border p-1 rounded item-price" value="${price}" placeholder="0" oninput="calculateInvoiceTotals()"></td>
+                <td class="p-2 text-right font-semibold item-amount">₹0.00</td>
+                <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-red-500 font-bold hover:text-red-700 cursor-pointer">✕</button></td>
+            `;
+            tableBody.appendChild(tr);
+            calculateInvoiceTotals();
+        }
+
+        function removeRow(btn) {
+            btn.closest('tr').remove();
+            const rows = document.querySelectorAll('#invoiceItemsTable .item-row');
+            rows.forEach((r, idx) => {
+                r.querySelector('.row-num').innerText = idx + 1;
+            });
+            calculateInvoiceTotals();
+        }
+
+        function calculateInvoiceTotals() {
+            let subTotal = 0;
+            const rows = document.querySelectorAll('#invoiceItemsTable .item-row');
+            rows.forEach(r => {
+                let qty = parseFloat(r.querySelector('.item-qty').value) || 0;
+                let price = parseFloat(r.querySelector('.item-price').value) || 0;
+                let amt = qty * price;
+                r.querySelector('.item-amount').innerText = `₹${amt.toFixed(2)}`;
+                subTotal += amt;
+            });
+
+            let discVal = parseFloat(document.getElementById('invDiscVal').value) || 0;
+            let discType = document.getElementById('invDiscType').value;
+            let discountAmount = discType === 'percent' ? (subTotal * discVal / 100) : discVal;
+
+            let driverNight = parseFloat(document.getElementById('invDriverNight').value) || 0;
+            let tollTax = parseFloat(document.getElementById('invTollTax').value) || 0;
+            let parking = parseFloat(document.getElementById('invParking').value) || 0;
+            let challan = parseFloat(document.getElementById('invChallan').value) || 0;
+
+            let taxable = subTotal - discountAmount + driverNight + tollTax + parking + challan;
+            
+            let taxRateVal = document.getElementById('invTaxRate').value;
+            let taxRatePercent = parseFloat(taxRateVal) || 0;
+
+            let tax = taxable * taxRatePercent;
+            let total = taxable + tax;
+
+            let roundOffVal = 0;
+            if (document.getElementById('invRoundOff').checked) {
+                let roundedTotal = Math.round(total);
+                roundOffVal = roundedTotal - total;
+                total = roundedTotal;
+            }
+
+            document.getElementById('invRoundOffVal').innerText = `₹${roundOffVal.toFixed(2)}`;
+            document.getElementById('invGrandTotal').innerText = `₹${total.toFixed(2)}`;
+
+            let received = parseFloat(document.getElementById('invReceived').value) || 0;
+            let balance = total - received;
+            document.getElementById('invBalanceDue').innerText = `₹${balance.toFixed(2)}`;
+        }
+
+        function saveGstToSheet() {
+            const customerName = document.getElementById('invCustomerName').value || "Client";
+            const customerGstin = document.getElementById('invCustomerGstin').value || "Unregistered";
+            const invDate = document.getElementById('invDate').value || new Date().toLocaleDateString();
+            const invState = document.getElementById('invState').value;
+            const taxRateVal = document.getElementById('invTaxRate').value;
+            const taxRatePercent = parseFloat(taxRateVal) || 0;
+            const isIgst = taxRateVal.includes('igst');
+
+            let subTotal = 0;
+            const rows = document.querySelectorAll('#invoiceItemsTable .item-row');
+            rows.forEach(r => {
+                let qty = parseFloat(r.querySelector('.item-qty').value) || 1;
+                let price = parseFloat(r.querySelector('.item-price').value) || 0;
+                subTotal += (qty * price);
+            });
+
+            let discVal = parseFloat(document.getElementById('invDiscVal').value) || 0;
+            let discType = document.getElementById('invDiscType').value;
+            let discountAmount = discType === 'percent' ? (subTotal * discVal / 100) : discVal;
+
+            let driverNight = parseFloat(document.getElementById('invDriverNight').value) || 0;
+            let tollTax = parseFloat(document.getElementById('invTollTax').value) || 0;
+            let parking = parseFloat(document.getElementById('invParking').value) || 0;
+            let challan = parseFloat(document.getElementById('invChallan').value) || 0;
+
+            let taxableAmt = subTotal - discountAmount + driverNight + tollTax + parking + challan;
+            let taxTotal = taxableAmt * taxRatePercent;
+            let grandTotal = taxableAmt + taxTotal;
+
+            if (document.getElementById('invRoundOff').checked) {
+                grandTotal = Math.round(grandTotal);
+            }
+
+            const params = new URLSearchParams({
+                action: "addGst",
+                invoiceNo: currentInvoiceNo,
+                customerName: customerName,
+                clientGstin: customerGstin,
+                state: invState,
+                taxableAmt: taxableAmt.toFixed(2),
+                sgst: (!isIgst && taxRatePercent > 0) ? (taxTotal / 2).toFixed(2) : "0.00",
+                cgst: (!isIgst && taxRatePercent > 0) ? (taxTotal / 2).toFixed(2) : "0.00",
+                igst: isIgst ? taxTotal.toFixed(2) : "0.00",
+                grandTotal: grandTotal.toFixed(2),
+                timestamp: new Date().toLocaleString()
+            });
+
+            fetch(`${GST_SCRIPT_URL}?${params.toString()}`, { mode: 'no-cors' })
+            .then(() => {
+                alert('✅ GST Invoice ' + currentInvoiceNo + ' saved & synced to Google Sheet successfully!');
+                
+                let parts = currentInvoiceNo.split('/');
+                let nextNum = parseInt(parts[1]) + 1;
+                localStorage.setItem('baba_last_inv_num', nextNum);
+                currentInvoiceNo = `2026-2027/${nextNum}`;
+                document.getElementById('invNumberDisplay').value = currentInvoiceNo;
+            })
+            .catch(err => {
+                console.error(err);
+                alert('✅ GST Invoice ' + currentInvoiceNo + ' sent to sheet!');
+            });
+        }
+
+        function generateVyaparGstPdf() {
+            const customerName = document.getElementById('invCustomerName').value || "Client";
+            const customerGstin = document.getElementById('invCustomerGstin').value || "Unregistered";
+            const invDate = document.getElementById('invDate').value || new Date().toLocaleDateString();
+            const invState = document.getElementById('invState').value;
+            const termsText = document.getElementById('invTerms').value;
+            const received = parseFloat(document.getElementById('invReceived').value) || 0;
+            const taxRateVal = document.getElementById('invTaxRate').value;
+            const taxRatePercent = parseFloat(taxRateVal) || 0;
+            const isIgst = taxRateVal.includes('igst');
+
+            let subTotal = 0;
+            let itemsList = [];
+            const rows = document.querySelectorAll('#invoiceItemsTable .item-row');
+            rows.forEach(r => {
+                let name = r.querySelector('.item-name').value || "Tour Service";
+                let hsn = r.querySelector('.item-hsn').value || "9964";
+                let desc = r.querySelector('.item-desc').value || "";
+                let km = r.querySelector('.item-km').value || "";
+                let qty = parseFloat(r.querySelector('.item-qty').value) || 1;
+                let price = parseFloat(r.querySelector('.item-price').value) || 0;
+                let amt = qty * price;
+                subTotal += amt;
+                itemsList.push({ name, hsn, desc, km, qty, price, amt });
+            });
+
+            let discVal = parseFloat(document.getElementById('invDiscVal').value) || 0;
+            let discType = document.getElementById('invDiscType').value;
+            let discountAmount = discType === 'percent' ? (subTotal * discVal / 100) : discVal;
+
+            let driverNight = parseFloat(document.getElementById('invDriverNight').value) || 0;
+            let tollTax = parseFloat(document.getElementById('invTollTax').value) || 0;
+            let parking = parseFloat(document.getElementById('invParking').value) || 0;
+            let challan = parseFloat(document.getElementById('invChallan').value) || 0;
+
+            let taxableAmt = subTotal - discountAmount + driverNight + tollTax + parking + challan;
+            let taxTotal = taxableAmt * taxRatePercent;
+            let grandTotal = taxableAmt + taxTotal;
+
+            if (document.getElementById('invRoundOff').checked) {
+                grandTotal = Math.round(grandTotal);
+            }
+            let balanceDue = grandTotal - received;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Company Header
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("BABA TOUR AND TRAVELS", 105, 12, { align: "center" });
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            doc.text("Opposite Gorakhpur Railway Station Gate Number 6, Gorakhpur, Uttar Pradesh-273001", 105, 17, { align: "center" });
+            doc.text("Phone no.: 8726667104 Email: babatourandtravel098@gmail.com", 105, 22, { align: "center" });
+            doc.text("GSTIN: 09AARPU5006D1ZI, State: 09-Uttar Pradesh", 105, 27, { align: "center" });
+            doc.text("Website: www.babatourandtravel.com", 105, 32, { align: "center" });
+
+            doc.setDrawColor(150, 150, 150);
+            doc.line(14, 35, 196, 35);
+
+            // Bill To & Invoice Details
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.text("Bill To:", 14, 42);
+            doc.text("Invoice Details:", 130, 42);
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.text(`${customerName}`, 14, 48);
+            doc.text(`GSTIN: ${customerGstin}`, 14, 53);
+            doc.text(`State: ${invState}`, 14, 58);
+
+            doc.text(`Invoice No: ${currentInvoiceNo}`, 130, 48);
+            doc.text(`Date: ${invDate}`, 130, 53);
+            doc.text(`Place of Supply: ${invState}`, 130, 58);
+
+            // Table Header with HSN
+            doc.setFillColor(30, 58, 138);
+            doc.rect(14, 66, 182, 8, "F");
+            doc.setTextColor(255, 255, 255);
+            doc.setFont("helvetica", "bold");
+            doc.text("Si.", 18, 71);
+            doc.text("Item / Description", 28, 71);
+            doc.text("
