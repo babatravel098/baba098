@@ -601,7 +601,6 @@
             return d;
         }
 
-        // Helper to parse generic date strings from timestamp
         function parseTimestampDate(val) {
             if(!val) return null;
             const d = new Date(val);
@@ -655,7 +654,7 @@
                         <td class="p-2">Taxable: ₹${inv.taxableAmt}<br><b>Total: ₹${inv.grandTotal}</b></td>
                         <td class="p-2 text-green-700 font-semibold">Synced ✅</td>
                         <td class="p-2 space-y-1">
-                            <button onclick="alert('Aap Vyapar GST Modal khol kar dobara Print ya PDF download kar sakte hain')" class="block w-full text-center bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-semibold hover:bg-purple-200 cursor-pointer">Info</button>
+                            <button onclick='openEditGstModal(${JSON.stringify(inv)})' class="block w-full text-center bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold hover:bg-blue-200 cursor-pointer">Edit</button>
                             <button onclick="deleteGstInvoice('${inv.invoiceNo}')" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold hover:bg-red-200 cursor-pointer">Delete</button>
                         </td>
                     `;
@@ -728,7 +727,31 @@
             });
         }
 
-        // Download Excel (CSV) Report function based on selected date range
+        // Edit GST Invoice function to load existing invoice into modal
+        function openEditGstModal(inv) {
+            document.getElementById('modalTitle').innerText = "🧾 Edit GST Tax Invoice (" + inv.invoiceNo + ")";
+            document.getElementById('invCustomerName').value = inv.customerName || '';
+            document.getElementById('invCustomerGstin').value = inv.clientGstin || '';
+            document.getElementById('invDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('invNumberDisplay').value = inv.invoiceNo; // Keep existing Invoice No
+            document.getElementById('invState').value = inv.state || '09-Uttar Pradesh';
+            
+            const tableBody = document.getElementById('invoiceItemsTable');
+            tableBody.innerHTML = '';
+            addRowData('Tour Service', '9964', 'Edited Invoice Item', 500, 1, inv.taxableAmt || 0);
+
+            document.getElementById('invDriverNight').value = 0;
+            document.getElementById('invTollTax').value = 0;
+            document.getElementById('invParking').value = 0;
+            document.getElementById('invChallan').value = 0;
+            document.getElementById('invDiscVal').value = 0;
+            document.getElementById('invReceived').value = 0;
+            document.getElementById('invTaxRate').value = "0.05";
+
+            calculateInvoiceTotals();
+            document.getElementById('gstModal').classList.remove('hidden');
+        }
+
         function downloadGstExcel() {
             const fromVal = document.getElementById('filterFromDate').value;
             const toVal = document.getElementById('filterToDate').value;
@@ -751,7 +774,6 @@
             }
 
             let csvContent = "data:text/csv;charset=utf-8,";
-            // CSV Headers
             csvContent += "Timestamp,Invoice No,Customer Name,Client GSTIN,State,Taxable Amount,SGST,CGST,IGST,Grand Total\r\n";
 
             filteredGst.forEach(inv => {
@@ -971,6 +993,7 @@
             const taxRateVal = document.getElementById('invTaxRate').value;
             const taxRatePercent = parseFloat(taxRateVal) || 0;
             const isIgst = taxRateVal.includes('igst');
+            const invNumberToSave = document.getElementById('invNumberDisplay').value;
 
             let subTotal = 0;
             const rows = document.querySelectorAll('#invoiceItemsTable .item-row');
@@ -999,7 +1022,7 @@
 
             const params = new URLSearchParams({
                 action: "addGst",
-                invoiceNo: currentInvoiceNo,
+                invoiceNo: invNumberToSave,
                 customerName: customerName,
                 clientGstin: customerGstin,
                 state: invState,
@@ -1013,17 +1036,14 @@
 
             fetch(`${GST_SCRIPT_URL}?${params.toString()}`, { mode: 'no-cors' })
             .then(() => {
-                alert('✅ GST Invoice ' + currentInvoiceNo + ' saved & synced to Google Sheet successfully!');
-                
-                let parts = currentInvoiceNo.split('/');
-                let nextNum = parseInt(parts[1]) + 1;
-                localStorage.setItem('baba_last_inv_num', nextNum);
-                currentInvoiceNo = `2026-2027/${nextNum}`;
-                document.getElementById('invNumberDisplay').value = currentInvoiceNo;
+                alert('✅ GST Invoice ' + invNumberToSave + ' saved / updated successfully!');
+                closeGstModal();
+                if(currentTab === 'gst') fetchGstInvoices();
             })
             .catch(err => {
                 console.error(err);
-                alert('✅ GST Invoice ' + currentInvoiceNo + ' sent to sheet!');
+                alert('✅ GST Invoice sent to sheet!');
+                closeGstModal();
             });
         }
 
@@ -1074,7 +1094,6 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            // Company Header
             doc.setFont("helvetica", "bold");
             doc.setFontSize(14);
             doc.text("BABA TOUR AND TRAVELS", 105, 12, { align: "center" });
@@ -1089,7 +1108,6 @@
             doc.setDrawColor(150, 150, 150);
             doc.line(14, 35, 196, 35);
 
-            // Bill To & Invoice Details
             doc.setFont("helvetica", "bold");
             doc.setFontSize(10);
             doc.text("Bill To:", 14, 42);
@@ -1101,11 +1119,11 @@
             doc.text(`GSTIN: ${customerGstin}`, 14, 53);
             doc.text(`State: ${invState}`, 14, 58);
 
-            doc.text(`Invoice No: ${currentInvoiceNo}`, 130, 48);
+            let activeInvNo = document.getElementById('invNumberDisplay').value;
+            doc.text(`Invoice No: ${activeInvNo}`, 130, 48);
             doc.text(`Date: ${invDate}`, 130, 53);
             doc.text(`Place of Supply: ${invState}`, 130, 58);
 
-            // Table Header with HSN
             doc.setFillColor(30, 58, 138);
             doc.rect(14, 66, 182, 8, "F");
             doc.setTextColor(255, 255, 255);
@@ -1117,7 +1135,6 @@
             doc.text("Rate", 145, 71);
             doc.text("Amount", 175, 71);
 
-            // Table Rows
             doc.setTextColor(0, 0, 0);
             doc.setFont("helvetica", "normal");
             let y = 80;
@@ -1139,7 +1156,6 @@
             doc.line(14, y, 196, y);
             y += 6;
 
-            // Tax Summary Table
             doc.setFillColor(240, 240, 240);
             doc.rect(14, y, 100, 6, "F");
             doc.setFont("helvetica", "bold");
@@ -1176,7 +1192,6 @@
                 doc.text("0.00", 98, y + 4);
             }
 
-            // Right Amounts Summary
             let rY = y - (isIgst ? 6 : 12);
             let displayTaxLabel = isIgst ? "IGST Total" : "Tax (" + (taxRatePercent * 100) + "% GST)";
             const addSum = (lbl, val, bold=false) => {
@@ -1195,7 +1210,6 @@
 
             y = Math.max(y + 15, rY + 5);
 
-            // Terms & Conditions & Bank Details
             doc.setFont("helvetica", "bold");
             doc.text("Terms & Conditions:", 14, y);
             doc.text("Bank Details:", 125, y);
@@ -1208,7 +1222,7 @@
             doc.setFontSize(7);
             doc.text("This is a system generated invoice and does not require physical signature or stamp.", 105, 275, { align: "center" });
 
-            doc.save(`GST_Invoice_${customerName}_${currentInvoiceNo.replace('/', '_')}.pdf`);
+            doc.save(`GST_Invoice_${customerName}_${activeInvNo.replace('/', '_')}.pdf`);
             closeGstModal();
         }
 
@@ -1224,7 +1238,6 @@
                 address: document.getElementById('custAddress').value,
                 pickup: document.getElementById('pickup').value,
                 drop: document.getElementById('drop').value,
-                tourRoute: document.getElementById('tourRoute5' || document.getElementById('tourRoute').value),
                 tourRoute: document.getElementById('tourRoute').value,
                 startDate: document.getElementById('startDate').value,
                 endDate: document.getElementById('endDate').value,
