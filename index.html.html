@@ -928,6 +928,32 @@
 
 
 
+        // Delete a booking from Google Sheets, then reload the table.
+        async function deleteBooking(phone, timestamp) {
+            if (!confirm('Are you sure you want to permanently delete this booking?')) return;
+
+            const params = new URLSearchParams();
+            params.set('action', 'delete');
+            params.set('phone', String(phone || '').trim());
+            params.set('timestamp', String(timestamp || '').trim());
+
+            try {
+                // Apps Script reads URL-encoded form fields from e.parameter.
+                // no-cors hides the response from the browser, but still sends the request.
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: params
+                });
+
+                alert('Delete request sent. The booking list will now reload. Please verify that the booking has disappeared.');
+                setTimeout(fetchBookings, 1800);
+            } catch (error) {
+                console.error('Delete booking request failed:', error);
+                alert('Delete request could not be sent. Please check your internet connection and try again.');
+            }
+        }
+
         function fetchBookings() {
 
             const tbody = document.getElementById('bookingTableBody');
@@ -2038,7 +2064,7 @@
 
 
 
-            fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(formData) })
+            fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: new URLSearchParams(formData) })
 
             .then(() => {
 
