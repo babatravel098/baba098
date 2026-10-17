@@ -208,7 +208,7 @@
                 </div>
 
                 <!-- Booking Form -->
-                <form id="bookingForm" class="space-y-3" onsubmit="saveBooking(event)">
+                <form id="bookingForm" class="space-y-3">
                     <h2 class="text-sm font-bold text-blue-900">New Booking Entry</h2>
                     <div>
                         <label class="text-xs font-semibold text-gray-600">ग्राहक का नाम (Customer Name)</label>
@@ -388,7 +388,7 @@
                             <option value="Dropped">Dropped</option>
                         </select>
                     </div>
-                    <button type="submit" class="w-full bg-purple-600 text-white p-2.5 rounded font-semibold hover:bg-purple-700 transition shadow cursor-pointer">💾 Save Lead & Sync to Cloud</button>
+                    <button type="submit" class="w-full bg-purple-600 text-white p-2.5 rounded font-semibold hover:bg-purple-700 transition shadow cursor-pointer">💾 Save Lead / Inquiry</button>
                 </form>
             </section>
 
@@ -455,11 +455,10 @@
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQSDa1PdP9-7UKovVE4ZOd9cS2vRvrNX1zQtp-v1p9lu-7MRqLTklSTLBIlm_INa_7kA/exec";
         const GST_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzNuP7Qr7qFxFOS3UzIB_5r-JCEEg7AlEf1QFN6WkEU_3h37ywZ6qbcSgv6yf7WhTMX/exec";
-        const LEADS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdxaEXU21jB-xpeJAWdTWCjZ2YARNDaEMg_qXjLuwIdfmB1Nsdj3YTZvJkQsGAqMYF/exec";
         
         let allBookingsData = [];
         let allGstInvoicesData = [];
-        let allLeadsData = [];
+        let allLeadsData = JSON.parse(localStorage.getItem('baba_leads_data') || '[]');
         let currentTab = 'new';
         let currentInvoiceNo = "2026-2027/41";
 
@@ -469,7 +468,6 @@
                 document.getElementById('mainContent').classList.remove('hidden');
                 updateDriverNight();
                 fetchBookings();
-                fetchLeads();
                 loadLastInvoiceNumber();
             }
         };
@@ -486,7 +484,6 @@
                 document.getElementById('mainContent').classList.remove('hidden');
                 updateDriverNight();
                 fetchBookings();
-                fetchLeads();
                 loadLastInvoiceNumber();
             } else {
                 errDiv.classList.remove('hidden');
@@ -517,70 +514,30 @@
             }
         }
 
-        async function saveLead(e) {
+        function saveLead(e) {
             e.preventDefault();
-            const leadId = Date.now();
-            const name = document.getElementById('leadName').value;
-            const phone = document.getElementById('leadPhone').value;
-            const details = document.getElementById('leadDetails').value;
-            const followup = document.getElementById('leadFollowup').value;
-            const status = document.getElementById('leadStatus').value;
+            const newLead = {
+                id: Date.now(),
+                name: document.getElementById('leadName').value,
+                phone: document.getElementById('leadPhone').value,
+                details: document.getElementById('leadDetails').value,
+                followup: document.getElementById('leadFollowup').value,
+                status: document.getElementById('leadStatus').value,
+                created: new Date().toLocaleString()
+            };
 
-            const params = new URLSearchParams({
-                action: "addLead",
-                leadId: leadId,
-                name: name,
-                phone: phone,
-                details: details,
-                followup: followup,
-                status: status,
-                timestamp: new Date().toLocaleString()
-            });
-
-            try {
-                await fetch(`${LEADS_SCRIPT_URL}?${params.toString()}`, { mode: 'no-cors' });
-                alert('📞 Inquiry / Lead saved & synced to Google Sheet successfully!');
-                document.getElementById('leadForm').reset();
-                setTimeout(fetchLeads, 1800);
-            } catch(err) {
-                alert('Lead sent to sheet!');
-            }
+            allLeadsData.push(newLead);
+            localStorage.setItem('baba_leads_data', JSON.stringify(allLeadsData));
+            alert('📞 Inquiry / Lead saved successfully!');
+            document.getElementById('leadForm').reset();
+            if(currentTab === 'leads') renderTable();
         }
 
-        async function deleteLead(leadId) {
+        function deleteLead(id) {
             if(!confirm('Are you sure you want to delete this lead?')) return;
-            const params = new URLSearchParams();
-            params.set('action', 'deleteLead');
-            params.set('leadId', leadId);
-
-            try {
-                await fetch(LEADS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: params });
-                alert('Lead delete request sent.');
-                setTimeout(fetchLeads, 1800);
-            } catch (error) {
-                alert('Could not delete lead.');
-            }
-        }
-
-        function fetchLeads() {
-            const tbody = document.getElementById('bookingTableBody');
-            if(currentTab === 'leads') {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400">Loading leads from cloud...</td></tr>`;
-            }
-
-            fetch(LEADS_SCRIPT_URL)
-            .then(res => res.json())
-            .then(data => {
-                if(!data) data = [];
-                allLeadsData = data.reverse();
-                if(currentTab === 'leads') renderTable();
-            })
-            .catch(err => {
-                console.error("Error fetching leads:", err);
-                if(currentTab === 'leads') {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-red-500">Leads load karne mein samasya aayi.</td></tr>`;
-                }
-            });
+            allLeadsData = allLeadsData.filter(l => l.id !== id);
+            localStorage.setItem('baba_leads_data', JSON.stringify(allLeadsData));
+            renderTable();
         }
 
         function convertLeadToBooking(lead) {
@@ -649,9 +606,7 @@
 
         function fetchBookings() {
             const tbody = document.getElementById('bookingTableBody');
-            if(currentTab === 'new' || currentTab === 'completed') {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Loading data from cloud...</td></tr>`;
-            }
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Loading data from cloud...</td></tr>`;
 
             fetch(SCRIPT_URL)
             .then(response => response.json())
@@ -661,17 +616,13 @@
                 if(currentTab === 'new' || currentTab === 'completed') renderTable();
             })
             .catch(error => {
-                if(currentTab === 'new' || currentTab === 'completed') {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500">Data load karne mein samasya aayi.</td></tr>`;
-                }
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500">Data load karne mein samasya aayi.</td></tr>`;
             });
         }
 
         function fetchGstInvoices() {
             const tbody = document.getElementById('bookingTableBody');
-            if(currentTab === 'gst') {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Loading GST invoices...</td></tr>`;
-            }
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Loading GST invoices...</td></tr>`;
 
             fetch(GST_SCRIPT_URL)
             .then(response => response.json())
@@ -681,16 +632,13 @@
                 if(currentTab === 'gst') renderTable();
             })
             .catch(error => {
-                if(currentTab === 'gst') {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500">GST data load karne mein samasya aayi.</td></tr>`;
-                }
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500">GST data load karne mein samasya aayi.</td></tr>`;
             });
         }
 
         function refreshCurrentTab() {
             if(currentTab === 'new' || currentTab === 'completed') fetchBookings();
             else if(currentTab === 'gst') fetchGstInvoices();
-            else if(currentTab === 'leads') fetchLeads();
             else renderTable();
         }
 
@@ -721,7 +669,7 @@
                 fetchGstInvoices();
             } else if(tab === 'leads') {
                 leadsBtn.className = "bg-amber-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer";
-                fetchLeads();
+                renderTable();
             }
         }
 
@@ -770,6 +718,7 @@
                     row.className = "border-b hover:bg-slate-50";
                     let statusColor = l.status === 'Converted' ? 'text-green-700 bg-green-50' : (l.status === 'Pending' ? 'text-orange-700 bg-orange-50' : 'text-gray-600');
                     
+                    // 100% Clean Professional English WhatsApp Template with encodeURIComponent
                     let waText = `Hello ${l.name},\n\nThank you for contacting Baba Tour & Travels, Gorakhpur regarding your travel inquiry. We would love to assist you with the best vehicle options, comfortable rides, and affordable package rates for your upcoming journey!\n\nPlease let us know your travel dates and requirements so we can share the best quotation with you.\n\nBest Regards,\nBaba Tour & Travels\nRailway Station Road, Gorakhpur\nHelpline: +91 8726667104 / 9026060471\nGSTIN: 09AARPU5006D1ZI`;
                     let encodedWaMsg = encodeURIComponent(waText);
 
@@ -781,7 +730,7 @@
                         <td class="p-2 space-y-1">
                             <a href="https://wa.me/91${l.phone}?text=${encodedWaMsg}" target="_blank" class="block text-center bg-green-600 text-white px-2 py-0.5 rounded font-semibold">WhatsApp</a>
                             <button onclick="convertLeadToBooking(${JSON.stringify(l).replace(/"/g, '&quot;')})" class="block w-full text-center bg-blue-600 text-white px-2 py-0.5 rounded font-semibold">Convert Booking</button>
-                            <button onclick="deleteLead('${l.id}')" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold">Delete</button>
+                            <button onclick="deleteLead(${l.id})" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold">Delete</button>
                         </td>
                     `;
                     tbody.appendChild(row);
@@ -1400,7 +1349,7 @@
             closeGstModal();
         }
 
-        function saveBooking(e) {
+        document.getElementById('bookingForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
             btn.innerText = "Saving..."; btn.disabled = true;
@@ -1432,13 +1381,13 @@
             fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: new URLSearchParams(formData) })
             .then(() => {
                 alert('Booking saved!');
-                document.getElementById('bookingForm').reset();
+                this.reset();
                 updateDriverNight();
                 btn.innerText = "Save Booking & Generate Receipt";
                 btn.disabled = false;
                 setTimeout(fetchBookings, 2000);
             });
-        }
+        });
     </script>
 </body>
 </html>
