@@ -718,8 +718,9 @@
                     row.className = "border-b hover:bg-slate-50";
                     let statusColor = l.status === 'Converted' ? 'text-green-700 bg-green-50' : (l.status === 'Pending' ? 'text-orange-700 bg-orange-50' : 'text-gray-600');
                     
-                    // Professional English WhatsApp Message Template
-                    let waMsg = `Hello ${l.name},%0A%0AThank you for contacting *Baba Tour & Travels, Gorakhpur* regarding your travel inquiry. We would love to assist you with the best vehicle options, comfortable rides, and affordable package rates for your upcoming journey!%0A%0APlease let us know your travel dates and requirements so we can share the best quotation with you.%0A%0ABest Regards,%0A🏢 *Baba Tour & Travels*%0A📍 Railway Station Road, Gorakhpur%0A📞 Helpline: +91 8726667104 / 9026060471%0A🧾 GSTIN: 09AARPU5006D1ZI`;
+                    // 100% Clean Professional English WhatsApp Template with encodeURIComponent
+                    let waText = `Hello ${l.name},\n\nThank you for contacting Baba Tour & Travels, Gorakhpur regarding your travel inquiry. We would love to assist you with the best vehicle options, comfortable rides, and affordable package rates for your upcoming journey!\n\nPlease let us know your travel dates and requirements so we can share the best quotation with you.\n\nBest Regards,\nBaba Tour & Travels\nRailway Station Road, Gorakhpur\nHelpline: +91 8726667104 / 9026060471\nGSTIN: 09AARPU5006D1ZI`;
+                    let encodedWaMsg = encodeURIComponent(waText);
 
                     row.innerHTML = `
                         <td class="p-2"><b>${l.name}</b><br><span class="text-gray-600">${l.phone}</span></td>
@@ -727,7 +728,7 @@
                         <td class="p-2 text-purple-900 font-semibold">${l.followup ? l.followup.replace('T', ' ') : '-'}</td>
                         <td class="p-2"><span class="px-2 py-0.5 rounded font-bold ${statusColor}">${l.status}</span></td>
                         <td class="p-2 space-y-1">
-                            <a href="https://wa.me/91${l.phone}?text=${waMsg}" target="_blank" class="block text-center bg-green-600 text-white px-2 py-0.5 rounded font-semibold">WhatsApp</a>
+                            <a href="https://wa.me/91${l.phone}?text=${encodedWaMsg}" target="_blank" class="block text-center bg-green-600 text-white px-2 py-0.5 rounded font-semibold">WhatsApp</a>
                             <button onclick="convertLeadToBooking(${JSON.stringify(l).replace(/"/g, '&quot;')})" class="block w-full text-center bg-blue-600 text-white px-2 py-0.5 rounded font-semibold">Convert Booking</button>
                             <button onclick="deleteLead(${l.id})" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold">Delete</button>
                         </td>
