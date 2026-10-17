@@ -190,10 +190,14 @@
     <div id="mainContent" class="hidden">
         <header class="bg-blue-900 text-white p-4 shadow-md flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <h1 class="text-xl font-bold">🚐 Baba Tour & Travels, Gorakhpur</h1>
-                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold">🟢 Live Cloud Synced</span>
+                <img src="logo.png" alt="Logo" class="w-10 h-10 rounded-full object-cover bg-white p-0.5 shadow">
+                <div>
+                    <h1 class="text-xl font-bold">🚐 Baba Tour & Travels, Gorakhpur</h1>
+                    <p class="text-[10px] text-blue-200">Railway Station Road | Helpline: 8726667104</p>
+                </div>
             </div>
             <div class="flex gap-3 items-center">
+                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">🟢 Live Cloud Synced</span>
                 <button onclick="openFreshGstModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">📄 Create Fresh GST Invoice</button>
                 <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🚪 Logout</button>
             </div>
@@ -556,7 +560,6 @@
 
             try {
                 await fetch(`${LEADS_SCRIPT_URL}?${params.toString()}`, { mode: 'no-cors' });
-                // Update locally as well
                 const lead = allLeadsData.find(l => String(l.id) === String(leadId));
                 if(lead) lead.status = newStatus;
                 alert('✅ Status updated successfully to: ' + newStatus);
