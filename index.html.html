@@ -556,6 +556,22 @@
             });
         }
 
+        function deleteBooking(phone, timestamp) {
+            if (confirm("Kya aap sach mein is booking ko delete karna chahte hain?")) {
+                const url = `${SCRIPT_URL}?action=delete&phone=${encodeURIComponent(phone)}&timestamp=${encodeURIComponent(timestamp)}`;
+                
+                fetch(url, { method: 'GET', mode: 'no-cors' })
+                .then(() => {
+                    alert('Booking successfully delete ho gayi!');
+                    setTimeout(fetchBookings, 2000);
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('Delete karne mein samasya aayi.');
+                });
+            }
+        }
+
         function sendWhatsApp(b) {
             const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
             const waText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0A` +
