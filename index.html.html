@@ -1018,41 +1018,37 @@
 
 
 
+        // Parse Google Sheets dates reliably (ISO yyyy-MM-dd and dd/MM/yyyy).
+        function parseBookingDate(value) {
+            if (value === null || value === undefined || value === '') return null;
+            const text = String(value).trim();
+            const dmy = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+            let d;
+            if (dmy) {
+                d = new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
+            } else {
+                d = new Date(text);
+            }
+            if (isNaN(d.getTime())) return null;
+            d.setHours(0, 0, 0, 0);
+            return d;
+        }
+
         function renderTable() {
-
             const tbody = document.getElementById('bookingTableBody');
-
             tbody.innerHTML = '';
 
-
-
             const today = new Date();
-
             today.setHours(0, 0, 0, 0);
 
-
-
             const filteredData = allBookingsData.filter(b => {
-
-                let endDate = b.endDate ? new Date(b.endDate) : today;
-
-                endDate.setHours(0, 0, 0, 0);
-
-
-
+                const endDate = parseBookingDate(b.endDate);
                 if (currentTab === 'completed') {
-
-                    return endDate < today;
-
-                } else {
-
-                    return endDate >= today;
-
+                    return endDate !== null && endDate < today;
                 }
-
+                // Keep blank/unreadable end dates visible in the New tab.
+                return endDate === null || endDate >= today;
             });
-
-
 
             if(filteredData.length === 0) {
 
