@@ -1,422 +1,2065 @@
 <!DOCTYPE html>
+
 <html lang="hi">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Baba Tour & Travels - Advanced GST Billing Dashboard</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <link rel="manifest" href="manifest.json">
+
 </head>
+
 <body class="bg-slate-100 font-sans">
 
+
+
     <!-- Login Modal Screen -->
+
     <div id="loginModal" class="fixed inset-0 bg-blue-950 z-50 flex items-center justify-center p-4">
+
         <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full space-y-6">
+
             <div class="text-center">
+
                 <h2 class="text-2xl font-bold text-blue-900">🚐 Baba Tour & Travels</h2>
+
                 <p class="text-xs text-gray-500 mt-1">Gorakhpur | Secure Staff Login</p>
+
             </div>
+
             <form id="loginForm" class="space-y-4" onsubmit="handleLogin(event)">
+
                 <div>
+
                     <label class="text-xs font-semibold text-gray-600">Username</label>
+
                     <input type="text" id="loginUser" required class="w-full border p-3 rounded-lg text-sm mt-1 focus:ring-2 focus:ring-blue-600 outline-none" placeholder="Enter username">
+
                 </div>
+
                 <div>
+
                     <label class="text-xs font-semibold text-gray-600">Password</label>
+
                     <input type="password" id="loginPass" required class="w-full border p-3 rounded-lg text-sm mt-1 focus:ring-2 focus:ring-blue-600 outline-none" placeholder="Enter password">
+
                 </div>
+
                 <div id="loginError" class="text-red-500 text-xs text-center hidden font-semibold">Galat Username ya Password! Kripya dobara koshish karein.</div>
+
                 <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-md cursor-pointer">Login to Dashboard</button>
+
             </form>
+
             <div class="text-center text-[10px] text-gray-400">
+
                 Authorized access only. Baba Tour and Travels, Gorakhpur.
+
             </div>
+
         </div>
+
     </div>
+
+
 
     <!-- Advanced GST Invoice Generator Modal (Vyapar Style) -->
+
     <div id="gstModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+
         <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-5xl w-full space-y-4 max-h-[95vh] overflow-y-auto">
+
             <div class="flex justify-between items-center border-b pb-3">
+
                 <h3 id="modalTitle" class="text-lg font-bold text-blue-900">🧾 Advanced GST Tax Invoice Generator</h3>
+
                 <button onclick="closeGstModal()" class="text-gray-500 hover:text-red-600 font-bold text-lg cursor-pointer">✕</button>
+
             </div>
+
+
 
             <div class="space-y-4 text-xs">
+
                 <!-- Top Header Info -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-lg border">
-                    <div>
-                        <label class="font-semibold text-gray-700">Customer / Company Name</label>
-                        <input type="text" id="invCustomerName" class="w-full border p-2 rounded mt-1 font-semibold" placeholder="Client Name">
-                    </div>
-                    <div>
-                        <label class="font-semibold text-gray-700">Client GSTIN</label>
-                        <input type="text" id="invCustomerGstin" class="w-full border p-2 rounded mt-1 uppercase font-mono" placeholder="09AACCI...">
-                    </div>
-                    <div>
-                        <label class="font-semibold text-gray-700">Invoice Date</label>
-                        <input type="date" id="invDate" class="w-full border p-2 rounded mt-1">
-                    </div>
-                    <div>
-                        <label class="font-semibold text-gray-700">Invoice Number (Auto)</label>
-                        <input type="text" id="invNumberDisplay" readonly class="w-full border p-2 rounded mt-1 font-mono font-bold bg-gray-100 text-blue-900">
-                    </div>
-                </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-lg border">
+
                     <div>
-                        <label class="font-semibold text-gray-700">State of Supply</label>
-                        <select id="invState" class="w-full border p-2 rounded mt-1 bg-white">
-                            <option value="09-Uttar Pradesh">09-Uttar Pradesh</option>
-                            <option value="01-Jammu & Kashmir">01-Jammu & Kashmir</option>
-                            <option value="03-Punjab">03-Punjab</option>
-                            <option value="04-Chandigarh">04-Chandigarh</option>
-                            <option value="06-Haryana">06-Haryana</option>
-                            <option value="07-Delhi">07-Delhi</option>
-                            <option value="08-Rajasthan">08-Rajasthan</option>
-                            <option value="10-Bihar">10-Bihar</option>
-                            <option value="19-West Bengal">19-West Bengal</option>
-                        </select>
+
+                        <label class="font-semibold text-gray-700">Customer / Company Name</label>
+
+                        <input type="text" id="invCustomerName" class="w-full border p-2 rounded mt-1 font-semibold" placeholder="Client Name">
+
                     </div>
+
+                    <div>
+
+                        <label class="font-semibold text-gray-700">Client GSTIN</label>
+
+                        <input type="text" id="invCustomerGstin" class="w-full border p-2 rounded mt-1 uppercase font-mono" placeholder="09AACCI...">
+
+                    </div>
+
+                    <div>
+
+                        <label class="font-semibold text-gray-700">Invoice Date</label>
+
+                        <input type="date" id="invDate" class="w-full border p-2 rounded mt-1">
+
+                    </div>
+
+                    <div>
+
+                        <label class="font-semibold text-gray-700">Invoice Number (Auto)</label>
+
+                        <input type="text" id="invNumberDisplay" readonly class="w-full border p-2 rounded mt-1 font-mono font-bold bg-gray-100 text-blue-900">
+
+                    </div>
+
                 </div>
+
+
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-lg border">
+
+                    <div>
+
+                        <label class="font-semibold text-gray-700">State of Supply</label>
+
+                        <select id="invState" class="w-full border p-2 rounded mt-1 bg-white">
+
+                            <option value="09-Uttar Pradesh">09-Uttar Pradesh</option>
+
+                            <option value="01-Jammu & Kashmir">01-Jammu & Kashmir</option>
+
+                            <option value="03-Punjab">03-Punjab</option>
+
+                            <option value="04-Chandigarh">04-Chandigarh</option>
+
+                            <option value="06-Haryana">06-Haryana</option>
+
+                            <option value="07-Delhi">07-Delhi</option>
+
+                            <option value="08-Rajasthan">08-Rajasthan</option>
+
+                            <option value="10-Bihar">10-Bihar</option>
+
+                            <option value="19-West Bengal">19-West Bengal</option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+
 
                 <!-- Items Table Container with HSN Code -->
+
                 <div class="border rounded-lg overflow-hidden">
+
                     <table class="w-full text-left border-collapse">
+
                         <thead>
+
                             <tr class="bg-slate-200 text-slate-700">
+
                                 <th class="p-2 w-10">#</th>
+
                                 <th class="p-2">Item / Service Name</th>
+
                                 <th class="p-2 w-28">HSN Code</th>
+
                                 <th class="p-2">Description</th>
+
                                 <th class="p-2 w-16">KM</th>
+
                                 <th class="p-2 w-14">QTY</th>
+
                                 <th class="p-2 w-20">Price (₹)</th>
+
                                 <th class="p-2 w-20">Amount (₹)</th>
+
                                 <th class="p-2 w-10"></th>
+
                             </tr>
+
                         </thead>
+
                         <tbody id="invoiceItemsTable">
+
                             <!-- Dynamic Rows -->
+
                         </tbody>
+
                     </table>
+
                 </div>
+
                 <button type="button" onclick="addInvoiceRow()" class="bg-blue-100 text-blue-800 px-3 py-1.5 rounded font-semibold text-xs hover:bg-blue-200 cursor-pointer">+ ADD ROW</button>
 
+
+
                 <!-- Bottom Section -->
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border">
+
                     <div class="space-y-3">
+
                         <div>
+
                             <label class="font-semibold text-gray-700">Add Terms & Conditions</label>
+
                             <textarea id="invTerms" rows="3" class="w-full border p-2 rounded mt-1">1. Extra locations / routes added during tour will be charged extra.
+
 2. For GST bill after booking, extra GST will be charged on total amount.</textarea>
+
                         </div>
+
                     </div>
+
+
 
                     <div class="space-y-2 text-right">
+
                         <div class="flex justify-between items-center">
+
                             <span class="font-semibold">Discount:</span>
+
                             <div class="flex gap-2 w-1/2">
+
                                 <input type="number" id="invDiscVal" value="0" oninput="calculateInvoiceTotals()" class="w-full border p-1 rounded text-right">
+
                                 <select id="invDiscType" onchange="calculateInvoiceTotals()" class="border p-1 rounded bg-white">
+
                                     <option value="rs">₹</option>
+
                                     <option value="percent">%</option>
+
                                 </select>
+
                             </div>
+
                         </div>
+
                         <div class="flex justify-between items-center">
+
                             <span class="font-semibold">Select GST Slab:</span>
+
                             <select id="invTaxRate" onchange="calculateInvoiceTotals()" class="border p-1 rounded bg-white w-1/2 font-semibold">
+
                                 <option value="0.05" selected>GST @ 5% (SGST/CGST 2.5%+2.5%)</option>
+
                                 <option value="0.05_igst">IGST @ 5% (Interstate)</option>
+
                                 <option value="0.12">GST @ 12% (SGST/CGST 6%+6%)</option>
+
                                 <option value="0.12_igst">IGST @ 12% (Interstate)</option>
+
                                 <option value="0.18">GST @ 18% (SGST/CGST 9%+9%)</option>
+
                                 <option value="0.18_igst">IGST @ 18% (Interstate)</option>
+
                                 <option value="0.28">GST @ 28% (SGST/CGST 14%+14%)</option>
+
                                 <option value="0.28_igst">IGST @ 28% (Interstate)</option>
+
                                 <option value="0">0% (Tax Exempted)</option>
+
                             </select>
+
                         </div>
+
                         <div class="flex justify-between items-center">
+
                             <span class="font-semibold">Driver Night (₹):</span>
+
                             <input type="number" id="invDriverNight" value="0" oninput="calculateInvoiceTotals()" class="border p-1 rounded text-right w-1/2">
+
                         </div>
+
                         <div class="flex justify-between items-center">
+
                             <span class="font-semibold">Toll Tax (₹):</span>
+
                             <input type="number" id="invTollTax" value="0" oninput="calculateInvoiceTotals()" class="border p-1 rounded text-right w-1/2">
+
                         </div>
+
                         <div class="flex justify-between items-center">
+
                             <span class="font-semibold">Parking / Checkpost (₹):</span>
+
                             <input type="number" id="invParking" value="0" oninput="calculateInvoiceTotals()" class="border p-1 rounded text-right w-1/2">
+
                         </div>
+
                         <div class="flex justify-between items-center">
+
                             <span class="font-semibold">Challan / Other (₹):</span>
+
                             <input type="number" id="invChallan" value="0" oninput="calculateInvoiceTotals()" class="border p-1 rounded text-right w-1/2">
+
                         </div>
+
                         <div class="flex justify-between items-center pt-2 border-t">
+
                             <label class="flex items-center gap-2 cursor-pointer font-semibold">
+
                                 <input type="checkbox" id="invRoundOff" checked onchange="calculateInvoiceTotals()"> Round Off
+
                             </label>
+
                             <span id="invRoundOffVal" class="text-gray-500">₹0.00</span>
+
                         </div>
+
                         <div class="flex justify-between items-center pt-2 border-t text-base font-bold text-blue-900">
+
                             <span>Total Amount:</span>
+
                             <span id="invGrandTotal">₹0.00</span>
+
                         </div>
+
                         <div class="flex justify-between items-center pt-1 text-sm font-bold text-green-700">
+
                             <span>Advance Received:</span>
+
                             <input type="number" id="invReceived" value="0" oninput="calculateInvoiceTotals()" class="border p-1 rounded text-right w-1/2 font-bold text-green-700">
+
                         </div>
+
                         <div class="flex justify-between items-center pt-1 text-sm font-bold text-red-600">
+
                             <span>Balance Due:</span>
+
                             <span id="invBalanceDue">₹0.00</span>
+
                         </div>
+
                     </div>
+
                 </div>
+
+
 
                 <div class="flex justify-end gap-3 pt-2">
+
                     <button type="button" onclick="saveGstToSheet()" class="bg-green-600 text-white px-5 py-2.5 rounded font-semibold hover:bg-green-700 transition cursor-pointer shadow">💾 Save & Sync to Sheet</button>
+
                     <button type="button" onclick="generateVyaparGstPdf()" class="bg-purple-600 text-white px-5 py-2.5 rounded font-semibold hover:bg-purple-700 transition cursor-pointer shadow">📥 Download PDF Invoice</button>
+
                     <button type="button" onclick="closeGstModal()" class="bg-gray-300 text-gray-700 px-4 py-2.5 rounded font-semibold hover:bg-gray-400 transition cursor-pointer">Cancel</button>
+
                 </div>
+
             </div>
+
         </div>
+
     </div>
+
+
 
     <!-- Main Content (Hidden until login) -->
+
     <div id="mainContent" class="hidden">
+
         <header class="bg-blue-900 text-white p-4 shadow-md flex justify-between items-center">
+
             <div class="flex items-center gap-3">
+
                 <h1 class="text-xl font-bold">🚐 Baba Tour & Travels, Gorakhpur</h1>
+
                 <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold">🟢 Live Cloud Synced</span>
+
             </div>
+
             <div class="flex gap-3 items-center">
+
                 <button onclick="openFreshGstModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">📄 Create Fresh GST Invoice</button>
+
                 <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🚪 Logout</button>
+
             </div>
+
         </header>
 
+
+
         <main class="max-w-7xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
             <!-- Left: New Booking Form -->
+
             <section class="bg-white p-5 rounded-xl shadow-md lg:col-span-1 h-fit">
+
                 <h2 class="text-lg font-semibold mb-4 text-blue-900 border-b pb-2">➕ New Booking Entry</h2>
+
                 <form id="bookingForm" class="space-y-3">
+
                     <div>
+
                         <label class="text-xs font-semibold text-gray-600">ग्राहक का नाम (Customer Name)</label>
+
                         <input type="text" id="custName" required class="w-full border p-2 rounded text-sm">
+
                     </div>
+
                     <div>
+
                         <label class="text-xs font-semibold text-gray-600">Client / Company GSTIN (Optional)</label>
+
                         <input type="text" id="clientGstin" placeholder="e.g. 09AACCI3895A1ZL" class="w-full border p-2 rounded text-sm uppercase font-mono">
+
                     </div>
+
                     <div class="grid grid-cols-2 gap-2">
+
                         <div>
+
                             <label class="text-xs font-semibold text-gray-600">मोबाइल नंबर (Mobile)</label>
+
                             <input type="tel" id="custPhone" required class="w-full border p-2 rounded text-sm">
+
                         </div>
+
                         <div>
+
                             <label class="text-xs font-semibold text-gray-600">Booking Office (Staff Name)</label>
+
                             <input type="text" id="staffName" placeholder="Ankit / Staff" required class="w-full border p-2 rounded text-sm">
+
                         </div>
+
                     </div>
+
                     <div>
+
                         <label class="text-xs font-semibold text-gray-600">ग्राहक पूरा पता (Customer Address)</label>
+
                         <input type="text" id="custAddress" required class="w-full border p-2 rounded text-sm">
+
                     </div>
+
                     <div class="grid grid-cols-2 gap-2">
+
                         <div>
+
                             <label class="text-xs font-semibold text-gray-600">पिकअप (Pickup Location)</label>
+
                             <input type="text" id="pickup" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Gorakhpur">
+
                         </div>
+
                         <div>
+
                             <label class="text-xs font-semibold text-gray-600">ड्रॉप / गंतव्य (Drop / Destination)</label>
+
                             <input type="text" id="drop" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Masrooe">
+
                         </div>
+
                     </div>
+
                     <div>
+
                         <label class="text-xs font-semibold text-gray-600">यात्रा का पूरा रूट / Via (Visiting Places)</label>
+
                         <input type="text" id="tourRoute" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Gorakhpur - Ayodhya - Varanasi">
+
                     </div>
+
                     <div class="grid grid-cols-2 gap-2">
+
                         <div>
+
                             <label class="text-xs font-semibold text-gray-600">यात्रा शुरू (From Date)</label>
+
                             <input type="date" id="startDate" required class="w-full border p-2 rounded text-sm">
+
                         </div>
+
                         <div>
+
                             <label class="text-xs font-semibold text-gray-600">वापसी तारीख (To Date)</label>
+
                             <input type="date" id="endDate" required class="w-full border p-2 rounded text-sm">
+
                         </div>
+
                     </div>
+
                     <div>
+
                        <label class="text-xs font-semibold text-gray-600">गाड़ी चुनें (Vehicle Name)</label>
+
                         <select id="vehicleSelect" onchange="updateDriverNight()" class="w-full border p-2 rounded text-sm bg-white font-medium text-blue-900">
+
                             <optgroup label="🚍 Buses (Driver Night: ₹800)">
+
                                 <option value="56 Seater Bus">56 Seater Bus</option>
+
                                 <option value="45 Seater Bus">45 Seater Bus</option>
+
                                 <option value="42 Seater Bus">42 Seater Bus</option>
+
                                 <option value="35 Seater Bus">35 Seater Bus</option>
+
                                 <option value="32 Seater Bus">32 Seater Bus</option>
+
                             </optgroup>
+
                             <optgroup label="🚐 Tempo Travellers & Vans (Driver Night: ₹500)">
+
                                 <option value="Force Urbania">Force Urbania</option>
+
                                 <option value="26 Seater Traveller (1)">26 Seater Traveller (Vehicle 1)</option>
+
                                 <option value="26 Seater Traveller (2)">26 Seater Traveller (Vehicle 2)</option>
+
                                 <option value="20 Seater Traveller">20 Seater Traveller</option>
+
                                 <option value="17 Seater Force">17 Seater Force</option>
+
                                 <option value="12 Seater Traveller">12 Seater Traveller</option>
+
                                 <option value="Mahindra Supro / Van">Mahindra Supro / Van</option>
+
                             </optgroup>
+
                             <optgroup label="🚙 SUVs & MUVs (Driver Night: ₹400)">
+
                                 <option value="Innova Crysta / Hycross">Innova Crysta / Hycross</option>
+
                                 <option value="Mahindra Marazzo">Mahindra Marazzo</option>
+
                                 <option value="Force Trax Cruiser">Force Trax Cruiser</option>
+
                                 <option value="Ertiga">Ertiga</option>
+
                                 <option value="Kia Carens">Kia Carens</option>
+
                                 <option value="Toyota Rumion">Toyota Rumion</option>
+
                             </optgroup>
+
                             <optgroup label="🚗 Sedans & Hatchbacks (Driver Night: ₹300)">
+
                                 <option value="Maruti Dzire">Maruti Dzire</option>
+
                                 <option value="Honda Amaze">Honda Amaze</option>
+
                                 <option value="Hyundai Aura">Hyundai Aura</option>
+
                                 <option value="Tata Tigor">Tata Tigor</option>
+
                                 <option value="Maruti WagonR / Swift">Maruti WagonR / Swift</option>
+
                                 <option value="Hyundai i10 / Tata Tiago">Hyundai i10 / Tata Tiago</option>
+
                             </optgroup>
+
                         </select>
+
                     </div>
+
                     <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2 rounded border">
+
                         <div>
+
                             <label class="text-[10px] font-semibold text-gray-600">तय KM</label>
+
                             <input type="text" id="agreedKm" placeholder="500 KM" class="w-full border p-1 rounded text-xs">
+
                         </div>
+
                         <div>
+
                             <label class="text-[10px] font-semibold text-gray-600">Extra KM (₹)</label>
+
                             <input type="number" id="extraKmRate" placeholder="18" class="w-full border p-1 rounded text-xs">
+
                         </div>
+
                         <div>
+
                             <label class="text-[10px] font-semibold text-gray-600">Extra Day (₹)</label>
+
                             <input type="number" id="extraDayRate" placeholder="2500" class="w-full border p-1 rounded text-xs">
+
                         </div>
+
                     </div>
+
+
 
                     <!-- Tour Exclusions / Inclusions Options -->
+
                     <div class="bg-amber-50 p-2 rounded border border-amber-200 space-y-2">
+
                         <p class="text-[11px] font-bold text-amber-900">Tour Terms & Charges Status:</p>
+
                         <div class="grid grid-cols-2 gap-2 text-xs">
+
                             <div>
+
                                 <label class="text-[11px] font-semibold text-gray-700">Driver Night:</label>
+
                                 <select id="driverNight" class="w-full border p-1 rounded bg-white text-xs font-bold text-orange-800">
+
                                     <option value="₹800 Per Night">₹800 Per Night (Bus)</option>
+
                                     <option value="₹500 Per Night" selected>₹500 Per Night (Traveller)</option>
+
                                     <option value="₹400 Per Night">₹400 Per Night (SUV/MUV)</option>
+
                                     <option value="₹300 Per Night">₹300 Per Night (Sedan/Hatch)</option>
+
                                     <option value="Included in Total">Included in Total</option>
+
                                     <option value="Not Applicable">Not Applicable</option>
+
                                 </select>
+
                             </div>
+
                             <div>
+
                                 <label class="text-[11px] font-semibold text-gray-700">Parking:</label>
+
                                 <select id="parkingInc" class="w-full border p-1 rounded bg-white text-xs">
+
                                     <option value="Excluded (Extra)">Excluded (Extra)</option>
+
                                     <option value="Included">Included</option>
+
                                 </select>
+
                             </div>
+
                             <div>
+
                                 <label class="text-[11px] font-semibold text-gray-700">Toll Tax:</label>
+
                                 <select id="tollInc" class="w-full border p-1 rounded bg-white text-xs">
+
                                     <option value="Excluded (Extra)">Excluded (Extra)</option>
+
                                     <option value="Included">Included</option>
+
                                 </select>
+
                             </div>
+
                             <div>
+
                                 <label class="text-[11px] font-semibold text-gray-700">Checkpost:</label>
+
                                 <select id="checkpostInc" class="w-full border p-1 rounded bg-white text-xs">
+
                                     <option value="Excluded (Extra)">Excluded (Extra)</option>
+
                                     <option value="Included">Included</option>
+
                                 </select>
+
                             </div>
+
                         </div>
+
                     </div>
+
+
 
                     <div class="grid grid-cols-2 gap-2">
+
                         <div>
+
                             <label class="text-xs font-semibold text-gray-600">कुल रकम (Total ₹)</label>
+
                             <input type="number" id="totalAmount" required class="w-full border p-2 rounded text-sm font-bold text-blue-900">
+
                         </div>
+
                         <div>
+
                             <label class="text-xs font-semibold text-gray-600">एडवांस (Advance ₹)</label>
+
                             <input type="number" id="advanceAmount" required class="w-full border p-2 rounded text-sm font-bold text-green-700">
+
                         </div>
+
                     </div>
+
                     <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white p-2.5 rounded font-semibold hover:bg-blue-700 transition shadow cursor-pointer">Save Booking & Generate Receipt</button>
+
                 </form>
+
             </section>
+
+
 
             <!-- Right: Live Bookings Table from Google Sheet -->
+
             <section class="bg-white p-5 rounded-xl shadow-md lg:col-span-2">
+
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-4 border-b pb-2 gap-2">
+
                     <h2 class="text-lg font-semibold text-blue-900">📋 Bookings Management</h2>
+
                     <div class="flex gap-2">
+
                         <button onclick="switchTab('new')" id="newTabBtn" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer">🆕 New Bookings</button>
+
                         <button onclick="switchTab('completed')" id="completedTabBtn" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer">✅ Completed Bookings</button>
+
                         <button onclick="fetchBookings()" class="bg-blue-100 text-blue-800 px-2.5 py-1.5 rounded text-xs font-semibold cursor-pointer">🔄</button>
+
                     </div>
+
                 </div>
+
                 
+
                 <div class="overflow-x-auto max-h-[600px]">
+
                     <table class="w-full text-left border-collapse text-xs">
+
                         <thead>
+
                             <tr class="bg-slate-200 text-slate-700 sticky top-0">
+
                                 <th class="p-2">Customer</th>
+
                                 <th class="p-2">Route & Places</th>
+
                                 <th class="p-2">Vehicle & Terms</th>
+
                                 <th class="p-2">Payment</th>
+
                                 <th class="p-2">Staff</th>
+
                                 <th class="p-2">Action</th>
+
                             </tr>
+
                         </thead>
+
                         <tbody id="bookingTableBody">
+
                             <tr><td colspan="6" class="text-center p-6 text-gray-400">Loading bookings...</td></tr>
+
                         </tbody>
+
                     </table>
+
                 </div>
+
             </section>
+
         </main>
+
     </div>
+
+
 
     <!-- Floating Quick Call & WhatsApp Buttons -->
+
     <div style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 12px;">
+
         <a href="tel:8726667104" title="Call Now" style="background-color: #2563eb; color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-decoration: none;">
+
             <i class="fa-solid fa-phone"></i>
+
         </a>
+
         <a href="https://wa.me/message/CPOLYJU4RQ2UH1" target="_blank" title="Chat on WhatsApp" style="background-color: #25D366; color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-decoration: none;">
+
             <i class="fa-brands fa-whatsapp"></i>
+
         </a>
+
     </div>
 
+
+
     <script>
+
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQSDa1PdP9-7UKovVE4ZOd9cS2vRvrNX1zQtp-v1p9lu-7MRqLTklSTLBIlm_INa_7kA/exec";
+
         const GST_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxhGEW-3Qk1BMvfQkCL0wbmFND5sy725VAgNQ3bA0aSpY7hzrJwyp_TNzNIvd-F_hRPnQ/exec";
+
         
+
         let allBookingsData = [];
+
         let currentTab = 'new';
+
         let currentInvoiceNo = "2026-2027/41";
 
+
+
         window.onload = function() {
+
             if (sessionStorage.getItem('baba_logged_in') === 'true') {
+
                 document.getElementById('loginModal').style.display = 'none';
+
                 document.getElementById('mainContent').classList.remove('hidden');
+
                 updateDriverNight();
+
                 fetchBookings();
+
                 loadLastInvoiceNumber();
+
             }
+
         };
 
+
+
         function handleLogin(e) {
+
             e.preventDefault();
+
             const user = document.getElementById('loginUser').value.trim();
+
             const pass = document.getElementById('loginPass').value.trim();
-            const errDiv =
+
+            const errDiv = document.getElementById('loginError');
+
+
+
+            if (user === 'admin' && pass === 'baba123') {
+
+                sessionStorage.setItem('baba_logged_in', 'true');
+
+                document.getElementById('loginModal').style.display = 'none';
+
+                document.getElementById('mainContent').classList.remove('hidden');
+
+                updateDriverNight();
+
+                fetchBookings();
+
+                loadLastInvoiceNumber();
+
+            } else {
+
+                errDiv.classList.remove('hidden');
+
+            }
+
+        }
+
+
+
+        function handleLogout() {
+
+            sessionStorage.removeItem('baba_logged_in');
+
+            location.reload();
+
+        }
+
+
+
+        function loadLastInvoiceNumber() {
+
+            let lastNum = localStorage.getItem('baba_last_inv_num');
+
+            if (lastNum) {
+
+                let nextVal = parseInt(lastNum) + 1;
+
+                currentInvoiceNo = `2026-2027/${nextVal}`;
+
+            } else {
+
+                currentInvoiceNo = "2026-2027/41";
+
+            }
+
+        }
+
+
+
+        function updateDriverNight() {
+
+            const vehicle = document.getElementById('vehicleSelect').value;
+
+            const driverNightSelect = document.getElementById('driverNight');
+
+            if(!driverNightSelect) return;
+
+            if (vehicle.includes('Bus')) {
+
+                driverNightSelect.value = '₹800 Per Night';
+
+            } else if (vehicle.includes('Traveller') || vehicle.includes('Urbania') || vehicle.includes('Force') || vehicle.includes('Supro')) {
+
+                driverNightSelect.value = '₹500 Per Night';
+
+            } else if (vehicle.includes('Innova') || vehicle.includes('Marazzo') || vehicle.includes('Cruiser') || vehicle.includes('Ertiga') || vehicle.includes('Carens') || vehicle.includes('Rumion')) {
+
+                driverNightSelect.value = '₹400 Per Night';
+
+            } else {
+
+                driverNightSelect.value = '₹300 Per Night';
+
+            }
+
+        }
+
+
+
+        function fetchBookings() {
+
+            const tbody = document.getElementById('bookingTableBody');
+
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Loading data from cloud...</td></tr>`;
+
+
+
+            fetch(SCRIPT_URL)
+
+            .then(response => response.json())
+
+            .then(data => {
+
+                if(!data) data = [];
+
+                allBookingsData = data.reverse();
+
+                renderTable();
+
+            })
+
+            .catch(error => {
+
+                console.error('Error fetching data:', error);
+
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500">Data load karne mein samasya aayi. Kripya Refresh button dabayein.</td></tr>`;
+
+            });
+
+        }
+
+
+
+        function switchTab(tab) {
+
+            currentTab = tab;
+
+            const newBtn = document.getElementById('newTabBtn');
+
+            const compBtn = document.getElementById('completedTabBtn');
+
+
+
+            if(tab === 'new') {
+
+                newBtn.className = "bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow";
+
+                compBtn.className = "bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold";
+
+            } else {
+
+                compBtn.className = "bg-green-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow";
+
+                newBtn.className = "bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold";
+
+            }
+
+            renderTable();
+
+        }
+
+
+
+        function renderTable() {
+
+            const tbody = document.getElementById('bookingTableBody');
+
+            tbody.innerHTML = '';
+
+
+
+            const today = new Date();
+
+            today.setHours(0, 0, 0, 0);
+
+
+
+            const filteredData = allBookingsData.filter(b => {
+
+                let endDate = b.endDate ? new Date(b.endDate) : today;
+
+                endDate.setHours(0, 0, 0, 0);
+
+
+
+                if (currentTab === 'completed') {
+
+                    return endDate < today;
+
+                } else {
+
+                    return endDate >= today;
+
+                }
+
+            });
+
+
+
+            if(filteredData.length === 0) {
+
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Yahan koi booking nahi hai.</td></tr>`;
+
+                return;
+
+            }
+
+
+
+            filteredData.forEach((b) => {
+
+                const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+
+                const row = document.createElement('tr');
+
+                row.className = "border-b hover:bg-slate-50";
+
+                row.innerHTML = `
+
+                    <td class="p-2">
+
+                        <b>${b.name || 'N/A'}</b><br>
+
+                        <span class="text-gray-600">${b.phone || ''}</span><br>
+
+                        <span class="text-gray-400 text-[10px]">${b.address || ''}</span>
+
+                    </td>
+
+                    <td class="p-2">
+
+                        <b>📍 Pickup:</b> ${b.pickup || 'N/A'}<br>
+
+                        <b>🎯 Drop:</b> ${b.drop || 'N/A'}<br>
+
+                        <b>🗺️ Route:</b> <span class="text-blue-800 font-semibold">${b.tourRoute || 'N/A'}</span><br>
+
+                        <span class="text-gray-500">📅 ${b.startDate || ''} to ${b.endDate || ''}</span>
+
+                    </td>
+
+                    <td class="p-2">
+
+                        <span class="bg-green-100 text-green-800 px-1.5 py-0.5 rounded font-semibold">${b.vehicle || 'N/A'}</span><br>
+
+                        <span class="text-gray-500 text-[10px]">KM: ${b.agreedKm || 'N/A'}</span><br>
+
+                        <span class="text-amber-700 text-[9px]">Night: ${b.driverNight || 'N/A'} | Toll: ${b.tollInc || 'N/A'}</span>
+
+                    </td>
+
+                    <td class="p-2">
+
+                        Tot: <b>₹${b.total || 0}</b><br>
+
+                        Adv: <span class="text-green-600 font-semibold">₹${b.advance || 0}</span><br>
+
+                        Bal: <span class="text-red-600 font-bold">₹${balance}</span>
+
+                    </td>
+
+                    <td class="p-2 text-gray-600">${b.staff || '-'}</td>
+
+                    <td class="p-2 space-y-1">
+
+                        <button onclick='sendWhatsApp(${JSON.stringify(b)})' class="block w-full text-center bg-green-600 text-white px-2 py-0.5 rounded font-semibold cursor-pointer">WhatsApp</button>
+
+                        <button onclick='generatePDF(${JSON.stringify(b)})' class="block w-full text-center bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold hover:bg-blue-200 cursor-pointer">Receipt</button>
+
+                        <button onclick='openVyaparGstModal(${JSON.stringify(b)})' class="block w-full text-center bg-purple-600 text-white px-2 py-0.5 rounded font-semibold hover:bg-purple-700 cursor-pointer">GST Invoice</button>
+
+                        <button onclick="deleteBooking('${b.phone}', '${b.timestamp}')" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold hover:bg-red-200 cursor-pointer">Delete</button>
+
+                    </td>
+
+                `;
+
+                tbody.appendChild(row);
+
+            });
+
+        }
+
+
+
+        function sendWhatsApp(b) {
+
+            const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+
+            const waText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0A` +
+
+                           `Thanks for choosing us! Your booking is confirmed. ✅%0A%0A` +
+
+                           `📋 *Booking Details:*%0A` +
+
+                           `• Customer Name: ${b.name || ''}%0A` +
+
+                           `• Route: ${b.tourRoute || 'N/A'}%0A` +
+
+                           `• Journey Date: ${b.startDate || ''} to ${b.endDate || ''}%0A` +
+
+                           `• Vehicle: ${b.vehicle || ''}%0A` +
+
+                           `• Driver Night: ${b.driverNight || ''} | Toll: ${b.tollInc || ''}%0A` +
+
+                           `• Total: ₹${b.total || 0}/- | Advance: ₹${b.advance || 0}/- | Balance: ₹${balance}/-%0A%0A` +
+
+                           `🏢 *Baba Tour and Travels* (Railway Station Road, Gorakhpur)%0A` +
+
+                           `🧾 GSTIN: 09AARPU5006D1ZI | Ph: 8726667104`;
+
+            window.open(`https://wa.me/91${b.phone}?text=${waText}`, '_blank');
+
+        }
+
+
+
+        function generatePDF(b) {
+
+            const { jsPDF } = window.jspdf;
+
+            const doc = new jsPDF();
+
+            const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+
+            doc.setFillColor(30, 58, 138);
+
+            doc.rect(10, 10, 190, 25, "F");
+
+            doc.setTextColor(255, 255, 255);
+
+            doc.setFontSize(18);
+
+            doc.text("BABA TOUR AND TRAVELS", 105, 20, { align: "center" });
+
+            doc.setFontSize(9);
+
+            doc.text("Railway Station Road, Gorakhpur | GST No: 09AARPU5006D1ZI", 105, 26, { align: "center" });
+
+            doc.text("Helpline: 8726667104, 9026060471, 9415966902", 105, 31, { align: "center" });
+
+            doc.setTextColor(0, 0, 0);
+
+            doc.setFontSize(13);
+
+            doc.text("BOOKING CONFIRMATION RECEIPT", 105, 43, { align: "center" });
+
+            doc.setFontSize(10);
+
+            let y = 52;
+
+            const addLine = (l, v) => { doc.text(l, 20, y); doc.text(": " + (v || "N/A"), 75, y); y += 6; };
+
+            addLine("Customer Name", b.name);
+
+            addLine("Mobile Number", b.phone);
+
+            addLine("Pickup Location", b.pickup);
+
+            addLine("Drop / Destination", b.drop);
+
+            addLine("Tour Route", b.tourRoute);
+
+            addLine("Journey Date", `${b.startDate} to ${b.endDate}`);
+
+            addLine("Selected Vehicle", b.vehicle);
+
+            addLine("Driver Night Status", b.driverNight);
+
+            addLine("Parking Status", b.parkingInc);
+
+            addLine("Toll Tax Status", b.tollInc);
+
+            addLine("Checkpost Status", b.checkpostInc);
+
+            addLine("Total Amount", `Rs. ${b.total}/-`);
+
+            addLine("Advance Paid", `Rs. ${b.advance}/-`);
+
+            addLine("Balance Amount", `Rs. ${balance}/-`);
+
+            doc.save(`Booking_Receipt_${b.name}.pdf`);
+
+        }
+
+
+
+        function openFreshGstModal() {
+
+            loadLastInvoiceNumber();
+
+            document.getElementById('modalTitle').innerText = "🧾 Create Fresh GST Tax Invoice";
+
+            document.getElementById('invCustomerName').value = '';
+
+            document.getElementById('invCustomerGstin').value = '';
+
+            document.getElementById('invDate').value = new Date().toISOString().split('T')[0];
+
+            document.getElementById('invNumberDisplay').value = currentInvoiceNo;
+
+            
+
+            const tableBody = document.getElementById('invoiceItemsTable');
+
+            tableBody.innerHTML = '';
+
+            addRowData('', '9964', '', '', 1, 0);
+
+
+
+            document.getElementById('invDriverNight').value = 0;
+
+            document.getElementById('invTollTax').value = 0;
+
+            document.getElementById('invParking').value = 0;
+
+            document.getElementById('invChallan').value = 0;
+
+            document.getElementById('invDiscVal').value = 0;
+
+            document.getElementById('invReceived').value = 0;
+
+            document.getElementById('invTaxRate').value = "0.05";
+
+
+
+            calculateInvoiceTotals();
+
+            document.getElementById('gstModal').classList.remove('hidden');
+
+        }
+
+
+
+        function openVyaparGstModal(b) {
+
+            loadLastInvoiceNumber();
+
+            document.getElementById('modalTitle').innerText = "🧾 Edit & Generate GST Tax Invoice";
+
+            document.getElementById('invCustomerName').value = b.name || '';
+
+            document.getElementById('invCustomerGstin').value = b.clientGstin || '';
+
+            document.getElementById('invDate').value = new Date().toISOString().split('T')[0];
+
+            document.getElementById('invNumberDisplay').value = currentInvoiceNo;
+
+            
+
+            const tableBody = document.getElementById('invoiceItemsTable');
+
+            tableBody.innerHTML = '';
+
+            
+
+            let itemDesc = `${b.pickup || 'GORAKHPUR'} TO ${b.drop || 'LOCAL'}, VEHICLE - ${b.vehicle || 'INNOVA'}`;
+
+            let kmVal = parseInt(b.agreedKm) || 500;
+
+            let priceVal = parseFloat(b.total) || 4050;
+
+
+
+            addRowData(itemDesc, '9964', 'Tour Service', kmVal, 1, priceVal);
+
+
+
+            document.getElementById('invDriverNight').value = 0;
+
+            document.getElementById('invTollTax').value = 0;
+
+            document.getElementById('invParking').value = 0;
+
+            document.getElementById('invChallan').value = 0;
+
+            document.getElementById('invDiscVal').value = 0;
+
+            document.getElementById('invReceived').value = b.advance || 0;
+
+            document.getElementById('invTaxRate').value = "0.05";
+
+
+
+            calculateInvoiceTotals();
+
+            document.getElementById('gstModal').classList.remove('hidden');
+
+        }
+
+
+
+        function closeGstModal() {
+
+            document.getElementById('gstModal').classList.add('hidden');
+
+        }
+
+
+
+        function addInvoiceRow() {
+
+            addRowData('', '9964', '', '', 1, 0);
+
+        }
+
+
+
+        function addRowData(item, hsn, desc, km, qty, price) {
+
+            const tableBody = document.getElementById('invoiceItemsTable');
+
+            const rowCount = tableBody.rows.length + 1;
+
+            const tr = document.createElement('tr');
+
+            tr.className = "border-b item-row";
+
+            tr.innerHTML = `
+
+                <td class="p-2 text-center row-num">${rowCount}</td>
+
+                <td class="p-2"><input type="text" class="w-full border p-1 rounded item-name" value="${item}" placeholder="Item name"></td>
+
+                <td class="p-2"><input type="text" class="w-full border p-1 rounded item-hsn font-mono text-center" value="${hsn}" placeholder="HSN"></td>
+
+                <td class="p-2"><input type="text" class="w-full border p-1 rounded item-desc" value="${desc}" placeholder="Description"></td>
+
+                <td class="p-2"><input type="number" class="w-full border p-1 rounded item-km" value="${km}" placeholder="KM" oninput="calculateInvoiceTotals()"></td>
+
+                <td class="p-2"><input type="number" class="w-full border p-1 rounded item-qty" value="${qty}" placeholder="1" oninput="calculateInvoiceTotals()"></td>
+
+                <td class="p-2"><input type="number" class="w-full border p-1 rounded item-price" value="${price}" placeholder="0" oninput="calculateInvoiceTotals()"></td>
+
+                <td class="p-2 text-right font-semibold item-amount">₹0.00</td>
+
+                <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-red-500 font-bold hover:text-red-700 cursor-pointer">✕</button></td>
+
+            `;
+
+            tableBody.appendChild(tr);
+
+            calculateInvoiceTotals();
+
+        }
+
+
+
+        function removeRow(btn) {
+
+            btn.closest('tr').remove();
+
+            const rows = document.querySelectorAll('#invoiceItemsTable .item-row');
+
+            rows.forEach((r, idx) => {
+
+                r.querySelector('.row-num').innerText = idx + 1;
+
+            });
+
+            calculateInvoiceTotals();
+
+        }
+
+
+
+        function calculateInvoiceTotals() {
+
+            let subTotal = 0;
+
+            const rows = document.querySelectorAll('#invoiceItemsTable .item-row');
+
+            rows.forEach(r => {
+
+                let qty = parseFloat(r.querySelector('.item-qty').value) || 0;
+
+                let price = parseFloat(r.querySelector('.item-price').value) || 0;
+
+                let amt = qty * price;
+
+                r.querySelector('.item-amount').innerText = `₹${amt.toFixed(2)}`;
+
+                subTotal += amt;
+
+            });
+
+
+
+            let discVal = parseFloat(document.getElementById('invDiscVal').value) || 0;
+
+            let discType = document.getElementById('invDiscType').value;
+
+            let discountAmount = discType === 'percent' ? (subTotal * discVal / 100) : discVal;
+
+
+
+            let driverNight = parseFloat(document.getElementById('invDriverNight').value) || 0;
+
+            let tollTax = parseFloat(document.getElementById('invTollTax').value) || 0;
+
+            let parking = parseFloat(document.getElementById('invParking').value) || 0;
+
+            let challan = parseFloat(document.getElementById('invChallan').value) || 0;
+
+
+
+            let taxable = subTotal - discountAmount + driverNight + tollTax + parking + challan;
+
+            
+
+            let taxRateVal = document.getElementById('invTaxRate').value;
+
+            let taxRatePercent = parseFloat(taxRateVal) || 0;
+
+
+
+            let tax = taxable * taxRatePercent;
+
+            let total = taxable + tax;
+
+
+
+            let roundOffVal = 0;
+
+            if (document.getElementById('invRoundOff').checked) {
+
+                let roundedTotal = Math.round(total);
+
+                roundOffVal = roundedTotal - total;
+
+                total = roundedTotal;
+
+            }
+
+
+
+            document.getElementById('invRoundOffVal').innerText = `₹${roundOffVal.toFixed(2)}`;
+
+            document.getElementById('invGrandTotal').innerText = `₹${total.toFixed(2)}`;
+
+
+
+            let received = parseFloat(document.getElementById('invReceived').value) || 0;
+
+            let balance = total - received;
+
+            document.getElementById('invBalanceDue').innerText = `₹${balance.toFixed(2)}`;
+
+        }
+
+
+
+        function saveGstToSheet() {
+
+            const customerName = document.getElementById('invCustomerName').value || "Client";
+
+            const customerGstin = document.getElementById('invCustomerGstin').value || "Unregistered";
+
+            const invDate = document.getElementById('invDate').value || new Date().toLocaleDateString();
+
+            const invState = document.getElementById('invState').value;
+
+            const taxRateVal = document.getElementById('invTaxRate').value;
+
+            const taxRatePercent = parseFloat(taxRateVal) || 0;
+
+            const isIgst = taxRateVal.includes('igst');
+
+
+
+            let subTotal = 0;
+
+            const rows = document.querySelectorAll('#invoiceItemsTable .item-row');
+
+            rows.forEach(r => {
+
+                let qty = parseFloat(r.querySelector('.item-qty').value) || 1;
+
+                let price = parseFloat(r.querySelector('.item-price').value) || 0;
+
+                subTotal += (qty * price);
+
+            });
+
+
+
+            let discVal = parseFloat(document.getElementById('invDiscVal').value) || 0;
+
+            let discType = document.getElementById('invDiscType').value;
+
+            let discountAmount = discType === 'percent' ? (subTotal * discVal / 100) : discVal;
+
+
+
+            let driverNight = parseFloat(document.getElementById('invDriverNight').value) || 0;
+
+            let tollTax = parseFloat(document.getElementById('invTollTax').value) || 0;
+
+            let parking = parseFloat(document.getElementById('invParking').value) || 0;
+
+            let challan = parseFloat(document.getElementById('invChallan').value) || 0;
+
+
+
+            let taxableAmt = subTotal - discountAmount + driverNight + tollTax + parking + challan;
+
+            let taxTotal = taxableAmt * taxRatePercent;
+
+            let grandTotal = taxableAmt + taxTotal;
+
+
+
+            if (document.getElementById('invRoundOff').checked) {
+
+                grandTotal = Math.round(grandTotal);
+
+            }
+
+
+
+            const params = new URLSearchParams({
+
+                action: "addGst",
+
+                invoiceNo: currentInvoiceNo,
+
+                customerName: customerName,
+
+                clientGstin: customerGstin,
+
+                state: invState,
+
+                taxableAmt: taxableAmt.toFixed(2),
+
+                sgst: (!isIgst && taxRatePercent > 0) ? (taxTotal / 2).toFixed(2) : "0.00",
+
+                cgst: (!isIgst && taxRatePercent > 0) ? (taxTotal / 2).toFixed(2) : "0.00",
+
+                igst: isIgst ? taxTotal.toFixed(2) : "0.00",
+
+                grandTotal: grandTotal.toFixed(2),
+
+                timestamp: new Date().toLocaleString()
+
+            });
+
+
+
+            fetch(`${GST_SCRIPT_URL}?${params.toString()}`, { mode: 'no-cors' })
+
+            .then(() => {
+
+                alert('✅ GST Invoice ' + currentInvoiceNo + ' saved & synced to Google Sheet successfully!');
+
+                
+
+                let parts = currentInvoiceNo.split('/');
+
+                let nextNum = parseInt(parts[1]) + 1;
+
+                localStorage.setItem('baba_last_inv_num', nextNum);
+
+                currentInvoiceNo = `2026-2027/${nextNum}`;
+
+                document.getElementById('invNumberDisplay').value = currentInvoiceNo;
+
+            })
+
+            .catch(err => {
+
+                console.error(err);
+
+                alert('✅ GST Invoice ' + currentInvoiceNo + ' sent to sheet!');
+
+            });
+
+        }
+
+
+
+        function generateVyaparGstPdf() {
+
+            const customerName = document.getElementById('invCustomerName').value || "Client";
+
+            const customerGstin = document.getElementById('invCustomerGstin').value || "Unregistered";
+
+            const invDate = document.getElementById('invDate').value || new Date().toLocaleDateString();
+
+            const invState = document.getElementById('invState').value;
+
+            const termsText = document.getElementById('invTerms').value;
+
+            const received = parseFloat(document.getElementById('invReceived').value) || 0;
+
+            const taxRateVal = document.getElementById('invTaxRate').value;
+
+            const taxRatePercent = parseFloat(taxRateVal) || 0;
+
+            const isIgst = taxRateVal.includes('igst');
+
+
+
+            let subTotal = 0;
+
+            let itemsList = [];
+
+            const rows = document.querySelectorAll('#invoiceItemsTable .item-row');
+
+            rows.forEach(r => {
+
+                let name = r.querySelector('.item-name').value || "Tour Service";
+
+                let hsn = r.querySelector('.item-hsn').value || "9964";
+
+                let desc = r.querySelector('.item-desc').value || "";
+
+                let km = r.querySelector('.item-km').value || "";
+
+                let qty = parseFloat(r.querySelector('.item-qty').value) || 1;
+
+                let price = parseFloat(r.querySelector('.item-price').value) || 0;
+
+                let amt = qty * price;
+
+                subTotal += amt;
+
+                itemsList.push({ name, hsn, desc, km, qty, price, amt });
+
+            });
+
+
+
+            let discVal = parseFloat(document.getElementById('invDiscVal').value) || 0;
+
+            let discType = document.getElementById('invDiscType').value;
+
+            let discountAmount = discType === 'percent' ? (subTotal * discVal / 100) : discVal;
+
+
+
+            let driverNight = parseFloat(document.getElementById('invDriverNight').value) || 0;
+
+            let tollTax = parseFloat(document.getElementById('invTollTax').value) || 0;
+
+            let parking = parseFloat(document.getElementById('invParking').value) || 0;
+
+            let challan = parseFloat(document.getElementById('invChallan').value) || 0;
+
+
+
+            let taxableAmt = subTotal - discountAmount + driverNight + tollTax + parking + challan;
+
+            let taxTotal = taxableAmt * taxRatePercent;
+
+            let grandTotal = taxableAmt + taxTotal;
+
+
+
+            if (document.getElementById('invRoundOff').checked) {
+
+                grandTotal = Math.round(grandTotal);
+
+            }
+
+            let balanceDue = grandTotal - received;
+
+
+
+            const { jsPDF } = window.jspdf;
+
+            const doc = new jsPDF();
+
+
+
+            // Company Header
+
+            doc.setFont("helvetica", "bold");
+
+            doc.setFontSize(14);
+
+            doc.text("BABA TOUR AND TRAVELS", 105, 12, { align: "center" });
+
+
+
+            doc.setFont("helvetica", "normal");
+
+            doc.setFontSize(8);
+
+            doc.text("Opposite Gorakhpur Railway Station Gate Number 6, Gorakhpur, Uttar Pradesh-273001", 105, 17, { align: "center" });
+
+            doc.text("Phone no.: 8726667104 Email: babatourandtravel098@gmail.com", 105, 22, { align: "center" });
+
+            doc.text("GSTIN: 09AARPU5006D1ZI, State: 09-Uttar Pradesh", 105, 27, { align: "center" });
+
+            doc.text("Website: www.babatourandtravel.com", 105, 32, { align: "center" });
+
+
+
+            doc.setDrawColor(150, 150, 150);
+
+            doc.line(14, 35, 196, 35);
+
+
+
+            // Bill To & Invoice Details
+
+            doc.setFont("helvetica", "bold");
+
+            doc.setFontSize(10);
+
+            doc.text("Bill To:", 14, 42);
+
+            doc.text("Invoice Details:", 130, 42);
+
+
+
+            doc.setFont("helvetica", "normal");
+
+            doc.setFontSize(9);
+
+            doc.text(`${customerName}`, 14, 48);
+
+            doc.text(`GSTIN: ${customerGstin}`, 14, 53);
+
+            doc.text(`State: ${invState}`, 14, 58);
+
+
+
+            doc.text(`Invoice No: ${currentInvoiceNo}`, 130, 48);
+
+            doc.text(`Date: ${invDate}`, 130, 53);
+
+            doc.text(`Place of Supply: ${invState}`, 130, 58);
+
+
+
+            // Table Header with HSN
+
+            doc.setFillColor(30, 58, 138);
+
+            doc.rect(14, 66, 182, 8, "F");
+
+            doc.setTextColor(255, 255, 255);
+
+            doc.setFont("helvetica", "bold");
+
+            doc.text("Si.", 18, 71);
+
+            doc.text("Item / Description", 28, 71);
+
+            doc.text("HSN", 105, 71);
+
+            doc.text("KM", 125, 71);
+
+            doc.text("Rate", 145, 71);
+
+            doc.text("Amount", 175, 71);
+
+
+
+            // Table Rows
+
+            doc.setTextColor(0, 0, 0);
+
+            doc.setFont("helvetica", "normal");
+
+            let y = 80;
+
+            itemsList.forEach((it, idx) => {
+
+                doc.text(`${idx + 1}`, 18, y);
+
+                doc.text(`${it.name} - ${it.desc}`, 28, y, { maxWidth: 72 });
+
+                doc.text(`${it.hsn}`, 105, y);
+
+                doc.text(`${it.km}`, 125, y);
+
+                doc.text(`${it.price.toFixed(2)}`, 145, y);
+
+                doc.text(`${it.amt.toFixed(2)}`, 175, y);
+
+                y += 10;
+
+            });
+
+
+
+            if (driverNight > 0) { doc.text("-", 18, y); doc.text("Driver Night Charges", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${driverNight.toFixed(2)}`, 175, y); y += 8; }
+
+            if (tollTax > 0) { doc.text("-", 18, y); doc.text("Toll Tax", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${tollTax.toFixed(2)}`, 175, y); y += 8; }
+
+            if (parking > 0) { doc.text("-", 18, y); doc.text("Parking / Checkpost", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${parking.toFixed(2)}`, 175, y); y += 8; }
+
+            if (challan > 0) { doc.text("-", 18, y); doc.text("Challan / Other Charges", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${challan.toFixed(2)}`, 175, y); y += 8; }
+
+
+
+            doc.line(14, y, 196, y);
+
+            y += 6;
+
+
+
+            // Tax Summary Table
+
+            doc.setFillColor(240, 240, 240);
+
+            doc.rect(14, y, 100, 6, "F");
+
+            doc.setFont("helvetica", "bold");
+
+            doc.text("Tax Type", 18, y + 4);
+
+            doc.text("Taxable Amt", 50, y + 4);
+
+            doc.text("Rate", 80, y + 4);
+
+            doc.text("Tax", 98, y + 4);
+
+
+
+            y += 6;
+
+            doc.setFont("helvetica", "normal");
+
+            if (isIgst) {
+
+                let igstRate = (taxRatePercent * 100).toFixed(0) + "%";
+
+                doc.text("IGST", 18, y + 4);
+
+                doc.text(`${taxableAmt.toFixed(2)}`, 50, y + 4);
+
+                doc.text(igstRate, 80, y + 4);
+
+                doc.text(`${taxTotal.toFixed(2)}`, 98, y + 4);
+
+            } else if (taxRatePercent > 0) {
+
+                let halfRate = (taxRatePercent * 50).toFixed(1) + "%";
+
+                let halfTax = (taxTotal / 2).toFixed(2);
+
+                doc.text("SGST", 18, y + 4);
+
+                doc.text(`${taxableAmt.toFixed(2)}`, 50, y + 4);
+
+                doc.text(halfRate, 80, y + 4);
+
+                doc.text(`${halfTax}`, 98, y + 4);
+
+
+
+                y += 6;
+
+                doc.text("CGST", 18, y + 4);
+
+                doc.text(`${taxableAmt.toFixed(2)}`, 50, y + 4);
+
+                doc.text(halfRate, 80, y + 4);
+
+                doc.text(`${halfTax}`, 98, y + 4);
+
+            } else {
+
+                doc.text("Exempted", 18, y + 4);
+
+                doc.text(`${taxableAmt.toFixed(2)}`, 50, y + 4);
+
+                doc.text("0%", 80, y + 4);
+
+                doc.text("0.00", 98, y + 4);
+
+            }
+
+
+
+            // Right Amounts Summary
+
+            let rY = y - (isIgst ? 6 : 12);
+
+            let displayTaxLabel = isIgst ? "IGST Total" : "Tax (" + (taxRatePercent * 100) + "% GST)";
+
+            const addSum = (lbl, val, bold=false) => {
+
+                if(bold) doc.setFont("helvetica", "bold");
+
+                else doc.setFont("helvetica", "normal");
+
+                doc.text(lbl, 125, rY);
+
+                doc.text(`Rs. ${val}`, 175, rY);
+
+                rY += 6;
+
+            };
+
+            addSum("Sub Total", taxableAmt.toFixed(2));
+
+            if(taxRatePercent > 0) addSum(displayTaxLabel, taxTotal.toFixed(2));
+
+            if(discountAmount > 0) addSum("Discount", `-${discountAmount.toFixed(2)}`);
+
+            addSum("Grand Total", grandTotal.toFixed(2), true);
+
+            addSum("Received", received.toFixed(2));
+
+            addSum("Balance Due", balanceDue.toFixed(2), true);
+
+
+
+            y = Math.max(y + 15, rY + 5);
+
+
+
+            // Terms & Conditions & Bank Details
+
+            doc.setFont("helvetica", "bold");
+
+            doc.text("Terms & Conditions:", 14, y);
+
+            doc.text("Bank Details:", 125, y);
+
+
+
+            doc.setFont("helvetica", "normal");
+
+            doc.setFontSize(8);
+
+            doc.text(termsText, 14, y + 5, { maxWidth: 100 });
+
+            doc.text("Bank: Kotak Mahindra Bank, Gorakhpur\nA/c No: 3411664106 | IFSC: KKBK0005297\nName: Baba Tour & Travel", 125, y + 5);
+
+
+
+            doc.setFontSize(7);
+
+            doc.text("This is a system generated invoice and does not require physical signature or stamp.", 105, 275, { align: "center" });
+
+
+
+            doc.save(`GST_Invoice_${customerName}_${currentInvoiceNo.replace('/', '_')}.pdf`);
+
+            closeGstModal();
+
+        }
+
+
+
+        document.getElementById('bookingForm').addEventListener('submit', function(e) {
+
+            e.preventDefault();
+
+            const btn = document.getElementById('submitBtn');
+
+            btn.innerText = "Saving..."; btn.disabled = true;
+
+
+
+            const formData = {
+
+                action: "add",
+
+                name: document.getElementById('custName').value,
+
+                phone: document.getElementById('custPhone').value,
+
+                address: document.getElementById('custAddress').value,
+
+                pickup: document.getElementById('pickup').value,
+
+                drop: document.getElementById('drop').value,
+
+                tourRoute: document.getElementById('tourRoute').value,
+
+                startDate: document.getElementById('startDate').value,
+
+                endDate: document.getElementById('endDate').value,
+
+                vehicle: document.getElementById('vehicleSelect').value,
+
+                agreedKm: document.getElementById('agreedKm').value,
+
+                extraKmRate: document.getElementById('extraKmRate').value,
+
+                extraDayRate: document.getElementById('extraDayRate').value,
+
+                driverNight: document.getElementById('driverNight').value,
+
+                parkingInc: document.getElementById('parkingInc').value,
+
+                tollInc: document.getElementById('tollInc').value,
+
+                checkpostInc: document.getElementById('checkpostInc').value,
+
+                total: parseFloat(document.getElementById('totalAmount').value) || 0,
+
+                advance: parseFloat(document.getElementById('advanceAmount').value) || 0,
+
+                staff: document.getElementById('staffName').value,
+
+                timestamp: new Date().toLocaleString()
+
+            };
+
+
+
+            fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(formData) })
+
+            .then(() => {
+
+                alert('Booking saved!');
+
+                this.reset();
+
+                updateDriverNight();
+
+                btn.innerText = "Save Booking & Generate Receipt";
+
+                btn.disabled = false;
+
+                setTimeout(fetchBookings, 2000);
+
+            });
+
+        });
+
+    </script>
+
+</body>
+
+</html>
