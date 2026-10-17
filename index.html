@@ -366,6 +366,22 @@
                         <button onclick="fetchBookings()" class="bg-blue-100 text-blue-800 px-2.5 py-1.5 rounded text-xs font-semibold cursor-pointer">🔄</button>
                     </div>
                 </div>
+
+                <!-- Date Filter Bar for GST Invoices Tab -->
+                <div id="gstFilterBar" class="hidden bg-purple-50 p-3 rounded-lg border border-purple-200 mb-3 flex flex-wrap items-center gap-3 text-xs">
+                    <div>
+                        <label class="font-semibold text-purple-900">From Date:</label>
+                        <input type="date" id="filterFromDate" class="border p-1.5 rounded bg-white mt-1">
+                    </div>
+                    <div>
+                        <label class="font-semibold text-purple-900">To Date:</label>
+                        <input type="date" id="filterToDate" class="border p-1.5 rounded bg-white mt-1">
+                    </div>
+                    <div class="flex items-end gap-2 mt-4 sm:mt-0">
+                        <button onclick="renderTable()" class="bg-purple-600 text-white px-3 py-1.5 rounded font-semibold hover:bg-purple-700 cursor-pointer">🔍 Filter</button>
+                        <button onclick="downloadGstExcel()" class="bg-green-600 text-white px-3 py-1.5 rounded font-semibold hover:bg-green-700 cursor-pointer shadow">📊 Download Excel Report</button>
+                    </div>
+                </div>
                 
                 <div class="overflow-x-auto max-h-[600px]">
                     <table class="w-full text-left border-collapse text-xs">
@@ -549,6 +565,7 @@
             const newBtn = document.getElementById('newTabBtn');
             const compBtn = document.getElementById('completedTabBtn');
             const gstBtn = document.getElementById('gstTabBtn');
+            const gstFilterBar = document.getElementById('gstFilterBar');
 
             newBtn.className = "bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer";
             compBtn.className = "bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer";
@@ -556,12 +573,15 @@
 
             if(tab === 'new') {
                 newBtn.className = "bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer";
+                gstFilterBar.classList.add('hidden');
                 fetchBookings();
             } else if(tab === 'completed') {
                 compBtn.className = "bg-green-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer";
+                gstFilterBar.classList.add('hidden');
                 fetchBookings();
             } else if(tab === 'gst') {
                 gstBtn.className = "bg-purple-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer";
+                gstFilterBar.classList.remove('hidden');
                 fetchGstInvoices();
             }
         }
@@ -581,6 +601,15 @@
             return d;
         }
 
+        // Helper to parse generic date strings from timestamp
+        function parseTimestampDate(val) {
+            if(!val) return null;
+            const d = new Date(val);
+            if(isNaN(d.getTime())) return null;
+            d.setHours(0,0,0,0);
+            return d;
+        }
+
         function renderTable() {
             const tbody = document.getElementById('bookingTableBody');
             const headerRow = document.getElementById('tableHeaderRow');
@@ -595,11 +624,28 @@
                     <th class="p-2">Status</th>
                     <th class="p-2">Action</th>
                 `;
-                if(allGstInvoicesData.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Yahan koi GST invoice save nahi hai.</td></tr>`;
+
+                const fromVal = document.getElementById('filterFromDate').value;
+                const toVal = document.getElementById('filterToDate').value;
+                const fromDate = fromVal ? new Date(fromVal) : null;
+                const toDate = toVal ? new Date(toVal) : null;
+                if(fromDate) fromDate.setHours(0,0,0,0);
+                if(toDate) toDate.setHours(23,59,59,999);
+
+                const filteredGst = allGstInvoicesData.filter(inv => {
+                    const invDate = parseTimestampDate(inv.timestamp);
+                    if(!invDate) return true;
+                    if(fromDate && invDate < fromDate) return false;
+                    if(toDate && invDate > toDate) return false;
+                    return true;
+                });
+
+                if(filteredGst.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Chuni gayi date ke beech koi GST invoice nahi mili.</td></tr>`;
                     return;
                 }
-                allGstInvoicesData.forEach(inv => {
+
+                filteredGst.forEach(inv => {
                     const row = document.createElement('tr');
                     row.className = "border-b hover:bg-slate-50";
                     row.innerHTML = `
@@ -680,6 +726,57 @@
                 `;
                 tbody.appendChild(row);
             });
+        }
+
+        // Download Excel (CSV) Report function based on selected date range
+        function downloadGstExcel() {
+            const fromVal = document.getElementById('filterFromDate').value;
+            const toVal = document.getElementById('filterToDate').value;
+            const fromDate = fromVal ? new Date(fromVal) : null;
+            const toDate = toVal ? new Date(toVal) : null;
+            if(fromDate) fromDate.setHours(0,0,0,0);
+            if(toDate) toDate.setHours(23,59,59,999);
+
+            const filteredGst = allGstInvoicesData.filter(inv => {
+                const invDate = parseTimestampDate(inv.timestamp);
+                if(!invDate) return true;
+                if(fromDate && invDate < fromDate) return false;
+                if(toDate && invDate > toDate) return false;
+                return true;
+            });
+
+            if(filteredGst.length === 0) {
+                alert('Chuni gayi date ke beech download karne ke liye koi GST invoice nahi hai.');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            // CSV Headers
+            csvContent += "Timestamp,Invoice No,Customer Name,Client GSTIN,State,Taxable Amount,SGST,CGST,IGST,Grand Total\r\n";
+
+            filteredGst.forEach(inv => {
+                let row = [
+                    `"${inv.timestamp || ''}"`,
+                    `"${inv.invoiceNo || ''}"`,
+                    `"${(inv.customerName || '').replace(/"/g, '""')}"`,
+                    `"${inv.clientGstin || ''}"`,
+                    `"${inv.state || ''}"`,
+                    `"${inv.taxableAmt || 0}"`,
+                    `"${inv.sgst || 0}"`,
+                    `"${inv.cgst || 0}"`,
+                    `"${inv.igst || 0}"`,
+                    `"${inv.grandTotal || 0}"`
+                ];
+                csvContent += row.join(",") + "\r\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `GSTR1_Report_${fromVal || 'All'}to${toVal || 'All'}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         function sendWhatsApp(b) {
@@ -1127,6 +1224,7 @@
                 address: document.getElementById('custAddress').value,
                 pickup: document.getElementById('pickup').value,
                 drop: document.getElementById('drop').value,
+                tourRoute: document.getElementById('tourRoute5' || document.getElementById('tourRoute').value),
                 tourRoute: document.getElementById('tourRoute').value,
                 startDate: document.getElementById('startDate').value,
                 endDate: document.getElementById('endDate').value,
