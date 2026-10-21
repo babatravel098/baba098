@@ -3,78 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Baba Tour & Travels - Ultimate Fleet CRM Dashboard</title>
+    <title>Baba Tour & Travels - Advanced GST Billing & CRM Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Poppins', sans-serif; }
-    </style>
     <link rel="manifest" href="manifest.json">
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased">
+<body class="bg-slate-100 font-sans">
 
     <!-- Login Modal Screen -->
-    <div id="loginModal" class="fixed inset-0 bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 z-50 flex items-center justify-center p-4">
-        <div class="bg-white/95 backdrop-blur-md p-8 rounded-3xl shadow-2xl max-w-md w-full space-y-6 border border-white/20">
-            <div class="text-center space-y-2">
-                <div class="w-16 h-16 bg-gradient-to-tr from-amber-500 to-yellow-400 rounded-2xl mx-auto flex items-center justify-center text-blue-950 text-2xl shadow-lg font-black">
-                    <i class="fa-solid fa-van-shuttle"></i>
-                </div>
-                <h2 class="text-2xl font-bold text-blue-950 tracking-tight">Baba Tour & Travels</h2>
-                <p class="text-xs text-gray-500 font-medium">Gorakhpur | Secure Management Portal</p>
+    <div id="loginModal" class="fixed inset-0 bg-blue-950 z-50 flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full space-y-6">
+            <div class="text-center">
+                <h2 class="text-2xl font-bold text-blue-900">🚐 Baba Tour & Travels</h2>
+                <p class="text-xs text-gray-500 mt-1">Gorakhpur | Secure Staff Login</p>
             </div>
             <form id="loginForm" class="space-y-4" onsubmit="handleLogin(event)">
                 <div>
                     <label class="text-xs font-semibold text-gray-600">Username</label>
-                    <input type="text" id="loginUser" required class="w-full border border-gray-200 p-3 rounded-xl text-sm mt-1 focus:ring-2 focus:ring-blue-600 outline-none bg-gray-50 font-medium transition" placeholder="Enter username">
+                    <input type="text" id="loginUser" required class="w-full border p-3 rounded-lg text-sm mt-1 focus:ring-2 focus:ring-blue-600 outline-none" placeholder="Enter username">
                 </div>
                 <div>
                     <label class="text-xs font-semibold text-gray-600">Password</label>
-                    <input type="password" id="loginPass" required class="w-full border border-gray-200 p-3 rounded-xl text-sm mt-1 focus:ring-2 focus:ring-blue-600 outline-none bg-gray-50 font-medium transition" placeholder="Enter password">
+                    <input type="password" id="loginPass" required class="w-full border p-3 rounded-lg text-sm mt-1 focus:ring-2 focus:ring-blue-600 outline-none" placeholder="Enter password">
                 </div>
                 <div id="loginError" class="text-red-500 text-xs text-center hidden font-semibold">Galat Username ya Password! Kripya dobara koshish karein.</div>
-                <button type="submit" class="w-full bg-gradient-to-r from-blue-700 to-indigo-800 text-white p-3.5 rounded-xl font-semibold hover:from-blue-800 hover:to-indigo-900 transition shadow-lg shadow-blue-500/25 cursor-pointer">Login to Dashboard</button>
+                <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-md cursor-pointer">Login to Dashboard</button>
             </form>
-            <div class="text-center text-[11px] text-gray-400 font-medium">
-                Authorized personnel only. Railway Station Road, Gorakhpur.
+            <div class="text-center text-[10px] text-gray-400">
+                Authorized access only. Baba Tour and Travels, Gorakhpur.
             </div>
         </div>
     </div>
 
-    <!-- Advanced GST Invoice Generator Modal -->
-    <div id="gstModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white p-6 rounded-3xl shadow-2xl max-w-5xl w-full space-y-4 max-h-[95vh] overflow-y-auto border border-gray-100">
+    <!-- Advanced GST Invoice Generator Modal (Vyapar Style) -->
+    <div id="gstModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-5xl w-full space-y-4 max-h-[95vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b pb-3">
-                <h3 id="modalTitle" class="text-lg font-bold text-blue-950 flex items-center gap-2">🧾 Advanced GST Tax Invoice Generator</h3>
-                <button onclick="closeGstModal()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600 font-bold transition flex items-center justify-center cursor-pointer">✕</button>
+                <h3 id="modalTitle" class="text-lg font-bold text-blue-900">🧾 Advanced GST Tax Invoice Generator</h3>
+                <button onclick="closeGstModal()" class="text-gray-500 hover:text-red-600 font-bold text-lg cursor-pointer">✕</button>
             </div>
 
             <div class="space-y-4 text-xs">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-gray-200">
+                <!-- Top Header Info -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-lg border">
                     <div>
                         <label class="font-semibold text-gray-700">Customer / Company Name</label>
-                        <input type="text" id="invCustomerName" class="w-full border border-gray-200 p-2.5 rounded-xl mt-1 font-semibold bg-white" placeholder="Client Name">
+                        <input type="text" id="invCustomerName" class="w-full border p-2 rounded mt-1 font-semibold" placeholder="Client Name">
                     </div>
                     <div>
                         <label class="font-semibold text-gray-700">Client GSTIN</label>
-                        <input type="text" id="invCustomerGstin" class="w-full border border-gray-200 p-2.5 rounded-xl mt-1 uppercase font-mono bg-white" placeholder="09AACCI...">
+                        <input type="text" id="invCustomerGstin" class="w-full border p-2 rounded mt-1 uppercase font-mono" placeholder="09AACCI...">
                     </div>
                     <div>
                         <label class="font-semibold text-gray-700">Invoice Date</label>
-                        <input type="date" id="invDate" class="w-full border border-gray-200 p-2.5 rounded-xl mt-1 bg-white">
+                        <input type="date" id="invDate" class="w-full border p-2 rounded mt-1">
                     </div>
                     <div>
                         <label class="font-semibold text-gray-700">Invoice Number (Auto)</label>
-                        <input type="text" id="invNumberDisplay" readonly class="w-full border border-gray-200 p-2.5 rounded-xl mt-1 font-mono font-bold bg-gray-100 text-blue-950">
+                        <input type="text" id="invNumberDisplay" readonly class="w-full border p-2 rounded mt-1 font-mono font-bold bg-gray-100 text-blue-900">
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-gray-200">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-lg border">
                     <div>
                         <label class="font-semibold text-gray-700">State of Supply</label>
-                        <select id="invState" class="w-full border border-gray-200 p-2.5 rounded-xl mt-1 bg-white font-medium">
+                        <select id="invState" class="w-full border p-2 rounded mt-1 bg-white">
                             <option value="09-Uttar Pradesh">09-Uttar Pradesh</option>
                             <option value="01-Jammu & Kashmir">01-Jammu & Kashmir</option>
                             <option value="03-Punjab">03-Punjab</option>
@@ -88,49 +82,53 @@
                     </div>
                 </div>
 
-                <div class="border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                <!-- Items Table Container with HSN Code -->
+                <div class="border rounded-lg overflow-hidden">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="bg-slate-200/70 text-slate-700 font-semibold">
-                                <th class="p-3 w-10 text-center">#</th>
-                                <th class="p-3">Item / Service Name</th>
-                                <th class="p-3 w-28">HSN Code</th>
-                                <th class="p-3">Description</th>
-                                <th class="p-3 w-16">KM</th>
-                                <th class="p-3 w-14">QTY</th>
-                                <th class="p-3 w-20">Price (₹)</th>
-                                <th class="p-3 w-20 text-right">Amount (₹)</th>
-                                <th class="p-3 w-10 text-center"></th>
+                            <tr class="bg-slate-200 text-slate-700">
+                                <th class="p-2 w-10">#</th>
+                                <th class="p-2">Item / Service Name</th>
+                                <th class="p-2 w-28">HSN Code</th>
+                                <th class="p-2">Description</th>
+                                <th class="p-2 w-16">KM</th>
+                                <th class="p-2 w-14">QTY</th>
+                                <th class="p-2 w-20">Price (₹)</th>
+                                <th class="p-2 w-20">Amount (₹)</th>
+                                <th class="p-2 w-10"></th>
                             </tr>
                         </thead>
-                        <tbody id="invoiceItemsTable" class="divide-y divide-gray-100"></tbody>
+                        <tbody id="invoiceItemsTable">
+                            <!-- Dynamic Rows -->
+                        </tbody>
                     </table>
                 </div>
-                <button type="button" onclick="addInvoiceRow()" class="bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2 rounded-xl font-semibold text-xs hover:bg-blue-100 transition cursor-pointer shadow-sm">+ ADD ROW</button>
+                <button type="button" onclick="addInvoiceRow()" class="bg-blue-100 text-blue-800 px-3 py-1.5 rounded font-semibold text-xs hover:bg-blue-200 cursor-pointer">+ ADD ROW</button>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-5 rounded-2xl border border-gray-200">
+                <!-- Bottom Section -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border">
                     <div class="space-y-3">
                         <div>
                             <label class="font-semibold text-gray-700">Add Terms & Conditions</label>
-                            <textarea id="invTerms" rows="3" class="w-full border border-gray-200 p-3 rounded-xl mt-1 bg-white text-xs">1. Extra locations / routes added during tour will be charged extra.
+                            <textarea id="invTerms" rows="3" class="w-full border p-2 rounded mt-1">1. Extra locations / routes added during tour will be charged extra.
 2. For GST bill after booking, extra GST will be charged on total amount.</textarea>
                         </div>
                     </div>
 
-                    <div class="space-y-2.5 text-right bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <div class="space-y-2 text-right">
                         <div class="flex justify-between items-center">
-                            <span class="font-semibold text-gray-600">Discount:</span>
+                            <span class="font-semibold">Discount:</span>
                             <div class="flex gap-2 w-1/2">
-                                <input type="number" id="invDiscVal" value="0" oninput="calculateInvoiceTotals()" class="w-full border border-gray-200 p-1.5 rounded-lg text-right">
-                                <select id="invDiscType" onchange="calculateInvoiceTotals()" class="border border-gray-200 p-1.5 rounded-lg bg-white">
+                                <input type="number" id="invDiscVal" value="0" oninput="calculateInvoiceTotals()" class="w-full border p-1 rounded text-right">
+                                <select id="invDiscType" onchange="calculateInvoiceTotals()" class="border p-1 rounded bg-white">
                                     <option value="rs">₹</option>
                                     <option value="percent">%</option>
                                 </select>
                             </div>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span class="font-semibold text-gray-600">Select GST Slab:</span>
-                            <select id="invTaxRate" onchange="calculateInvoiceTotals()" class="border border-gray-200 p-1.5 rounded-lg bg-white w-1/2 font-semibold text-xs">
+                            <span class="font-semibold">Select GST Slab:</span>
+                            <select id="invTaxRate" onchange="calculateInvoiceTotals()" class="border p-1 rounded bg-white w-1/2 font-semibold">
                                 <option value="0.05" selected>GST @ 5% (SGST/CGST 2.5%+2.5%)</option>
                                 <option value="0.05_igst">IGST @ 5% (Interstate)</option>
                                 <option value="0.12">GST @ 12% (SGST/CGST 6%+6%)</option>
@@ -143,36 +141,36 @@
                             </select>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span class="font-semibold text-gray-600">Driver Night (₹):</span>
-                            <input type="number" id="invDriverNight" value="0" oninput="calculateInvoiceTotals()" class="border border-gray-200 p-1.5 rounded-lg text-right w-1/2">
+                            <span class="font-semibold">Driver Night (₹):</span>
+                            <input type="number" id="invDriverNight" value="0" oninput="calculateInvoiceTotals()" class="border p-1 rounded text-right w-1/2">
                         </div>
                         <div class="flex justify-between items-center">
-                            <span class="font-semibold text-gray-600">Toll Tax (₹):</span>
-                            <input type="number" id="invTollTax" value="0" oninput="calculateInvoiceTotals()" class="border border-gray-200 p-1.5 rounded-lg text-right w-1/2">
+                            <span class="font-semibold">Toll Tax (₹):</span>
+                            <input type="number" id="invTollTax" value="0" oninput="calculateInvoiceTotals()" class="border p-1 rounded text-right w-1/2">
                         </div>
                         <div class="flex justify-between items-center">
-                            <span class="font-semibold text-gray-600">Parking / Checkpost (₹):</span>
-                            <input type="number" id="invParking" value="0" oninput="calculateInvoiceTotals()" class="border border-gray-200 p-1.5 rounded-lg text-right w-1/2">
+                            <span class="font-semibold">Parking / Checkpost (₹):</span>
+                            <input type="number" id="invParking" value="0" oninput="calculateInvoiceTotals()" class="border p-1 rounded text-right w-1/2">
                         </div>
                         <div class="flex justify-between items-center">
-                            <span class="font-semibold text-gray-600">Challan / Other (₹):</span>
-                            <input type="number" id="invChallan" value="0" oninput="calculateInvoiceTotals()" class="border border-gray-200 p-1.5 rounded-lg text-right w-1/2">
+                            <span class="font-semibold">Challan / Other (₹):</span>
+                            <input type="number" id="invChallan" value="0" oninput="calculateInvoiceTotals()" class="border p-1 rounded text-right w-1/2">
                         </div>
                         <div class="flex justify-between items-center pt-2 border-t">
-                            <label class="flex items-center gap-2 cursor-pointer font-semibold text-gray-600">
-                                <input type="checkbox" id="invRoundOff" checked onchange="calculateInvoiceTotals()" class="rounded"> Round Off
+                            <label class="flex items-center gap-2 cursor-pointer font-semibold">
+                                <input type="checkbox" id="invRoundOff" checked onchange="calculateInvoiceTotals()"> Round Off
                             </label>
-                            <span id="invRoundOffVal" class="text-gray-500 font-mono">₹0.00</span>
+                            <span id="invRoundOffVal" class="text-gray-500">₹0.00</span>
                         </div>
-                        <div class="flex justify-between items-center pt-2 border-t text-sm font-bold text-blue-950">
+                        <div class="flex justify-between items-center pt-2 border-t text-base font-bold text-blue-900">
                             <span>Total Amount:</span>
                             <span id="invGrandTotal">₹0.00</span>
                         </div>
-                        <div class="flex justify-between items-center pt-1 text-xs font-bold text-green-700">
+                        <div class="flex justify-between items-center pt-1 text-sm font-bold text-green-700">
                             <span>Advance Received:</span>
-                            <input type="number" id="invReceived" value="0" oninput="calculateInvoiceTotals()" class="border border-gray-200 p-1.5 rounded-lg text-right w-1/2 font-bold text-green-700">
+                            <input type="number" id="invReceived" value="0" oninput="calculateInvoiceTotals()" class="border p-1 rounded text-right w-1/2 font-bold text-green-700">
                         </div>
-                        <div class="flex justify-between items-center pt-1 text-sm font-bold text-red-600 border-t">
+                        <div class="flex justify-between items-center pt-1 text-sm font-bold text-red-600">
                             <span>Balance Due:</span>
                             <span id="invBalanceDue">₹0.00</span>
                         </div>
@@ -180,9 +178,9 @@
                 </div>
 
                 <div class="flex justify-end gap-3 pt-2">
-                    <button type="button" onclick="saveGstToSheet()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-semibold transition cursor-pointer shadow-lg shadow-emerald-500/20">💾 Save & Sync to Sheet</button>
-                    <button type="button" onclick="generateVyaparGstPdf()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2.5 rounded-xl font-semibold transition cursor-pointer shadow-lg shadow-purple-500/20">📥 Download PDF Invoice</button>
-                    <button type="button" onclick="closeGstModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-5 py-2.5 rounded-xl font-semibold transition cursor-pointer">Cancel</button>
+                    <button type="button" onclick="saveGstToSheet()" class="bg-green-600 text-white px-5 py-2.5 rounded font-semibold hover:bg-green-700 transition cursor-pointer shadow">💾 Save & Sync to Sheet</button>
+                    <button type="button" onclick="generateVyaparGstPdf()" class="bg-purple-600 text-white px-5 py-2.5 rounded font-semibold hover:bg-purple-700 transition cursor-pointer shadow">📥 Download PDF Invoice</button>
+                    <button type="button" onclick="closeGstModal()" class="bg-gray-300 text-gray-700 px-4 py-2.5 rounded font-semibold hover:bg-gray-400 transition cursor-pointer">Cancel</button>
                 </div>
             </div>
         </div>
@@ -190,83 +188,83 @@
 
     <!-- Main Content (Hidden until login) -->
     <div id="mainContent" class="hidden">
-        <header class="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white p-4 shadow-xl border-b border-white/10 flex justify-between items-center sticky top-0 z-40">
+        <header class="bg-blue-900 text-white p-4 shadow-md flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center text-blue-950 text-xl shadow-lg font-black border-2 border-white/20">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center text-blue-950 text-xl shadow-lg font-black border-2 border-white/20">
                     <i class="fa-solid fa-van-shuttle"></i>
                 </div>
                 <div>
-                    <h1 class="text-lg font-bold tracking-wide">🚐 Baba Tour & Travels, Gorakhpur</h1>
-                    <p class="text-[11px] text-blue-200 font-medium">Railway Station Road | Helpline: 8726667104</p>
+                    <h1 class="text-xl font-bold tracking-wide">🚐 Baba Tour & Travels, Gorakhpur</h1>
+                    <p class="text-[10px] text-blue-200">Railway Station Road | Helpline: 8726667104</p>
                 </div>
             </div>
             <div class="flex gap-3 items-center">
-                <span class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full font-semibold hidden sm:inline-block backdrop-blur-sm">🟢 Live Cloud Synced</span>
-                <button onclick="openFreshGstModal()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-lg shadow-purple-600/30 transition cursor-pointer flex items-center gap-2"><i class="fa-solid fa-file-invoice-dollar"></i> Create Fresh GST Invoice</button>
-                <button onclick="handleLogout()" class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-lg shadow-rose-600/30 transition cursor-pointer flex items-center gap-2"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">🟢 Live Cloud Synced</span>
+                <button onclick="openFreshGstModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">📄 Create Fresh GST Invoice</button>
+                <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🚪 Logout</button>
             </div>
         </header>
 
-        <main class="max-w-7xl mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <main class="max-w-7xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Left: New Booking Form OR Lead Form -->
-            <section class="bg-white p-6 rounded-3xl shadow-xl lg:col-span-1 h-fit space-y-4 border border-gray-100">
-                <div class="flex bg-gray-100 p-1 rounded-2xl gap-1">
-                    <button onclick="switchForm('booking')" id="bookingFormTab" class="flex-1 bg-blue-600 text-white py-2 rounded-xl text-xs font-semibold shadow transition cursor-pointer">➕ New Booking</button>
-                    <button onclick="switchForm('lead')" id="leadFormTab" class="flex-1 text-slate-600 py-2 rounded-xl text-xs font-semibold hover:text-slate-900 transition cursor-pointer">📞 Add Lead / Inquiry</button>
+            <section class="bg-white p-5 rounded-xl shadow-md lg:col-span-1 h-fit space-y-4">
+                <div class="flex border-b pb-2 gap-2">
+                    <button onclick="switchForm('booking')" id="bookingFormTab" class="flex-1 bg-blue-600 text-white py-1.5 rounded text-xs font-semibold cursor-pointer">➕ New Booking</button>
+                    <button onclick="switchForm('lead')" id="leadFormTab" class="flex-1 bg-slate-200 text-slate-700 py-1.5 rounded text-xs font-semibold cursor-pointer">📞 Add Lead / Inquiry</button>
                 </div>
 
                 <!-- Booking Form -->
-                <form id="bookingForm" class="space-y-3.5" onsubmit="saveBooking(event)">
-                    <h2 class="text-sm font-bold text-blue-950 flex items-center gap-2"><i class="fa-solid fa-clipboard-list text-blue-600"></i> New Booking Entry</h2>
+                <form id="bookingForm" class="space-y-3" onsubmit="saveBooking(event)">
+                    <h2 class="text-sm font-bold text-blue-900">New Booking Entry</h2>
                     <div>
                         <label class="text-xs font-semibold text-gray-600">ग्राहक का नाम (Customer Name)</label>
-                        <input type="text" id="custName" required class="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition" placeholder="Full name">
+                        <input type="text" id="custName" required class="w-full border p-2 rounded text-sm">
                     </div>
                     <div>
                         <label class="text-xs font-semibold text-gray-600">Client / Company GSTIN (Optional)</label>
-                        <input type="text" id="clientGstin" placeholder="e.g. 09AACCI3895A1ZL" class="w-full border border-gray-200 p-2.5 rounded-xl text-sm uppercase font-mono bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition">
+                        <input type="text" id="clientGstin" placeholder="e.g. 09AACCI3895A1ZL" class="w-full border p-2 rounded text-sm uppercase font-mono">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="text-xs font-semibold text-gray-600">मोबाइल नंबर (Mobile)</label>
-                            <input type="tel" id="custPhone" required class="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition" placeholder="10-digit number">
+                            <input type="tel" id="custPhone" required class="w-full border p-2 rounded text-sm">
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-gray-600">Booking Office (Staff Name)</label>
-                            <input type="text" id="staffName" placeholder="Ankit / Staff" required class="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition">
+                            <input type="text" id="staffName" placeholder="Ankit / Staff" required class="w-full border p-2 rounded text-sm">
                         </div>
                     </div>
                     <div>
                         <label class="text-xs font-semibold text-gray-600">ग्राहक पूरा पता (Customer Address)</label>
-                        <input type="text" id="custAddress" required class="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition" placeholder="Location / Address">
+                        <input type="text" id="custAddress" required class="w-full border p-2 rounded text-sm">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="text-xs font-semibold text-gray-600">पिकअप (Pickup)</label>
-                            <input type="text" id="pickup" required class="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition" placeholder="Gorakhpur">
+                            <label class="text-xs font-semibold text-gray-600">पिकअप (Pickup Location)</label>
+                            <input type="text" id="pickup" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Gorakhpur">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold text-gray-600">ड्रॉप (Drop)</label>
-                            <input type="text" id="drop" required class="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition" placeholder="Destination">
+                            <label class="text-xs font-semibold text-gray-600">ड्रॉप / गंतव्य (Drop / Destination)</label>
+                            <input type="text" id="drop" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Masrooe">
                         </div>
                     </div>
                     <div>
                         <label class="text-xs font-semibold text-gray-600">यात्रा का पूरा रूट / Via (Visiting Places)</label>
-                        <input type="text" id="tourRoute" required class="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition" placeholder="e.g. Gorakhpur - Ayodhya">
+                        <input type="text" id="tourRoute" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Gorakhpur - Ayodhya - Varanasi">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="text-xs font-semibold text-gray-600">यात्रा शुरू (From Date)</label>
-                            <input type="date" id="startDate" required class="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition">
+                            <input type="date" id="startDate" required class="w-full border p-2 rounded text-sm">
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-gray-600">वापसी तारीख (To Date)</label>
-                            <input type="date" id="endDate" required class="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition">
+                            <input type="date" id="endDate" required class="w-full border p-2 rounded text-sm">
                         </div>
                     </div>
                     <div>
                        <label class="text-xs font-semibold text-gray-600">गाड़ी चुनें (Vehicle Name)</label>
-                        <select id="vehicleSelect" onchange="updateDriverNight()" class="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50/50 focus:bg-white font-medium text-blue-950 focus:ring-2 focus:ring-blue-600 outline-none transition">
+                        <select id="vehicleSelect" onchange="updateDriverNight()" class="w-full border p-2 rounded text-sm bg-white font-medium text-blue-900">
                             <optgroup label="🚍 Buses (Driver Night: ₹800)">
                                 <option value="56 Seater Bus">56 Seater Bus</option>
                                 <option value="45 Seater Bus">45 Seater Bus</option>
@@ -301,41 +299,28 @@
                             </optgroup>
                         </select>
                     </div>
-
-                    <!-- CRM Module: Driver & Fleet Assignment -->
-                    <div class="grid grid-cols-2 gap-2 bg-indigo-50/70 p-3 rounded-xl border border-indigo-200">
-                        <div>
-                            <label class="text-[11px] font-semibold text-indigo-950">Driver Name</label>
-                            <input type="text" id="assignedDriver" placeholder="e.g. Nandan Pandey" class="w-full border border-indigo-200 p-2 rounded-lg text-xs bg-white mt-0.5">
-                        </div>
-                        <div>
-                            <label class="text-[11px] font-semibold text-indigo-950">Driver Phone</label>
-                            <input type="tel" id="driverPhone" placeholder="Mobile No." class="w-full border border-indigo-200 p-2 rounded-lg text-xs bg-white mt-0.5">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl border border-gray-200">
+                    <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2 rounded border">
                         <div>
                             <label class="text-[10px] font-semibold text-gray-600">तय KM</label>
-                            <input type="text" id="agreedKm" placeholder="500 KM" class="w-full border border-gray-200 p-1.5 rounded-lg text-xs bg-white">
+                            <input type="text" id="agreedKm" placeholder="500 KM" class="w-full border p-1 rounded text-xs">
                         </div>
                         <div>
                             <label class="text-[10px] font-semibold text-gray-600">Extra KM (₹)</label>
-                            <input type="number" id="extraKmRate" placeholder="18" class="w-full border border-gray-200 p-1.5 rounded-lg text-xs bg-white">
+                            <input type="number" id="extraKmRate" placeholder="18" class="w-full border p-1 rounded text-xs">
                         </div>
                         <div>
                             <label class="text-[10px] font-semibold text-gray-600">Extra Day (₹)</label>
-                            <input type="number" id="extraDayRate" placeholder="2500" class="w-full border border-gray-200 p-1.5 rounded-lg text-xs bg-white">
+                            <input type="number" id="extraDayRate" placeholder="2500" class="w-full border p-1 rounded text-xs">
                         </div>
                     </div>
 
                     <!-- Tour Exclusions / Inclusions Options -->
-                    <div class="bg-amber-50/70 p-3 rounded-xl border border-amber-200 space-y-2">
+                    <div class="bg-amber-50 p-2 rounded border border-amber-200 space-y-2">
                         <p class="text-[11px] font-bold text-amber-900">Tour Terms & Charges Status:</p>
                         <div class="grid grid-cols-2 gap-2 text-xs">
                             <div>
                                 <label class="text-[11px] font-semibold text-gray-700">Driver Night:</label>
-                                <select id="driverNight" class="w-full border border-amber-200 p-1.5 rounded-lg bg-white text-xs font-bold text-orange-800">
+                                <select id="driverNight" class="w-full border p-1 rounded bg-white text-xs font-bold text-orange-800">
                                     <option value="₹800 Per Night">₹800 Per Night (Bus)</option>
                                     <option value="₹500 Per Night" selected>₹500 Per Night (Traveller)</option>
                                     <option value="₹400 Per Night">₹400 Per Night (SUV/MUV)</option>
@@ -346,21 +331,21 @@
                             </div>
                             <div>
                                 <label class="text-[11px] font-semibold text-gray-700">Parking:</label>
-                                <select id="parkingInc" class="w-full border border-amber-200 p-1.5 rounded-lg bg-white text-xs">
+                                <select id="parkingInc" class="w-full border p-1 rounded bg-white text-xs">
                                     <option value="Excluded (Extra)">Excluded (Extra)</option>
                                     <option value="Included">Included</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="text-[11px] font-semibold text-gray-700">Toll Tax:</label>
-                                <select id="tollInc" class="w-full border border-amber-200 p-1.5 rounded-lg bg-white text-xs">
+                                <select id="tollInc" class="w-full border p-1 rounded bg-white text-xs">
                                     <option value="Excluded (Extra)">Excluded (Extra)</option>
                                     <option value="Included">Included</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="text-[11px] font-semibold text-gray-700">Checkpost:</label>
-                                <select id="checkpostInc" class="w-full border border-amber-200 p-1.5 rounded-lg bg-white text-xs">
+                                <select id="checkpostInc" class="w-full border p-1 rounded bg-white text-xs">
                                     <option value="Excluded (Extra)">Excluded (Extra)</option>
                                     <option value="Included">Included</option>
                                 </select>
@@ -371,91 +356,91 @@
                     <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="text-xs font-semibold text-gray-600">कुल रकम (Total ₹)</label>
-                            <input type="number" id="totalAmount" required class="w-full border border-gray-200 p-2.5 rounded-xl text-sm font-bold text-blue-950 bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition">
+                            <input type="number" id="totalAmount" required class="w-full border p-2 rounded text-sm font-bold text-blue-900">
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-gray-600">एडवांस (Advance ₹)</label>
-                            <input type="number" id="advanceAmount" required class="w-full border border-gray-200 p-2.5 rounded-xl text-sm font-bold text-emerald-700 bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition">
+                            <input type="number" id="advanceAmount" required class="w-full border p-2 rounded text-sm font-bold text-green-700">
                         </div>
                     </div>
-                    <button type="submit" id="submitBtn" class="w-full bg-gradient-to-r from-blue-700 to-indigo-800 text-white p-3 rounded-xl font-semibold hover:from-blue-800 hover:to-indigo-900 transition shadow-lg shadow-blue-500/25 cursor-pointer">Save Booking & Generate Receipt</button>
+                    <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white p-2.5 rounded font-semibold hover:bg-blue-700 transition shadow cursor-pointer">Save Booking & Generate Receipt</button>
                 </form>
 
                 <!-- Lead Form (Hidden by default) -->
-                <form id="leadForm" class="space-y-3.5 hidden" onsubmit="saveLead(event)">
-                    <h2 class="text-sm font-bold text-purple-950 flex items-center gap-2"><i class="fa-solid fa-headset text-purple-600"></i> New Phone Inquiry / Lead</h2>
+                <form id="leadForm" class="space-y-3 hidden" onsubmit="saveLead(event)">
+                    <h2 class="text-sm font-bold text-purple-900">New Phone Inquiry / Lead</h2>
                     <div>
                         <label class="text-xs font-semibold text-gray-600">Customer Name</label>
-                        <input type="text" id="leadName" required class="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50/50" placeholder="Caller Name">
+                        <input type="text" id="leadName" required class="w-full border p-2 rounded text-sm" placeholder="Caller Name">
                     </div>
                     <div>
                         <label class="text-xs font-semibold text-gray-600">Mobile Number</label>
-                        <input type="tel" id="leadPhone" required class="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50/50" placeholder="10-digit number">
+                        <input type="tel" id="leadPhone" required class="w-full border p-2 rounded text-sm" placeholder="10-digit number">
                     </div>
                     <div>
                         <label class="text-xs font-semibold text-gray-600">Inquiry Details / Requirements</label>
-                        <textarea id="leadDetails" rows="2" required class="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50/50" placeholder="e.g. Need Traveller for Pokhara tour"></textarea>
+                        <textarea id="leadDetails" rows="2" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Need Traveller for Pokhara tour next month"></textarea>
                     </div>
                     <div>
                         <label class="text-xs font-semibold text-gray-600">Follow-up Date & Time</label>
-                        <input type="datetime-local" id="leadFollowup" required class="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50/50">
+                        <input type="datetime-local" id="leadFollowup" required class="w-full border p-2 rounded text-sm">
                     </div>
                     <div>
                         <label class="text-xs font-semibold text-gray-600">Status</label>
-                        <select id="leadStatus" class="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-white font-medium">
+                        <select id="leadStatus" class="w-full border p-2 rounded text-sm bg-white font-medium">
                             <option value="Pending">Pending Follow-up</option>
                             <option value="Called">Called / Discussed</option>
                             <option value="Converted">Deal Confirmed (Booking)</option>
                             <option value="Dropped">Dropped</option>
                         </select>
                     </div>
-                    <button type="submit" class="w-full bg-gradient-to-r from-purple-700 to-indigo-800 text-white p-3 rounded-xl font-semibold hover:from-purple-800 hover:to-indigo-900 transition shadow-lg shadow-purple-500/25 cursor-pointer">💾 Save Lead & Sync to Cloud</button>
+                    <button type="submit" class="w-full bg-purple-600 text-white p-2.5 rounded font-semibold hover:bg-purple-700 transition shadow cursor-pointer">💾 Save Lead & Sync to Cloud</button>
                 </form>
             </section>
 
             <!-- Right: Live Bookings / Leads Table -->
-            <section class="bg-white p-6 rounded-3xl shadow-xl lg:col-span-2 border border-gray-100">
-                <div class="flex flex-col sm:flex-row justify-between items-center mb-5 border-b pb-4 gap-3">
-                    <h2 class="text-lg font-bold text-blue-950 flex items-center gap-2"><i class="fa-solid fa-chart-line text-blue-600"></i> Management Dashboard</h2>
+            <section class="bg-white p-5 rounded-xl shadow-md lg:col-span-2">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-4 border-b pb-2 gap-2">
+                    <h2 class="text-lg font-semibold text-blue-900">📋 Management Dashboard</h2>
                     <div class="flex gap-2 flex-wrap">
-                        <button onclick="switchTab('new')" id="newTabBtn" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-md shadow-blue-600/20 cursor-pointer transition">🆕 New Bookings</button>
-                        <button onclick="switchTab('completed')" id="completedTabBtn" class="bg-slate-100 text-slate-700 px-4 py-2 rounded-xl text-xs font-semibold hover:bg-slate-200 transition cursor-pointer">✅ Completed</button>
-                        <button onclick="switchTab('gst')" id="gstTabBtn" class="bg-slate-100 text-slate-700 px-4 py-2 rounded-xl text-xs font-semibold hover:bg-slate-200 transition cursor-pointer">🧾 GST Invoices</button>
-                        <button onclick="switchTab('leads')" id="leadsTabBtn" class="bg-slate-100 text-slate-700 px-4 py-2 rounded-xl text-xs font-semibold hover:bg-slate-200 transition cursor-pointer">📞 Leads & Follow-ups</button>
-                        <button onclick="refreshCurrentTab()" class="bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer"><i class="fa-solid fa-rotate"></i></button>
+                        <button onclick="switchTab('new')" id="newTabBtn" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer">🆕 New Bookings</button>
+                        <button onclick="switchTab('completed')" id="completedTabBtn" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer">✅ Completed</button>
+                        <button onclick="switchTab('gst')" id="gstTabBtn" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer">🧾 GST Invoices</button>
+                        <button onclick="switchTab('leads')" id="leadsTabBtn" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer">📞 Leads & Follow-ups</button>
+                        <button onclick="refreshCurrentTab()" class="bg-blue-100 text-blue-800 px-2.5 py-1.5 rounded text-xs font-semibold cursor-pointer">🔄</button>
                     </div>
                 </div>
 
                 <!-- Date Filter Bar for GST Invoices Tab -->
-                <div id="gstFilterBar" class="hidden bg-purple-50/70 p-4 rounded-2xl border border-purple-200 mb-4 flex flex-wrap items-center gap-3 text-xs">
+                <div id="gstFilterBar" class="hidden bg-purple-50 p-3 rounded-lg border border-purple-200 mb-3 flex flex-wrap items-center gap-3 text-xs">
                     <div>
-                        <label class="font-semibold text-purple-950">From Date:</label>
-                        <input type="date" id="filterFromDate" class="border border-purple-200 p-2 rounded-xl bg-white mt-1 font-medium">
+                        <label class="font-semibold text-purple-900">From Date:</label>
+                        <input type="date" id="filterFromDate" class="border p-1.5 rounded bg-white mt-1">
                     </div>
                     <div>
-                        <label class="font-semibold text-purple-950">To Date:</label>
-                        <input type="date" id="filterToDate" class="border border-purple-200 p-2 rounded-xl bg-white mt-1 font-medium">
+                        <label class="font-semibold text-purple-900">To Date:</label>
+                        <input type="date" id="filterToDate" class="border p-1.5 rounded bg-white mt-1">
                     </div>
                     <div class="flex items-end gap-2 mt-4 sm:mt-0">
-                        <button onclick="renderTable()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl font-semibold shadow transition cursor-pointer">🔍 Filter</button>
-                        <button onclick="downloadGstExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-semibold shadow transition cursor-pointer">📊 Download Excel Report</button>
+                        <button onclick="renderTable()" class="bg-purple-600 text-white px-3 py-1.5 rounded font-semibold hover:bg-purple-700 cursor-pointer">🔍 Filter</button>
+                        <button onclick="downloadGstExcel()" class="bg-green-600 text-white px-3 py-1.5 rounded font-semibold hover:bg-green-700 cursor-pointer shadow">📊 Download Excel Report</button>
                     </div>
                 </div>
                 
-                <div class="overflow-x-auto max-h-[600px] rounded-2xl border border-gray-100 shadow-inner">
+                <div class="overflow-x-auto max-h-[600px]">
                     <table class="w-full text-left border-collapse text-xs">
                         <thead>
-                            <tr class="bg-slate-100 text-slate-700 sticky top-0 font-semibold shadow-sm z-10" id="tableHeaderRow">
-                                <th class="p-3">Customer</th>
-                                <th class="p-3">Route & Places</th>
-                                <th class="p-3">Vehicle & Terms</th>
-                                <th class="p-3">Payment</th>
-                                <th class="p-3">Staff</th>
-                                <th class="p-3 text-center">Action</th>
+                            <tr class="bg-slate-200 text-slate-700 sticky top-0" id="tableHeaderRow">
+                                <th class="p-2">Customer</th>
+                                <th class="p-2">Route & Places</th>
+                                <th class="p-2">Vehicle & Terms</th>
+                                <th class="p-2">Payment</th>
+                                <th class="p-2">Staff</th>
+                                <th class="p-2">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="bookingTableBody" class="divide-y divide-gray-100 bg-white">
-                            <tr><td colspan="6" class="text-center p-8 text-gray-400 font-medium">Loading data...</td></tr>
+                        <tbody id="bookingTableBody">
+                            <tr><td colspan="6" class="text-center p-6 text-gray-400">Loading data...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -464,11 +449,11 @@
     </div>
 
     <!-- Floating Quick Call & WhatsApp Buttons -->
-    <div style="position: fixed; bottom: 25px; right: 25px; z-index: 9999; display: flex; flex-direction: column; gap: 14px;">
-        <a href="tel:8726667104" title="Call Now" class="bg-blue-600 hover:bg-blue-700 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-xl transition transform hover:scale-105">
+    <div style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 12px;">
+        <a href="tel:8726667104" title="Call Now" style="background-color: #2563eb; color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-decoration: none;">
             <i class="fa-solid fa-phone"></i>
         </a>
-        <a href="https://wa.me/message/CPOLYJU4RQ2UH1" target="_blank" title="Chat on WhatsApp" class="bg-emerald-500 hover:bg-emerald-600 text-white w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-xl transition transform hover:scale-105">
+        <a href="https://wa.me/message/CPOLYJU4RQ2UH1" target="_blank" title="Chat on WhatsApp" style="background-color: #25D366; color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-decoration: none;">
             <i class="fa-brands fa-whatsapp"></i>
         </a>
     </div>
@@ -483,25 +468,6 @@
         let allLeadsData = [];
         let currentTab = 'new';
         let currentInvoiceNo = "2026-2027/41";
-
-        function getCompletedSet() {
-            let comp = localStorage.getItem('baba_completed_bookings_v2');
-            return comp ? JSON.parse(comp) : [];
-        }
-
-        function toggleCompleteBooking(phone, timestamp) {
-            let comp = getCompletedSet();
-            let key = phone + "_" + timestamp;
-            if (comp.includes(key)) {
-                comp = comp.filter(k => k !== key);
-                alert('Booking moved back to Active/New tab.');
-            } else {
-                comp.push(key);
-                alert('Booking marked as Completed!');
-            }
-            localStorage.setItem('baba_completed_bookings_v2', JSON.stringify(comp));
-            fetchBookings();
-        }
 
         window.onload = function() {
             if (sessionStorage.getItem('baba_logged_in') === 'true') {
@@ -529,7 +495,7 @@
                 fetchLeads();
                 loadLastInvoiceNumber();
             } else {
-                errDiv.classList.remove('hidden');
+                errDiv.classList.add('hidden');
             }
         }
 
@@ -545,13 +511,13 @@
             const lForm = document.getElementById('leadForm');
 
             if(type === 'booking') {
-                bTab.className = "flex-1 bg-blue-600 text-white py-2 rounded-xl text-xs font-semibold shadow transition cursor-pointer";
-                lTab.className = "flex-1 text-slate-600 py-2 rounded-xl text-xs font-semibold hover:text-slate-900 transition cursor-pointer";
+                bTab.className = "flex-1 bg-blue-600 text-white py-1.5 rounded text-xs font-semibold cursor-pointer";
+                lTab.className = "flex-1 bg-slate-200 text-slate-700 py-1.5 rounded text-xs font-semibold cursor-pointer";
                 bForm.classList.remove('hidden');
                 lForm.classList.add('hidden');
             } else {
-                lTab.className = "flex-1 bg-purple-600 text-white py-2 rounded-xl text-xs font-semibold shadow transition cursor-pointer";
-                bTab.className = "flex-1 text-slate-600 py-2 rounded-xl text-xs font-semibold hover:text-slate-900 transition cursor-pointer";
+                lTab.className = "flex-1 bg-purple-600 text-white py-1.5 rounded text-xs font-semibold cursor-pointer";
+                bTab.className = "flex-1 bg-slate-200 text-slate-700 py-1.5 rounded text-xs font-semibold cursor-pointer";
                 lForm.classList.remove('hidden');
                 bForm.classList.add('hidden');
             }
@@ -623,7 +589,7 @@
         function fetchLeads() {
             const tbody = document.getElementById('bookingTableBody');
             if(currentTab === 'leads') {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-8 text-gray-400 font-medium">Loading leads from cloud...</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400">Loading leads from cloud...</td></tr>`;
             }
 
             fetch(LEADS_SCRIPT_URL)
@@ -636,7 +602,7 @@
             .catch(err => {
                 console.error("Error fetching leads:", err);
                 if(currentTab === 'leads') {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-8 text-rose-500 font-medium">Leads load karne mein samasya aayi.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-red-500">Leads load karne mein samasya aayi.</td></tr>`;
                 }
             });
         }
@@ -708,7 +674,7 @@
         function fetchBookings() {
             const tbody = document.getElementById('bookingTableBody');
             if(currentTab === 'new' || currentTab === 'completed') {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-gray-400 font-medium">Loading data from cloud...</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Loading data from cloud...</td></tr>`;
             }
 
             fetch(SCRIPT_URL)
@@ -720,7 +686,7 @@
             })
             .catch(error => {
                 if(currentTab === 'new' || currentTab === 'completed') {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-rose-500 font-medium">Data load karne mein samasya aayi.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500">Data load karne mein samasya aayi.</td></tr>`;
                 }
             });
         }
@@ -728,7 +694,7 @@
         function fetchGstInvoices() {
             const tbody = document.getElementById('bookingTableBody');
             if(currentTab === 'gst') {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-gray-400 font-medium">Loading GST invoices...</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Loading GST invoices...</td></tr>`;
             }
 
             fetch(GST_SCRIPT_URL)
@@ -740,7 +706,7 @@
             })
             .catch(error => {
                 if(currentTab === 'gst') {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-rose-500 font-medium">GST data load karne mein samasya aayi.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500">GST data load karne mein samasya aayi.</td></tr>`;
                 }
             });
         }
@@ -760,25 +726,25 @@
             const leadsBtn = document.getElementById('leadsTabBtn');
             const gstFilterBar = document.getElementById('gstFilterBar');
 
-            newBtn.className = "bg-slate-100 text-slate-700 px-4 py-2 rounded-xl text-xs font-semibold hover:bg-slate-200 transition cursor-pointer";
-            compBtn.className = "bg-slate-100 text-slate-700 px-4 py-2 rounded-xl text-xs font-semibold hover:bg-slate-200 transition cursor-pointer";
-            if(gstBtn) gstBtn.className = "bg-slate-100 text-slate-700 px-4 py-2 rounded-xl text-xs font-semibold hover:bg-slate-200 transition cursor-pointer";
-            if(leadsBtn) leadsBtn.className = "bg-slate-100 text-slate-700 px-4 py-2 rounded-xl text-xs font-semibold hover:bg-slate-200 transition cursor-pointer";
+            newBtn.className = "bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer";
+            compBtn.className = "bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer";
+            if(gstBtn) gstBtn.className = "bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer";
+            if(leadsBtn) leadsBtn.className = "bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer";
 
             gstFilterBar.classList.add('hidden');
 
             if(tab === 'new') {
-                newBtn.className = "bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-md shadow-blue-600/20 cursor-pointer transition";
+                newBtn.className = "bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer";
                 fetchBookings();
             } else if(tab === 'completed') {
-                compBtn.className = "bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/20 cursor-pointer transition";
+                compBtn.className = "bg-green-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer";
                 fetchBookings();
             } else if(tab === 'gst') {
-                gstBtn.className = "bg-purple-600 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-md shadow-purple-600/20 cursor-pointer transition";
+                gstBtn.className = "bg-purple-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer";
                 gstFilterBar.classList.remove('hidden');
                 fetchGstInvoices();
             } else if(tab === 'leads') {
-                leadsBtn.className = "bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-md shadow-amber-600/20 cursor-pointer transition";
+                leadsBtn.className = "bg-amber-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer";
                 fetchLeads();
             }
         }
@@ -927,18 +893,12 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            let completedSet = getCompletedSet();
-
             const filteredData = allBookingsData.filter(b => {
-                let key = (b.phone || '') + "_" + (b.timestamp || '');
-                let isCompletedManually = completedSet.includes(key);
                 const endDate = parseBookingDate(b.endDate);
-                let isCompletedByDate = endDate !== null && endDate < today;
-
                 if (currentTab === 'completed') {
-                    return isCompletedManually || isCompletedByDate;
+                    return endDate !== null && endDate < today;
                 }
-                return !isCompletedManually && !isCompletedByDate;
+                return endDate === null || endDate >= today;
             });
 
             if(filteredData.length === 0) {
@@ -950,8 +910,6 @@
                 const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
                 const displayStart = formatDisplayDate(b.startDate);
                 const displayEnd = formatDisplayDate(b.endDate);
-                let key = (b.phone || '') + "_" + (b.timestamp || '');
-                let isDone = completedSet.includes(key);
 
                 const reviewLink = "https://g.page/r/CWQggXZxge_yEAE/review";
                 const waRemindText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0AHello ${b.name || 'Sir/Ma\'am'},%0AThis is a friendly reminder for your upcoming tour starting on *${displayStart}* to *${displayEnd}* (Route: ${b.tourRoute || 'N/A'}).%0AWe are fully prepared for your comfortable journey! For any queries, call us at 8726667104.%0A%0AThank you for choosing us!`;
@@ -983,9 +941,6 @@
                     </td>
                     <td class="p-2 text-gray-600">${b.staff || '-'}</td>
                     <td class="p-2 space-y-1">
-                        <button onclick="toggleCompleteBooking('${b.phone}', '${b.timestamp}')" class="block w-full text-center ${isDone ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white px-2 py-1 rounded font-semibold text-[11px] cursor-pointer shadow">
-                            ${isDone ? '🔄 Move to Active' : '✅ Mark Completed'}
-                        </button>
                         <a href="https://wa.me/91${b.phone}?text=${waRemindText}" target="_blank" class="block text-center bg-amber-500 text-white px-2 py-0.5 rounded font-semibold text-[10px]">🔔 2-Day Reminder</a>
                         <a href="https://wa.me/91${b.phone}?text=${waFeedbackText}" target="_blank" class="block text-center bg-teal-600 text-white px-2 py-0.5 rounded font-semibold text-[10px]">⭐ Send Review Link</a>
                         <button onclick='sendWhatsApp(${JSON.stringify(b)})' class="block w-full text-center bg-green-600 text-white px-2 py-0.5 rounded font-semibold cursor-pointer">WhatsApp</button>
@@ -1302,7 +1257,7 @@
                 customerName: customerName,
                 clientGstin: customerGstin,
                 state: invState,
-                taxableAmt: taxableAmt.toFixed(2),
+                taxableAmt: taxableAmt.DirectToFixed ? taxableAmt.toFixed(2) : taxableAmt,
                 sgst: (!isIgst && taxRatePercent > 0) ? (taxTotal / 2).toFixed(2) : "0.00",
                 cgst: (!isIgst && taxRatePercent > 0) ? (taxTotal / 2).toFixed(2) : "0.00",
                 igst: isIgst ? taxTotal.toFixed(2) : "0.00",
@@ -1331,7 +1286,7 @@
             const formData = {
                 action: "add",
                 name: document.getElementById('custName').value,
-                phone: document.getElementById('custPhone').value,
+                phone: document.getElementById('custPhone.value') || document.getElementById('custPhone').value,
                 address: document.getElementById('custAddress').value,
                 pickup: document.getElementById('pickup').value,
                 drop: document.getElementById('drop').value,
