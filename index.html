@@ -749,15 +749,13 @@
             }
         }
 
-        // 100% Direct Raw String Date Fixer (No Date Object, No Timezone Shift)
-        function cleanDateStr(dateStr) {
+        // Fix: Force local calendar date without timezone shift
+        function formatDisplayDate(dateStr) {
             if (!dateStr) return '';
             let s = String(dateStr).trim();
-            // If Google Sheet sends ISO string like 2026-10-24T18:30:00.000Z or similar
-            if (s.includes('T')) {
-                s = s.split('T')[0];
-            }
-            // If format is YYYY-MM-DD, convert directly to DD-MM-YYYY without creating Date object
+            if (s.includes('T')) s = s.split('T')[0];
+            
+            // If it's already YYYY-MM-DD
             const ymd = s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
             if (ymd) {
                 return `${ymd[3]}-${ymd[2]}-${ymd[1]}`;
@@ -772,7 +770,7 @@
             
             const ymd = s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
             if (ymd) {
-                // Return local midnight timestamp correctly
+                // Construct Date using local year, month, day directly
                 return new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]));
             }
             const dmy = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
@@ -917,8 +915,8 @@
 
             filteredData.forEach((b) => {
                 const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
-                const displayStart = cleanDateStr(b.startDate);
-                const displayEnd = cleanDateStr(b.endDate);
+                const displayStart = formatDisplayDate(b.startDate);
+                const displayEnd = formatDisplayDate(b.endDate);
 
                 const row = document.createElement('tr');
                 row.className = "border-b hover:bg-slate-50";
@@ -1031,8 +1029,8 @@
 
         function sendWhatsApp(b) {
             const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
-            const displayStart = cleanDateStr(b.startDate);
-            const displayEnd = cleanDateStr(b.endDate);
+            const displayStart = formatDisplayDate(b.startDate);
+            const displayEnd = formatDisplayDate(b.endDate);
 
             const waText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0A` +
                            `Thanks for choosing us! Your booking is confirmed. ✅%0A%0A` +
@@ -1052,8 +1050,8 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
-            const displayStart = cleanDateStr(b.startDate);
-            const displayEnd = cleanDateStr(b.endDate);
+            const displayStart = formatDisplayDate(b.startDate);
+            const displayEnd = formatDisplayDate(b.endDate);
 
             doc.setFillColor(30, 58, 138);
             doc.rect(10, 10, 190, 25, "F");
@@ -1385,7 +1383,7 @@
             if (driverNight > 0) { doc.text("-", 18, y); doc.text("Driver Night Charges", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${driverNight.toFixed(2)}`, 175, y); y += 8; }
             if (tollTax > 0) { doc.text("-", 18, y); doc.text("Toll Tax", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${tollTax.toFixed(2)}`, 175, y); y += 8; }
             if (parking > 0) { doc.text("-", 18, y); doc.text("Parking / Checkpost", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${parking.toFixed(2)}`, 175, y); y += 8; }
-            if (challan > 0) { doc.text("-", 18, y); doc.text("Challan / Other Charges", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${challan.toFixed(2)}`, 175, y); y += 8; }
+            if (challan > 0) { doc.text("-", 18, y); doc.text("Challenge / Other Charges", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${challan.toFixed(2)}`, 175, y); y += 8; }
 
             doc.line(14, y, 196, y);
             y += 6;
