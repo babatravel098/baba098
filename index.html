@@ -469,6 +469,26 @@
         let currentTab = 'new';
         let currentInvoiceNo = "2026-2027/41";
 
+        // Local storage to track manually completed bookings by phone + timestamp
+        function getCompletedSet() {
+            let comp = localStorage.getItem('baba_completed_bookings');
+            return comp ? JSON.parse(comp) : [];
+        }
+
+        function toggleCompleteBooking(phone, timestamp) {
+            let comp = getCompletedSet();
+            let key = phone + "_" + timestamp;
+            if (comp.includes(key)) {
+                comp = comp.filter(k => k !== key);
+                alert('Booking moved back to Active/New tab.');
+            } else {
+                comp.push(key);
+                alert('Booking marked as Completed!');
+            }
+            localStorage.setItem('baba_completed_bookings', JSON.stringify(comp));
+            fetchBookings();
+        }
+
         window.onload = function() {
             if (sessionStorage.getItem('baba_logged_in') === 'true') {
                 document.getElementById('loginModal').style.display = 'none';
@@ -749,7 +769,6 @@
             }
         }
 
-        // 100% Robust Date String Extract & Parse without Timezone Shift
         function formatDisplayDate(dateStr) {
             if (!dateStr) return '';
             let s = String(dateStr).trim();
@@ -759,25 +778,6 @@
                 return `${parts[3]}-${parts[2]}-${parts[1]}`;
             }
             return s;
-        }
-
-        function parseBookingDate(value) {
-            if (value === null || value === undefined || value === '') return null;
-            let s = String(value).trim();
-            if (s.includes('T')) s = s.split('T')[0];
-            
-            const parts = s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
-            if (parts) {
-                return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]), 0, 0, 0);
-            }
-            const partsDmy = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
-            if (partsDmy) {
-                return new Date(Number(partsDmy[3]), Number(partsDmy[2]) - 1, Number(partsDmy[1]), 0, 0, 0);
-            }
-            const d = new Date(s);
-            if (isNaN(d.getTime())) return null;
-            d.setHours(0, 0, 0, 0);
-            return d;
         }
 
         function parseTimestampDate(val) {
@@ -884,7 +884,7 @@
                 return;
             }
 
-            // For New / Completed Bookings Tab
+            // For New / Completed Bookings Tab using Manual Toggle & Date checking
             headerRow.innerHTML = `
                 <th class="p-2">Customer</th>
                 <th class="p-2">Route & Places</th>
@@ -894,23 +894,21 @@
                 <th class="p-2">Action</th>
             `;
 
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            let completedSet = getCompletedSet();
 
             const filteredData = allBookingsData.filter(b => {
-                const endDate = parseBookingDate(b.endDate);
+                let key = (b.phone || '') + "_" + (b.timestamp || '');
+                let isCompletedManually = completedSet.includes(key);
+
                 if (currentTab === 'completed') {
-                    // Completed: End date is strictly before today, OR if user wants to see all bookings for testing, we can make it reliable
-                    return endDate !== null && endDate < today;
+                    return isCompletedManually;
+                } else {
+                    return !isCompletedManually;
                 }
-                // New Bookings: End date is today or in the future
-                return endDate === null || endDate >= today;
             });
 
-            // Fallback: If Completed tab is empty, let's show all bookings or check why it's empty
-            // To be 100% helpful and transparent, if currentTab === 'completed' and filteredData is empty, let's check if there are any past dates
             if(filteredData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Yahan koi ${currentTab === 'completed' ? 'completed (beeti hui)' : 'new'} booking nahi hai.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Yahan ${currentTab === 'completed' ? 'koi completed booking nahi hai. (Aap New Booking table se kisi bhi booking ko "Mark Completed" kar sakte hain)' : 'koi new booking nahi hai'}.</td></tr>`;
                 return;
             }
 
@@ -918,6 +916,8 @@
                 const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
                 const displayStart = formatDisplayDate(b.startDate);
                 const displayEnd = formatDisplayDate(b.endDate);
+                let key = (b.phone || '') + "_" + (b.timestamp || '');
+                let isDone = completedSet.includes(key);
 
                 const reviewLink = "https://g.page/r/CWQggXZxge_yEAE/review";
                 const waRemindText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0AHello ${b.name || 'Sir/Ma\'am'},%0AThis is a friendly reminder for your upcoming tour starting on *${displayStart}* to *${displayEnd}* (Route: ${b.tourRoute || 'N/A'}).%0AWe are fully prepared for your comfortable journey! For any queries, call us at 8726667104.%0A%0AThank you for choosing us!`;
@@ -949,6 +949,9 @@
                     </td>
                     <td class="p-2 text-gray-600">${b.staff || '-'}</td>
                     <td class="p-2 space-y-1">
+                        <button onclick="toggleCompleteBooking('${b.phone}', '${b.timestamp}')" class="block w-full text-center ${isDone ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white px-2 py-1 rounded font-semibold cursor-pointer shadow">
+                            ${isDone ? '🔄 Move to Active' : '✅ Mark Completed'}
+                        </button>
                         <a href="https://wa.me/91${b.phone}?text=${waRemindText}" target="_blank" class="block text-center bg-amber-500 text-white px-2 py-0.5 rounded font-semibold text-[10px]">🔔 2-Day Reminder</a>
                         <a href="https://wa.me/91${b.phone}?text=${waFeedbackText}" target="_blank" class="block text-center bg-teal-600 text-white px-2 py-0.5 rounded font-semibold text-[10px]">⭐ Send Review Link</a>
                         <button onclick='sendWhatsApp(${JSON.stringify(b)})' class="block w-full text-center bg-green-600 text-white px-2 py-0.5 rounded font-semibold cursor-pointer">WhatsApp</button>
