@@ -675,6 +675,7 @@
             const tbody = document.getElementById('bookingTableBody');
             if(currentTab === 'new' || currentTab === 'completed') {
                 tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Loading data from cloud...</td></tr>`;
+            }
 
             fetch(SCRIPT_URL)
             .then(response => response.json())
@@ -688,7 +689,6 @@
                     tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500">Data load karne mein samasya aayi.</td></tr>`;
                 }
             });
-          }
         }
 
         function fetchGstInvoices() {
@@ -749,36 +749,37 @@
             }
         }
 
-        // Direct Text Date Formatter (Completely bypasses timezone shifting)
-        function formatDisplayDate(dateStr) {
+        // 100% Direct Raw String Date Fixer (No Date Object, No Timezone Shift)
+        function cleanDateStr(dateStr) {
             if (!dateStr) return '';
-            let cleanStr = String(dateStr).trim();
-            // If it's an ISO string or contains 'T', extract only the YYYY-MM-DD part
-            if (cleanStr.includes('T')) {
-                cleanStr = cleanStr.split('T')[0];
+            let s = String(dateStr).trim();
+            // If Google Sheet sends ISO string like 2026-10-24T18:30:00.000Z or similar
+            if (s.includes('T')) {
+                s = s.split('T')[0];
             }
-            const parts = cleanStr.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
-            if (parts) {
-                return `${parts[3]}-${parts[2]}-${parts[1]}`; // returns DD-MM-YYYY for display
+            // If format is YYYY-MM-DD, convert directly to DD-MM-YYYY without creating Date object
+            const ymd = s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
+            if (ymd) {
+                return `${ymd[3]}-${ymd[2]}-${ymd[1]}`;
             }
-            return cleanStr;
+            return s;
         }
 
         function parseBookingDate(value) {
             if (value === null || value === undefined || value === '') return null;
-            let cleanStr = String(value).trim();
-            if (cleanStr.includes('T')) {
-                cleanStr = cleanStr.split('T')[0];
+            let s = String(value).trim();
+            if (s.includes('T')) s = s.split('T')[0];
+            
+            const ymd = s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
+            if (ymd) {
+                // Return local midnight timestamp correctly
+                return new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]));
             }
-            const parts = cleanStr.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
-            if (parts) {
-                return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]), 0, 0, 0);
+            const dmy = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
+            if (dmy) {
+                return new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
             }
-            const partsDmy = cleanStr.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
-            if (partsDmy) {
-                return new Date(Number(partsDmy[3]), Number(partsDmy[2]) - 1, Number(partsDmy[1]), 0, 0, 0);
-            }
-            const d = new Date(cleanStr);
+            const d = new Date(s);
             if (isNaN(d.getTime())) return null;
             d.setHours(0, 0, 0, 0);
             return d;
@@ -916,8 +917,8 @@
 
             filteredData.forEach((b) => {
                 const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
-                const displayStart = formatDisplayDate(b.startDate);
-                const displayEnd = formatDisplayDate(b.endDate);
+                const displayStart = cleanDateStr(b.startDate);
+                const displayEnd = cleanDateStr(b.endDate);
 
                 const row = document.createElement('tr');
                 row.className = "border-b hover:bg-slate-50";
@@ -1030,8 +1031,8 @@
 
         function sendWhatsApp(b) {
             const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
-            const displayStart = formatDisplayDate(b.startDate);
-            const displayEnd = formatDisplayDate(b.endDate);
+            const displayStart = cleanDateStr(b.startDate);
+            const displayEnd = cleanDateStr(b.endDate);
 
             const waText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0A` +
                            `Thanks for choosing us! Your booking is confirmed. ✅%0A%0A` +
@@ -1051,8 +1052,8 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
-            const displayStart = formatDisplayDate(b.startDate);
-            const displayEnd = formatDisplayDate(b.endDate);
+            const displayStart = cleanDateStr(b.startDate);
+            const displayEnd = cleanDateStr(b.endDate);
 
             doc.setFillColor(30, 58, 138);
             doc.rect(10, 10, 190, 25, "F");
