@@ -749,31 +749,27 @@
             }
         }
 
-        // Fixed Date Parser to handle UTC / Timezone Offset correctly
+        // 100% Robust Direct String Date Parser (Zero Timezone Shift)
         function parseBookingDate(value) {
             if (value === null || value === undefined || value === '') return null;
             const text = String(value).trim();
-            // If format is YYYY-MM-DD
-            const ymd = text.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})$/);
-            if (ymd) {
-                const d = new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]));
-                d.setHours(0, 0, 0, 0);
-                return d;
+            
+            // Check if string contains ISO date part (YYYY-MM-DD)
+            const matchIso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (matchIso) {
+                return new Date(Number(matchIso[1]), Number(matchIso[2]) - 1, Number(matchIso[3]));
             }
-            // If format is DD/MM/YYYY
-            const dmy = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
-            if (dmy) {
-                const d = new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
-                d.setHours(0, 0, 0, 0);
-                return d;
+            
+            // Check if string contains DD/MM/YYYY or DD-MM-YYYY
+            const matchDmy = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
+            if (matchDmy) {
+                return new Date(Number(matchDmy[3]), Number(matchDmy[2]) - 1, Number(matchDmy[1]));
             }
-            // Fallback for ISO strings (e.g. 2026-10-21T18:30:00.000Z)
+
             const d = new Date(text);
             if (isNaN(d.getTime())) return null;
-            // Add local timezone offset adjustment so date stays accurate to local calendar date
-            const localDate = new Date(d.getTime() + (d.getTimezoneOffset() * 60000));
-            localDate.setHours(0, 0, 0, 0);
-            return localDate;
+            d.setHours(0, 0, 0, 0);
+            return d;
         }
 
         function parseTimestampDate(val) {
