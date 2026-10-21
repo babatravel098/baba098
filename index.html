@@ -749,7 +749,7 @@
             }
         }
 
-        // Clean string date formatters
+        // Direct Clean String Comparison & Date Parsing for 100% accurate filtering
         function formatDisplayDate(dateStr) {
             if (!dateStr) return '';
             let s = String(dateStr).trim();
@@ -900,8 +900,10 @@
             const filteredData = allBookingsData.filter(b => {
                 const endDate = parseBookingDate(b.endDate);
                 if (currentTab === 'completed') {
+                    // Completed: End date is strictly before today
                     return endDate !== null && endDate < today;
                 }
+                // New Bookings: End date is today or in the future
                 return endDate === null || endDate >= today;
             });
 
