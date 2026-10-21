@@ -749,13 +749,23 @@
             }
         }
 
-        // Robust date parser that handles YYYY-MM-DD or standard date strings without timezone loss
+        // Clean string date handlers without timezone shift
+        function formatDisplayDate(dateStr) {
+            if (!dateStr) return '';
+            let s = String(dateStr).trim();
+            if (s.includes('T')) s = s.split('T')[0];
+            const parts = s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
+            if (parts) {
+                return `${parts[3]}-${parts[2]}-${parts[1]}`;
+            }
+            return s;
+        }
+
         function parseBookingDate(value) {
             if (value === null || value === undefined || value === '') return null;
             let s = String(value).trim();
-            if (s.includes('T')) {
-                s = s.split('T')[0];
-            }
+            if (s.includes('T')) s = s.split('T')[0];
+            
             const parts = s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
             if (parts) {
                 return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]), 0, 0, 0);
@@ -768,19 +778,6 @@
             if (isNaN(d.getTime())) return null;
             d.setHours(0, 0, 0, 0);
             return d;
-        }
-
-        function formatDisplayDate(dateStr) {
-            if (!dateStr) return '';
-            let s = String(dateStr).trim();
-            if (s.includes('T')) {
-                s = s.split('T')[0];
-            }
-            const parts = s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
-            if (parts) {
-                return `${parts[3]}-${parts[2]}-${parts[1]}`;
-            }
-            return s;
         }
 
         function parseTimestampDate(val) {
@@ -918,7 +915,6 @@
                 const displayStart = formatDisplayDate(b.startDate);
                 const displayEnd = formatDisplayDate(b.endDate);
 
-                // WhatsApp Automation Messages with Google Review Link
                 const reviewLink = "https://g.page/r/CWQggXZxge_yEAE/review";
                 const waRemindText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0AHello ${b.name || 'Sir/Ma\'am'},%0AThis is a friendly reminder for your upcoming tour starting on *${displayStart}* to *${displayEnd}* (Route: ${b.tourRoute || 'N/A'}).%0AWe are fully prepared for your comfortable journey! For any queries, call us at 8726667104.%0A%0AThank you for choosing us!`;
                 const waFeedbackText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0AHello ${b.name || 'Sir/Ma\'am'},%0AWe hope you had a wonderful and comfortable journey with us! ✅%0A%0APlease take a moment to share your valuable feedback and rate us on our Google Profile:%0A👉 ${reviewLink}%0A%0ALooking forward to serving you again!%0ABest Regards, Baba Tour & Travels, Gorakhpur`;
