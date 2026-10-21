@@ -675,7 +675,6 @@
             const tbody = document.getElementById('bookingTableBody');
             if(currentTab === 'new' || currentTab === 'completed') {
                 tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Loading data from cloud...</td></tr>`;
-            }
 
             fetch(SCRIPT_URL)
             .then(response => response.json())
@@ -689,6 +688,7 @@
                     tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500">Data load karne mein samasya aayi.</td></tr>`;
                 }
             });
+          }
         }
 
         function fetchGstInvoices() {
@@ -749,23 +749,36 @@
             }
         }
 
-        // Pure Direct String Date Matcher (Prevents Timezone Shifts)
+        // Direct Text Date Formatter (Completely bypasses timezone shifting)
+        function formatDisplayDate(dateStr) {
+            if (!dateStr) return '';
+            let cleanStr = String(dateStr).trim();
+            // If it's an ISO string or contains 'T', extract only the YYYY-MM-DD part
+            if (cleanStr.includes('T')) {
+                cleanStr = cleanStr.split('T')[0];
+            }
+            const parts = cleanStr.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
+            if (parts) {
+                return `${parts[3]}-${parts[2]}-${parts[1]}`; // returns DD-MM-YYYY for display
+            }
+            return cleanStr;
+        }
+
         function parseBookingDate(value) {
             if (value === null || value === undefined || value === '') return null;
-            const text = String(value).trim();
-            
-            // Extract YYYY-MM-DD directly from string
-            const parts = text.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
+            let cleanStr = String(value).trim();
+            if (cleanStr.includes('T')) {
+                cleanStr = cleanStr.split('T')[0];
+            }
+            const parts = cleanStr.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
             if (parts) {
                 return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]), 0, 0, 0);
             }
-
-            const partsDmy = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
+            const partsDmy = cleanStr.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
             if (partsDmy) {
                 return new Date(Number(partsDmy[3]), Number(partsDmy[2]) - 1, Number(partsDmy[1]), 0, 0, 0);
             }
-
-            const d = new Date(text);
+            const d = new Date(cleanStr);
             if (isNaN(d.getTime())) return null;
             d.setHours(0, 0, 0, 0);
             return d;
@@ -903,6 +916,9 @@
 
             filteredData.forEach((b) => {
                 const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+                const displayStart = formatDisplayDate(b.startDate);
+                const displayEnd = formatDisplayDate(b.endDate);
+
                 const row = document.createElement('tr');
                 row.className = "border-b hover:bg-slate-50";
                 row.innerHTML = `
@@ -915,7 +931,7 @@
                         <b>📍 Pickup:</b> ${b.pickup || 'N/A'}<br>
                         <b>🎯 Drop:</b> ${b.drop || 'N/A'}<br>
                         <b>🗺️ Route:</b> <span class="text-blue-800 font-semibold">${b.tourRoute || 'N/A'}</span><br>
-                        <span class="text-gray-500">📅 ${String(b.startDate || '').split('T')[0]} to ${String(b.endDate || '').split('T')[0]}</span>
+                        <span class="text-gray-500">📅 ${displayStart} to ${displayEnd}</span>
                     </td>
                     <td class="p-2">
                         <span class="bg-green-100 text-green-800 px-1.5 py-0.5 rounded font-semibold">${b.vehicle || 'N/A'}</span><br>
@@ -1014,12 +1030,15 @@
 
         function sendWhatsApp(b) {
             const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+            const displayStart = formatDisplayDate(b.startDate);
+            const displayEnd = formatDisplayDate(b.endDate);
+
             const waText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0A` +
                            `Thanks for choosing us! Your booking is confirmed. ✅%0A%0A` +
                            `📋 *Booking Details:*%0A` +
                            `• Customer Name: ${b.name || ''}%0A` +
                            `• Route: ${b.tourRoute || 'N/A'}%0A` +
-                           `• Journey Date: ${String(b.startDate || '').split('T')[0]} to ${String(b.endDate || '').split('T')[0]}%0A` +
+                           `• Journey Date: ${displayStart} to ${displayEnd}%0A` +
                            `• Vehicle: ${b.vehicle || ''}%0A` +
                            `• Driver Night: ${b.driverNight || ''} | Toll: ${b.tollInc || ''}%0A` +
                            `• Total: ₹${b.total || 0}/- | Advance: ₹${b.advance || 0}/- | Balance: ₹${balance}/-%0A%0A` +
@@ -1032,6 +1051,9 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+            const displayStart = formatDisplayDate(b.startDate);
+            const displayEnd = formatDisplayDate(b.endDate);
+
             doc.setFillColor(30, 58, 138);
             doc.rect(10, 10, 190, 25, "F");
             doc.setTextColor(255, 255, 255);
@@ -1051,7 +1073,7 @@
             addLine("Pickup Location", b.pickup);
             addLine("Drop / Destination", b.drop);
             addLine("Tour Route", b.tourRoute);
-            addLine("Journey Date", `${String(b.startDate || '').split('T')[0]} to ${String(b.endDate || '').split('T')[0]}`);
+            addLine("Journey Date", `${displayStart} to ${displayEnd}`);
             addLine("Selected Vehicle", b.vehicle);
             addLine("Driver Night Status", b.driverNight);
             addLine("Parking Status", b.parkingInc);
