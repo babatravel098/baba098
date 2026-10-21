@@ -749,21 +749,20 @@
             }
         }
 
-        // 100% Robust Direct String Date Parser (Zero Timezone Shift)
+        // Pure Direct String Date Matcher (Prevents Timezone Shifts)
         function parseBookingDate(value) {
             if (value === null || value === undefined || value === '') return null;
             const text = String(value).trim();
             
-            // Check if string contains ISO date part (YYYY-MM-DD)
-            const matchIso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
-            if (matchIso) {
-                return new Date(Number(matchIso[1]), Number(matchIso[2]) - 1, Number(matchIso[3]));
+            // Extract YYYY-MM-DD directly from string
+            const parts = text.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
+            if (parts) {
+                return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]), 0, 0, 0);
             }
-            
-            // Check if string contains DD/MM/YYYY or DD-MM-YYYY
-            const matchDmy = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
-            if (matchDmy) {
-                return new Date(Number(matchDmy[3]), Number(matchDmy[2]) - 1, Number(matchDmy[1]));
+
+            const partsDmy = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
+            if (partsDmy) {
+                return new Date(Number(partsDmy[3]), Number(partsDmy[2]) - 1, Number(partsDmy[1]), 0, 0, 0);
             }
 
             const d = new Date(text);
@@ -916,7 +915,7 @@
                         <b>📍 Pickup:</b> ${b.pickup || 'N/A'}<br>
                         <b>🎯 Drop:</b> ${b.drop || 'N/A'}<br>
                         <b>🗺️ Route:</b> <span class="text-blue-800 font-semibold">${b.tourRoute || 'N/A'}</span><br>
-                        <span class="text-gray-500">📅 ${b.startDate || ''} to ${b.endDate || ''}</span>
+                        <span class="text-gray-500">📅 ${String(b.startDate || '').split('T')[0]} to ${String(b.endDate || '').split('T')[0]}</span>
                     </td>
                     <td class="p-2">
                         <span class="bg-green-100 text-green-800 px-1.5 py-0.5 rounded font-semibold">${b.vehicle || 'N/A'}</span><br>
@@ -1020,7 +1019,7 @@
                            `📋 *Booking Details:*%0A` +
                            `• Customer Name: ${b.name || ''}%0A` +
                            `• Route: ${b.tourRoute || 'N/A'}%0A` +
-                           `• Journey Date: ${b.startDate || ''} to ${b.endDate || ''}%0A` +
+                           `• Journey Date: ${String(b.startDate || '').split('T')[0]} to ${String(b.endDate || '').split('T')[0]}%0A` +
                            `• Vehicle: ${b.vehicle || ''}%0A` +
                            `• Driver Night: ${b.driverNight || ''} | Toll: ${b.tollInc || ''}%0A` +
                            `• Total: ₹${b.total || 0}/- | Advance: ₹${b.advance || 0}/- | Balance: ₹${balance}/-%0A%0A` +
@@ -1052,7 +1051,7 @@
             addLine("Pickup Location", b.pickup);
             addLine("Drop / Destination", b.drop);
             addLine("Tour Route", b.tourRoute);
-            addLine("Journey Date", `${b.startDate} to ${b.endDate}`);
+            addLine("Journey Date", `${String(b.startDate || '').split('T')[0]} to ${String(b.endDate || '').split('T')[0]}`);
             addLine("Selected Vehicle", b.vehicle);
             addLine("Driver Night Status", b.driverNight);
             addLine("Parking Status", b.parkingInc);
