@@ -749,7 +749,7 @@
             }
         }
 
-        // Direct Clean String Comparison & Date Parsing for 100% accurate filtering
+        // Bulletproof date parsers and formatters handling all text/ISO formats
         function formatDisplayDate(dateStr) {
             if (!dateStr) return '';
             let s = String(dateStr).trim();
@@ -766,10 +766,12 @@
             let s = String(value).trim();
             if (s.includes('T')) s = s.split('T')[0];
             
+            // Check for YYYY-MM-DD
             const parts = s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
             if (parts) {
                 return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]), 0, 0, 0);
             }
+            // Check for DD-MM-YYYY
             const partsDmy = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
             if (partsDmy) {
                 return new Date(Number(partsDmy[3]), Number(partsDmy[2]) - 1, Number(partsDmy[1]), 0, 0, 0);
@@ -1356,7 +1358,7 @@
             doc.text(`GSTIN: ${customerGstin}`, 14, 53);
             doc.text(`State: ${invState}`, 14, 58);
 
-            let activeInvNo = document.getElementById('invNumberDisplay').value;
+            let activeInvNo = document.getElementById('invoiceNumberDisplay').value;
             doc.text(`Invoice No: ${activeInvNo}`, 130, 48);
             doc.text(`Date: ${invDate}`, 130, 53);
             doc.text(`Place of Supply: ${invState}`, 130, 58);
@@ -1498,7 +1500,7 @@
                 document.getElementById('bookingForm').reset();
                 updateDriverNight();
                 btn.innerText = "Save Booking & Generate Receipt";
-                btn.disabled = false;
+                btn.disabled, btn.disabled = false;
                 setTimeout(fetchBookings, 2000);
             });
         }
