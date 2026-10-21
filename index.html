@@ -190,7 +190,6 @@
     <div id="mainContent" class="hidden">
         <header class="bg-blue-900 text-white p-4 shadow-md flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <!-- Professional Built-in Brand Logo Badge -->
                 <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center text-blue-950 text-xl shadow-lg font-black border-2 border-white/20">
                     <i class="fa-solid fa-van-shuttle"></i>
                 </div>
@@ -634,7 +633,7 @@
                 driverNightSelect.value = '₹800 Per Night';
             } else if (vehicle.includes('Traveller') || vehicle.includes('Urbania') || vehicle.includes('Force') || vehicle.includes('Supro')) {
                 driverNightSelect.value = '₹500 Per Night';
-            } else if (vehicle.includes('Innova') || vehicle.includes('Marazzo') || vehicle.includes('Cruiser') || vehicle.includes('Ertiga') || vehicle.includes('Carens') || vehicle.includes('Rumion')) {
+            } else if (vehicle.includes('Innova') || vehicle.includes('Marazzo') || vehicle.includes('Force Trax Cruiser') || vehicle.includes('Ertiga') || vehicle.includes('Carens') || vehicle.includes('Rumion')) {
                 driverNightSelect.value = '₹400 Per Night';
             } else {
                 driverNightSelect.value = '₹300 Per Night';
@@ -750,19 +749,31 @@
             }
         }
 
+        // Fixed Date Parser to handle UTC / Timezone Offset correctly
         function parseBookingDate(value) {
             if (value === null || value === undefined || value === '') return null;
             const text = String(value).trim();
-            const dmy = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
-            let d;
-            if (dmy) {
-                d = new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
-            } else {
-                d = new Date(text);
+            // If format is YYYY-MM-DD
+            const ymd = text.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})$/);
+            if (ymd) {
+                const d = new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]));
+                d.setHours(0, 0, 0, 0);
+                return d;
             }
+            // If format is DD/MM/YYYY
+            const dmy = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+            if (dmy) {
+                const d = new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
+                d.setHours(0, 0, 0, 0);
+                return d;
+            }
+            // Fallback for ISO strings (e.g. 2026-10-21T18:30:00.000Z)
+            const d = new Date(text);
             if (isNaN(d.getTime())) return null;
-            d.setHours(0, 0, 0, 0);
-            return d;
+            // Add local timezone offset adjustment so date stays accurate to local calendar date
+            const localDate = new Date(d.getTime() + (d.getTimezoneOffset() * 60000));
+            localDate.setHours(0, 0, 0, 0);
+            return localDate;
         }
 
         function parseTimestampDate(val) {
