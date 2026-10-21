@@ -474,7 +474,7 @@
     </div>
 
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQSDa1PdP9-7UKovVE4ZOd9cS2vRvrNX1zQtp-v1p9lu-7MRqLTklSTLBIlm_INa_7kA/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyurr2c8fdXZSiC3oY7YpEs2tCiRcCR5fm9Cqx-xD0cv49_JHLIJW7PxfTHcmgxwz7vtg/exec";
         const GST_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzNuP7Qr7qFxFOS3UzIB_5r-JCEEg7AlEf1QFN6WkEU_3h37ywZ6qbcSgv6yf7WhTMX/exec";
         const LEADS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzJ5hZ3GWHHdivmIG9kUg_YiClwOgqAafvoZs9dtA_P34ilYqfNGY7EbnAFjjO9PUXW/exec";
         
@@ -485,7 +485,7 @@
         let currentInvoiceNo = "2026-2027/41";
 
         function getCompletedSet() {
-            let comp = localStorage.getItem('baba_completed_bookings');
+            let comp = localStorage.getItem('baba_completed_bookings_v2');
             return comp ? JSON.parse(comp) : [];
         }
 
@@ -499,7 +499,7 @@
                 comp.push(key);
                 alert('Booking marked as Completed!');
             }
-            localStorage.setItem('baba_completed_bookings', JSON.stringify(comp));
+            localStorage.setItem('baba_completed_bookings_v2', JSON.stringify(comp));
             fetchBookings();
         }
 
@@ -953,7 +953,7 @@
                     </td>
                     <td class="p-3">
                         <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-lg font-semibold">${b.vehicle || 'N/A'}</span><br>
-                        <span class="text-gray-500 text-[10px]">KM: ${b.agreedKm || 'N/A'}</span><br>
+                        <span class="text-indigo-900 font-semibold text-[11px]">👤 Driver: ${b.driverName || 'Not Assigned'} (${b.driverPhone || 'N/A'})</span><br>
                         <span class="text-amber-700 text-[10px] font-medium">Night: ${b.driverNight || 'N/A'}</span>
                     </td>
                     <td class="p-3">
