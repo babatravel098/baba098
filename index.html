@@ -749,20 +749,7 @@
             }
         }
 
-        // Absolute foolproof date fix: converts any input string or UTC date straight to DD-MM-YYYY without timezone loss
-        function formatDisplayDate(dateStr) {
-            if (!dateStr) return '';
-            let s = String(dateStr).trim();
-            if (s.includes('T')) {
-                s = s.split('T')[0];
-            }
-            const parts = s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
-            if (parts) {
-                return `${parts[3]}-${parts[2]}-${parts[1]}`;
-            }
-            return s;
-        }
-
+        // Robust date parser that handles YYYY-MM-DD or standard date strings without timezone loss
         function parseBookingDate(value) {
             if (value === null || value === undefined || value === '') return null;
             let s = String(value).trim();
@@ -781,6 +768,19 @@
             if (isNaN(d.getTime())) return null;
             d.setHours(0, 0, 0, 0);
             return d;
+        }
+
+        function formatDisplayDate(dateStr) {
+            if (!dateStr) return '';
+            let s = String(dateStr).trim();
+            if (s.includes('T')) {
+                s = s.split('T')[0];
+            }
+            const parts = s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
+            if (parts) {
+                return `${parts[3]}-${parts[2]}-${parts[1]}`;
+            }
+            return s;
         }
 
         function parseTimestampDate(val) {
@@ -918,9 +918,10 @@
                 const displayStart = formatDisplayDate(b.startDate);
                 const displayEnd = formatDisplayDate(b.endDate);
 
-                // WhatsApp Automation Messages
+                // WhatsApp Automation Messages with Google Review Link
+                const reviewLink = "https://g.page/r/CWQggXZxge_yEAE/review";
                 const waRemindText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0AHello ${b.name || 'Sir/Ma\'am'},%0AThis is a friendly reminder for your upcoming tour starting on *${displayStart}* to *${displayEnd}* (Route: ${b.tourRoute || 'N/A'}).%0AWe are fully prepared for your comfortable journey! For any queries, call us at 8726667104.%0A%0AThank you for choosing us!`;
-                const waFeedbackText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0AHello ${b.name || 'Sir/Ma\'am'},%0AWe hope you had a wonderful and comfortable journey with us! ✅%0A%0APlease take a moment to share your valuable feedback by rating us on our Google Profile:%0A👉 *[Yahan Apna Google Review Link Daalein]*%0A%0ALooking forward to serving you again!%0ABest Regards, Baba Tour & Travels, Gorakhpur`;
+                const waFeedbackText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0AHello ${b.name || 'Sir/Ma\'am'},%0AWe hope you had a wonderful and comfortable journey with us! ✅%0A%0APlease take a moment to share your valuable feedback and rate us on our Google Profile:%0A👉 ${reviewLink}%0A%0ALooking forward to serving you again!%0ABest Regards, Baba Tour & Travels, Gorakhpur`;
 
                 const row = document.createElement('tr');
                 row.className = "border-b hover:bg-slate-50";
@@ -949,7 +950,7 @@
                     <td class="p-2 text-gray-600">${b.staff || '-'}</td>
                     <td class="p-2 space-y-1">
                         <a href="https://wa.me/91${b.phone}?text=${waRemindText}" target="_blank" class="block text-center bg-amber-500 text-white px-2 py-0.5 rounded font-semibold text-[10px]">🔔 2-Day Reminder</a>
-                        <a href="https://wa.me/91${b.phone}?text=${waFeedbackText}" target="_blank" class="block text-center bg-teal-600 text-white px-2 py-0.5 rounded font-semibold text-[10px]">⭐ Google Review Link</a>
+                        <a href="https://wa.me/91${b.phone}?text=${waFeedbackText}" target="_blank" class="block text-center bg-teal-600 text-white px-2 py-0.5 rounded font-semibold text-[10px]">⭐ Send Review Link</a>
                         <button onclick='sendWhatsApp(${JSON.stringify(b)})' class="block w-full text-center bg-green-600 text-white px-2 py-0.5 rounded font-semibold cursor-pointer">WhatsApp</button>
                         <button onclick='generatePDF(${JSON.stringify(b)})' class="block w-full text-center bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold hover:bg-blue-200 cursor-pointer">Receipt</button>
                         <button onclick='openVyaparGstModal(${JSON.stringify(b)})' class="block w-full text-center bg-purple-600 text-white px-2 py-0.5 rounded font-semibold hover:bg-purple-700 cursor-pointer">GST Invoice</button>
@@ -1482,7 +1483,7 @@
                 vehicle: document.getElementById('vehicleSelect').value,
                 agreedKm: document.getElementById('agreedKm').value,
                 extraKmRate: document.getElementById('extraKmRate').value,
-                extraDayRate: document.getElementById('extraDayRate500' in window ? '' : 'extraDayRate').value, // safe check
+                extraDayRate: document.getElementById('extraDayRate').value,
                 driverNight: document.getElementById('driverNight').value,
                 parkingInc: document.getElementById('parkingInc').value,
                 tollInc: document.getElementById('tollInc').value,
@@ -1498,7 +1499,7 @@
                 alert('Booking saved!');
                 document.getElementById('bookingForm').reset();
                 updateDriverNight();
-                btn.emit = "Save Booking & Generate Receipt";
+                btn.innerText = "Save Booking & Generate Receipt";
                 btn.disabled = false;
                 setTimeout(fetchBookings, 2000);
             });
