@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Baba Tour & Travels - Premium Fleet & CRM Dashboard</title>
+    <title>Baba Tour & Travels - Ultimate Fleet CRM Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -43,7 +43,7 @@
         </div>
     </div>
 
-    <!-- Advanced GST Invoice Generator Modal (Vyapar Style) -->
+    <!-- Advanced GST Invoice Generator Modal -->
     <div id="gstModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white p-6 rounded-3xl shadow-2xl max-w-5xl w-full space-y-4 max-h-[95vh] overflow-y-auto border border-gray-100">
             <div class="flex justify-between items-center border-b pb-3">
@@ -52,7 +52,6 @@
             </div>
 
             <div class="space-y-4 text-xs">
-                <!-- Top Header Info -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-gray-200">
                     <div>
                         <label class="font-semibold text-gray-700">Customer / Company Name</label>
@@ -89,7 +88,6 @@
                     </div>
                 </div>
 
-                <!-- Items Table Container with HSN Code -->
                 <div class="border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
                     <table class="w-full text-left border-collapse">
                         <thead>
@@ -105,14 +103,11 @@
                                 <th class="p-3 w-10 text-center"></th>
                             </tr>
                         </thead>
-                        <tbody id="invoiceItemsTable" class="divide-y divide-gray-100">
-                            <!-- Dynamic Rows -->
-                        </tbody>
+                        <tbody id="invoiceItemsTable" class="divide-y divide-gray-100"></tbody>
                     </table>
                 </div>
                 <button type="button" onclick="addInvoiceRow()" class="bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2 rounded-xl font-semibold text-xs hover:bg-blue-100 transition cursor-pointer shadow-sm">+ ADD ROW</button>
 
-                <!-- Bottom Section -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-5 rounded-2xl border border-gray-200">
                     <div class="space-y-3">
                         <div>
@@ -306,6 +301,19 @@
                             </optgroup>
                         </select>
                     </div>
+
+                    <!-- CRM Module: Driver & Fleet Assignment -->
+                    <div class="grid grid-cols-2 gap-2 bg-indigo-50/70 p-3 rounded-xl border border-indigo-200">
+                        <div>
+                            <label class="text-[11px] font-semibold text-indigo-950">Driver Name</label>
+                            <input type="text" id="assignedDriver" placeholder="e.g. Nandan Pandey" class="w-full border border-indigo-200 p-2 rounded-lg text-xs bg-white mt-0.5">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-indigo-950">Driver Phone</label>
+                            <input type="tel" id="driverPhone" placeholder="Mobile No." class="w-full border border-indigo-200 p-2 rounded-lg text-xs bg-white mt-0.5">
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl border border-gray-200">
                         <div>
                             <label class="text-[10px] font-semibold text-gray-600">तय KM</label>
@@ -1061,7 +1069,7 @@
                            `• Route: ${b.tourRoute || 'N/A'}%0A` +
                            `• Journey Date: ${displayStart} to ${displayEnd}%0A` +
                            `• Vehicle: ${b.vehicle || ''}%0A` +
-                           `• Driver Night: ${b.driverNight || ''} | Toll: ${b.tollInc || ''}%0A` +
+                           `• Driver Name: ${b.driverName || 'N/A'} (${b.driverPhone || 'N/A'})%0A` +
                            `• Total: ₹${b.total || 0}/- | Advance: ₹${b.advance || 0}/- | Balance: ₹${balance}/-%0A%0A` +
                            `🏢 *Baba Tour and Travels* (Railway Station Road, Gorakhpur)%0A` +
                            `🧾 GSTIN: 09AARPU5006D1ZI | Ph: 8726667104`;
@@ -1096,6 +1104,7 @@
             addLine("Tour Route", b.tourRoute);
             addLine("Journey Date", `${displayStart} to ${displayEnd}`);
             addLine("Selected Vehicle", b.vehicle);
+            addLine("Assigned Driver", `${b.driverName || 'N/A'} (${b.driverPhone || 'N/A'})`);
             addLine("Driver Night Status", b.driverNight);
             addLine("Parking Status", b.parkingInc);
             addLine("Toll Tax Status", b.tollInc);
@@ -1301,185 +1310,6 @@
             });
         }
 
-        function generateVyaparGstPdf() {
-            const customerName = document.getElementById('invCustomerName').value || "Client";
-            const customerGstin = document.getElementById('invCustomerGstin').value || "Unregistered";
-            const invDate = document.getElementById('invDate').value || new Date().toLocaleDateString();
-            const invState = document.getElementById('invState').value;
-            const termsText = document.getElementById('invTerms').value;
-            const received = parseFloat(document.getElementById('invReceived').value) || 0;
-            const taxRateVal = document.getElementById('invTaxRate').value;
-            const taxRatePercent = parseFloat(taxRateVal) || 0;
-            const isIgst = taxRateVal.includes('igst');
-
-            let subTotal = 0;
-            let itemsList = [];
-            const rows = document.querySelectorAll('#invoiceItemsTable .item-row');
-            rows.forEach(r => {
-                let name = r.querySelector('.item-name').value || "Tour Service";
-                let hsn = r.querySelector('.item-hsn').value || "9964";
-                let desc = r.querySelector('.item-desc').value || "";
-                let km = r.querySelector('.item-km').value || "";
-                let qty = parseFloat(r.querySelector('.item-qty').value) || 1;
-                let price = parseFloat(r.querySelector('.item-price').value) || 0;
-                let amt = qty * price;
-                subTotal += amt;
-                itemsList.push({ name, hsn, desc, km, qty, price, amt });
-            });
-
-            let discVal = parseFloat(document.getElementById('invDiscVal').value) || 0;
-            let discType = document.getElementById('invDiscType').value;
-            let discountAmount = discType === 'percent' ? (subTotal * discVal / 100) : discVal;
-
-            let driverNight = parseFloat(document.getElementById('invDriverNight').value) || 0;
-            let tollTax = parseFloat(document.getElementById('invTollTax').value) || 0;
-            let parking = parseFloat(document.getElementById('invParking').value) || 0;
-            let challan = parseFloat(document.getElementById('invChallan').value) || 0;
-
-            let taxableAmt = subTotal - discountAmount + driverNight + tollTax + parking + challan;
-            let taxTotal = taxableAmt * taxRatePercent;
-            let grandTotal = taxableAmt + taxTotal;
-
-            if (document.getElementById('invRoundOff').checked) {
-                grandTotal = Math.round(grandTotal);
-            }
-            let balanceDue = grandTotal - received;
-
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("BABA TOUR AND TRAVELS", 105, 12, { align: "center" });
-
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(8);
-            doc.text("Opposite Gorakhpur Railway Station Gate Number 6, Gorakhpur, Uttar Pradesh-273001", 105, 17, { align: "center" });
-            doc.text("Phone no.: 8726667104 Email: babatourandtravel098@gmail.com", 105, 22, { align: "center" });
-            doc.text("GSTIN: 09AARPU5006D1ZI, State: 09-Uttar Pradesh", 105, 27, { align: "center" });
-            doc.text("Website: www.babatourandtravel.com", 105, 32, { align: "center" });
-
-            doc.setDrawColor(150, 150, 150);
-            doc.line(14, 35, 196, 35);
-
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(10);
-            doc.text("Bill To:", 14, 42);
-            doc.text("Invoice Details:", 130, 42);
-
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(9);
-            doc.text(`${customerName}`, 14, 48);
-            doc.text(`GSTIN: ${customerGstin}`, 14, 53);
-            doc.text(`State: ${invState}`, 14, 58);
-
-            let activeInvNo = document.getElementById('invNumberDisplay').value;
-            doc.text(`Invoice No: ${activeInvNo}`, 130, 48);
-            doc.text(`Date: ${invDate}`, 130, 53);
-            doc.text(`Place of Supply: ${invState}`, 130, 58);
-
-            doc.setFillColor(30, 58, 138);
-            doc.rect(14, 66, 182, 8, "F");
-            doc.setTextColor(255, 255, 255);
-            doc.setFont("helvetica", "bold");
-            doc.text("Si.", 18, 71);
-            doc.text("Item / Description", 28, 71);
-            doc.text("HSN", 105, 71);
-            doc.text("KM", 125, 71);
-            doc.text("Rate", 145, 71);
-            doc.text("Amount", 175, 71);
-
-            doc.setTextColor(0, 0, 0);
-            doc.setFont("helvetica", "normal");
-            let y = 80;
-            itemsList.forEach((it, idx) => {
-                doc.text(`${idx + 1}`, 18, y);
-                doc.text(`${it.name} - ${it.desc}`, 28, y, { maxWidth: 72 });
-                doc.text(`${it.hsn}`, 105, y);
-                doc.text(`${it.km}`, 125, y);
-                doc.text(`${it.price.toFixed(2)}`, 145, y);
-                doc.text(`${it.amt.toFixed(2)}`, 175, y);
-                y += 10;
-            });
-
-            if (driverNight > 0) { doc.text("-", 18, y); doc.text("Driver Night Charges", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${driverNight.toFixed(2)}`, 175, y); y += 8; }
-            if (tollTax > 0) { doc.text("-", 18, y); doc.text("Toll Tax", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${tollTax.toFixed(2)}`, 175, y); y += 8; }
-            if (parking > 0) { doc.text("-", 18, y); doc.text("Parking / Checkpost", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${parking.toFixed(2)}`, 175, y); y += 8; }
-            if (challan > 0) { doc.text("-", 18, y); doc.text("Challan / Other Charges", 28, y); doc.text("-", 105, y); doc.text("-", 125, y); doc.text("-", 145, y); doc.text(`${challan.toFixed(2)}`, 175, y); y += 8; }
-
-            doc.line(14, y, 196, y);
-            y += 6;
-
-            doc.setFillColor(240, 240, 240);
-            doc.rect(14, y, 100, 6, "F");
-            doc.setFont("helvetica", "bold");
-            doc.text("Tax Type", 18, y + 4);
-            doc.text("Taxable Amt", 50, y + 4);
-            doc.text("Rate", 80, y + 4);
-            doc.text("Tax", 98, y + 4);
-
-            y += 6;
-            doc.setFont("helvetica", "normal");
-            if (isIgst) {
-                let igstRate = (taxRatePercent * 100).toFixed(0) + "%";
-                doc.text("IGST", 18, y + 4);
-                doc.text(`${taxableAmt.toFixed(2)}`, 50, y + 4);
-                doc.text(igstRate, 80, y + 4);
-                doc.text(`${taxTotal.toFixed(2)}`, 98, y + 4);
-            } else if (taxRatePercent > 0) {
-                let halfRate = (taxRatePercent * 50).toFixed(1) + "%";
-                let halfTax = (taxTotal / 2).toFixed(2);
-                doc.text("SGST", 18, y + 4);
-                doc.text(`${taxableAmt.toFixed(2)}`, 50, y + 4);
-                doc.text(halfRate, 80, y + 4);
-                doc.text(`${halfTax}`, 98, y + 4);
-
-                y += 6;
-                doc.text("CGST", 18, y + 4);
-                doc.text(`${taxableAmt.toFixed(2)}`, 50, y + 4);
-                doc.text(halfRate, 80, y + 4);
-                doc.text(`${halfTax}`, 98, y + 4);
-            } else {
-                doc.text("Exempted", 18, y + 4);
-                doc.text(`${taxableAmt.toFixed(2)}`, 50, y + 4);
-                doc.text("0%", 80, y + 4);
-                doc.text("0.00", 98, y + 4);
-            }
-
-            let rY = y - (isIgst ? 6 : 12);
-            let displayTaxLabel = isIgst ? "IGST Total" : "Tax (" + (taxRatePercent * 100) + "% GST)";
-            const addSum = (lbl, val, bold=false) => {
-                if(bold) doc.setFont("helvetica", "bold");
-                else doc.setFont("helvetica", "normal");
-                doc.text(lbl, 125, rY);
-                doc.text(`Rs. ${val}`, 175, rY);
-                rY += 6;
-            };
-            addSum("Sub Total", taxableAmt.toFixed(2));
-            if(taxRatePercent > 0) addSum(displayTaxLabel, taxTotal.toFixed(2));
-            if(discountAmount > 0) addSum("Discount", `-${discountAmount.toFixed(2)}`);
-            addSum("Grand Total", grandTotal.toFixed(2), true);
-            addSum("Received", received.toFixed(2));
-            addSum("Balance Due", balanceDue.toFixed(2), true);
-
-            y = Math.max(y + 15, rY + 5);
-
-            doc.setFont("helvetica", "bold");
-            doc.text("Terms & Conditions:", 14, y);
-            doc.text("Bank Details:", 125, y);
-
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(8);
-            doc.text(termsText, 14, y + 5, { maxWidth: 100 });
-            doc.text("Bank: Kotak Mahindra Bank, Gorakhpur\nA/c No: 3411664106 | IFSC: KKBK0005297\nName: Baba Tour & Travel", 125, y + 5);
-
-            doc.setFontSize(7);
-            doc.text("This is a system generated invoice and does not require physical signature or stamp.", 105, 275, { align: "center" });
-
-            doc.save(`GST_Invoice_${customerName}_${activeInvNo.replace('/', '_')}.pdf`);
-            closeGstModal();
-        }
-
         function saveBooking(e) {
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
@@ -1496,6 +1326,8 @@
                 startDate: document.getElementById('startDate').value,
                 endDate: document.getElementById('endDate').value,
                 vehicle: document.getElementById('vehicleSelect').value,
+                driverName: document.getElementById('assignedDriver').value,
+                driverPhone: document.getElementById('driverPhone').value,
                 agreedKm: document.getElementById('agreedKm').value,
                 extraKmRate: document.getElementById('extraKmRate').value,
                 extraDayRate: document.getElementById('extraDayRate').value,
