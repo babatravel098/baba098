@@ -792,7 +792,7 @@
             }
         }
 
-        // Robust Date parser that extracts exact YYYY-MM-DD from complex GMT strings
+        // Reliable date extractor for complex Google Sheet Date Strings
         function formatDisplayDate(dateStr) {
             if (!dateStr) return '';
             let s = String(dateStr).trim();
@@ -807,16 +807,13 @@
         function parseBookingDate(value) {
             if (value === null || value === undefined || value === '') return null;
             let s = String(value).trim();
-            if (s.includes('T')) s = s.split('T')[0];
             
-            const parts = s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
-            if (parts) {
-                return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]), 0, 0, 0);
+            // Extract YYYY-MM-DD cleanly even if it has 'T' or GMT strings attached
+            let match = s.match(/(\d{4})[-/](\d{2})[-/](\d{2})/);
+            if (match) {
+                return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 0, 0, 0);
             }
-            const partsDmy = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
-            if (partsDmy) {
-                return new Date(Number(partsDmy[3]), Number(partsDmy[2]) - 1, Number(partsDmy[1]), 0, 0, 0);
-            }
+
             const d = new Date(s);
             if (isNaN(d.getTime())) return null;
             d.setHours(0, 0, 0, 0);
