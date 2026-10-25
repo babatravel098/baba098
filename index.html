@@ -792,6 +792,7 @@
             }
         }
 
+        // Robust Date parser that extracts exact YYYY-MM-DD from complex GMT strings
         function formatDisplayDate(dateStr) {
             if (!dateStr) return '';
             let s = String(dateStr).trim();
@@ -807,6 +808,7 @@
             if (value === null || value === undefined || value === '') return null;
             let s = String(value).trim();
             if (s.includes('T')) s = s.split('T')[0];
+            
             const parts = s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
             if (parts) {
                 return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]), 0, 0, 0);
@@ -936,16 +938,18 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
+            // AUTOMATIC DATE CHECK: endDate < today means tour is finished and goes to Completed tab
             const filteredData = allBookingsData.filter(b => {
                 const endDate = parseBookingDate(b.endDate);
                 if (currentTab === 'completed') {
                     return endDate !== null && endDate < today;
                 }
+                // New / Active Bookings: end date is today or in the future
                 return endDate === null || endDate >= today;
             });
 
             if(filteredData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Yahan koi booking nahi hai.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Yahan koi ${currentTab === 'completed' ? 'completed' : 'new'} booking nahi hai.</td></tr>`;
                 return;
             }
 
