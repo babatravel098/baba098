@@ -219,7 +219,7 @@
                 </div>
             </div>
             <div class="flex gap-2.5 items-center">
-                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Expenses v8</span>
+                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Reports v9</span>
                 <button onclick="openFreshGstModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">📄 Create Fresh GST Invoice</button>
                 <button onclick="openPasswordModal()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🔑 Change Password</button>
                 <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🚪 Logout</button>
@@ -232,7 +232,7 @@
                 <button type="button" onclick="openOperations('followups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Due follow-ups</span><strong id="opsFollowups" class="text-2xl text-blue-900">—</strong></button>
                 <button type="button" onclick="openOperations('collections')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Pending collections</span><strong id="opsCollections" class="text-2xl text-blue-900">—</strong></button>
             </div>
-            <div class="flex flex-wrap gap-2"><button type="button" onclick="openQuotes()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Quotations / Itinerary</button>
+            <div class="flex flex-wrap gap-2"><button type="button" onclick="openBookingReport()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Booking Reports</button><button type="button" onclick="openQuotes()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Quotations / Itinerary</button>
 <button type="button" onclick="openCustomers()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Customers / History</button>
                 <button type="button" onclick="openEntry('booking')" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">+ New Booking</button>
                 <button type="button" onclick="openEntry('lead')" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">+ Add Lead</button>
@@ -587,6 +587,17 @@
 <label>Paid so far (INR)<input name="paid" type="number" min="0" step="0.01" value="0" required class="block w-full border rounded p-2"></label>
 <label>Note<input name="note" maxlength="300" class="block w-full border rounded p-2"></label>
 <button type="submit" class="bg-blue-700 text-white rounded p-2">Save Expense Draft</button><button type="button" onclick="document.getElementById('expensesDialog').close()" class="border rounded p-2">Close</button></form><p id="expenseMessage" role="status" class="text-sm my-2"></p><div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead><tr><th>Date</th><th>Category / Vendor</th><th>Cost</th><th>Paid</th><th>Due</th><th>Note</th><th>Action</th></tr></thead><tbody id="expenseHistory"></tbody></table></div></dialog>
+<dialog id="reportDialog" aria-labelledby="reportTitle" style="width:min(1100px,96vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
+<h2 id="reportTitle" class="text-xl font-bold">Booking Report</h2>
+<p class="text-sm my-3">Filter by trip start date. Amounts use Google Sheet bookings. Expenses and status updates include drafts from this browser.</p>
+<form id="reportForm" class="flex flex-wrap gap-3 items-end my-3">
+<label>From<input id="reportFrom" type="date" class="block border rounded p-2"></label>
+<label>To<input id="reportTo" type="date" class="block border rounded p-2"></label>
+<label>Status<select id="reportStatus" class="block border rounded p-2"><option value="">All statuses</option><option>Confirmed</option><option>Ongoing</option><option>Completed</option><option>Cancelled</option></select></label>
+<button type="submit" class="bg-blue-700 text-white rounded p-2">Show Report</button>
+<button type="button" onclick="document.getElementById('reportDialog').close()" class="border rounded p-2">Close</button></form>
+<p id="reportMessage" role="status" class="my-3 text-sm"></p><div id="reportSummary" class="bg-blue-50 p-3 rounded leading-7"></div>
+<div class="overflow-x-auto mt-4"><table class="w-full text-sm text-left"><thead><tr><th class="p-2">Customer / Mobile</th><th class="p-2">Trip start</th><th class="p-2">Status</th><th class="p-2">Booked</th><th class="p-2">Sheet advance</th><th class="p-2">Balance</th><th class="p-2">Recorded cost</th></tr></thead><tbody id="reportRows"></tbody></table></div></dialog>
 <script>
 
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQSDa1PdP9-7UKovVE4ZOd9cS2vRvrNX1zQtp-v1p9lu-7MRqLTklSTLBIlm_INa_7kA/exec";
@@ -2341,6 +2352,48 @@ document.getElementById('expenseForm').addEventListener('submit',event=>{
   document.getElementById('expenseMessage').textContent='Expense draft saved in this browser. Sheet sync is pending.';
  } catch(error) { document.getElementById('expenseMessage').textContent='Could not save expense. '+error.message; }
 });
+
+function bookingReportRows(bookings, from, to, status) {
+ if (from && to && from > to) throw Error('From date must be on or before To date.');
+ return bookings.filter(booking => {
+  const date = operationsDay(booking.startDate || '');
+  return (!from || (date && date >= from)) && (!to || (date && date <= to)) && (!status || getBookingStatus(booking) === status);
+ });
+}
+function openBookingReport() {
+ document.getElementById('reportForm').reset();
+ renderBookingReport();
+ document.getElementById('reportDialog').showModal();
+}
+function renderBookingReport() {
+ const body = document.getElementById('reportRows');body.replaceChildren();
+ document.getElementById('reportSummary').textContent = '';
+ const message = document.getElementById('reportMessage');message.textContent = '';
+ try {
+  if (!bookingsLoaded) throw Error('Load bookings first, then reopen this report.');
+  const rows = bookingReportRows(allBookingsData, document.getElementById('reportFrom').value, document.getElementById('reportTo').value, document.getElementById('reportStatus').value);
+  let total=0, advance=0, costs=0, costErrors=0, withExpenses=0;
+  for (const booking of rows) {
+   const booked=paymentPaise(booking.total),received=paymentPaise(booking.advance);
+   total+=booked;advance+=received;
+   let costLabel='No costs entered';
+   try {
+    const expenses=readExpenses(booking);
+    const cost=expenses.reduce((sum,item)=>sum+item.cost,0);costs+=cost;
+    if(expenses.length){withExpenses++;costLabel=paymentMoney(cost);}
+   } catch {costErrors++;costLabel='Could not read costs';}
+   const row=document.createElement('tr');
+   for(const value of [String(booking.name || '')+' / '+String(booking.phone || ''),formatDisplayDate(booking.startDate) || 'Missing date',getBookingStatus(booking),paymentMoney(booked),paymentMoney(received),paymentMoney(booked-received),costLabel]) {
+    const cell=document.createElement('td');cell.textContent=value;cell.className='border-b p-2';row.appendChild(cell);
+   }
+   body.appendChild(row);
+  }
+  document.getElementById('reportSummary').textContent = rows.length+' bookings · Booked '+paymentMoney(total)+' · Sheet advance '+paymentMoney(advance)+' · Balance '+paymentMoney(total-advance)+' · Recorded costs '+paymentMoney(costs);
+  message.textContent = withExpenses+' of '+rows.length+' bookings have recorded expenses. Payment drafts are visible in Payment History. Cancelled bookings retain their Sheet amounts until settlement.' + (costErrors ? ' Costs could not be read for '+costErrors+' bookings, so recorded cost totals are incomplete.' : '');
+  if(!rows.length) message.textContent='No bookings match these filters.';
+ } catch(error) {body.replaceChildren();document.getElementById('reportSummary').textContent='';message.textContent=error.message;}
+}
+document.getElementById('reportForm').addEventListener('submit',event=>{event.preventDefault();renderBookingReport();});
 </script>
 </body>
 </html>
