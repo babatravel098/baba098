@@ -219,7 +219,7 @@
                 </div>
             </div>
             <div class="flex gap-2.5 items-center">
-                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Reports v9</span>
+                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Operations v10</span>
                 <button onclick="openFreshGstModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">📄 Create Fresh GST Invoice</button>
                 <button onclick="openPasswordModal()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🔑 Change Password</button>
                 <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🚪 Logout</button>
@@ -232,7 +232,7 @@
                 <button type="button" onclick="openOperations('followups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Due follow-ups</span><strong id="opsFollowups" class="text-2xl text-blue-900">—</strong></button>
                 <button type="button" onclick="openOperations('collections')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Pending collections</span><strong id="opsCollections" class="text-2xl text-blue-900">—</strong></button>
             </div>
-            <div class="flex flex-wrap gap-2"><button type="button" onclick="openBookingReport()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Booking Reports</button><button type="button" onclick="openQuotes()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Quotations / Itinerary</button>
+            <div class="flex flex-wrap gap-2"><button type="button" onclick="openOfficeHub()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Office Operations</button><button type="button" onclick="openBookingReport()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Booking Reports</button><button type="button" onclick="openQuotes()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Quotations / Itinerary</button>
 <button type="button" onclick="openCustomers()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Customers / History</button>
                 <button type="button" onclick="openEntry('booking')" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">+ New Booking</button>
                 <button type="button" onclick="openEntry('lead')" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">+ Add Lead</button>
@@ -570,7 +570,7 @@
 <label class="block text-sm">Inclusions<textarea rows="3" name="inclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
 <label class="block text-sm">Exclusions<textarea rows="3" name="exclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
 <label class="block text-sm">Total package amount (INR)<input type="number" name="amount" required min="0" step="0.01" class="block w-full border rounded p-2 mt-1"></label>
-<label class="block text-sm">Payment and cancellation terms<textarea rows="3" name="terms" class="block w-full border rounded p-2 mt-1"></textarea></label><div class="sm:col-span-2 flex gap-2 flex-wrap"><button class="bg-blue-700 text-white rounded p-2" type="submit">Save Draft</button><button class="border rounded p-2" type="button" onclick="downloadQuote()">Download PDF</button><button class="border rounded p-2" type="button" onclick="document.getElementById('quotesDialog').close()">Close</button></div></form><p id="quoteMessage" role="status"></p></dialog>
+<label class="block text-sm">Payment and cancellation terms<textarea rows="3" name="terms" class="block w-full border rounded p-2 mt-1"></textarea></label><div class="sm:col-span-2 flex gap-2 flex-wrap"><button class="bg-blue-700 text-white rounded p-2" type="submit">Save Draft</button><button class="border rounded p-2" type="button" onclick="downloadQuote()">Download PDF</button><button class="border rounded p-2" type="button" onclick="quoteToBookingForm()">Fill Booking Form</button><button class="border rounded p-2" type="button" onclick="document.getElementById('quotesDialog').close()">Close</button></div></form><p id="quoteMessage" role="status"></p></dialog>
 <dialog id="assignmentDialog" style="width:min(650px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px" aria-labelledby="assignmentTitle"><h2 id="assignmentTitle" class="text-xl font-bold">Vehicle &amp; Driver Assignment</h2><p id="assignmentCustomer" class="my-3"></p><p class="text-sm text-slate-600 mb-3">Assignments are saved in this browser. Conflict checks use loaded bookings and assignments saved here. Travel dates come from the Sheet.</p><form id="assignmentForm" class="space-y-3">
 <label class="block">Vehicle registration number<input name="registration" required maxlength="30" class="block w-full border rounded p-2"></label>
 <label class="block">Driver name<input name="driver" required maxlength="100" class="block w-full border rounded p-2"></label>
@@ -598,6 +598,20 @@
 <button type="button" onclick="document.getElementById('reportDialog').close()" class="border rounded p-2">Close</button></form>
 <p id="reportMessage" role="status" class="my-3 text-sm"></p><div id="reportSummary" class="bg-blue-50 p-3 rounded leading-7"></div>
 <div class="overflow-x-auto mt-4"><table class="w-full text-sm text-left"><thead><tr><th class="p-2">Customer / Mobile</th><th class="p-2">Trip start</th><th class="p-2">Status</th><th class="p-2">Booked</th><th class="p-2">Sheet advance</th><th class="p-2">Balance</th><th class="p-2">Recorded cost</th></tr></thead><tbody id="reportRows"></tbody></table></div></dialog>
+<dialog id="officeHubDialog" aria-labelledby="officeHubTitle" style="width:min(1050px,96vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
+<div class="flex justify-between gap-3"><h2 id="officeHubTitle" class="text-xl font-bold">Office Operations</h2><button type="button" onclick="document.getElementById('officeHubDialog').close()" class="border rounded p-2">Close</button></div>
+<p class="text-sm text-slate-600 my-3">Tasks, assignments and expenses use drafts saved in this browser. Reminders are shown when you open this page. Vendor totals group matching names across loaded bookings.</p>
+<button type="button" onclick="downloadDraftBackup()" class="border rounded p-2">Download Draft Backup</button><p class="text-xs my-2">Exports browser drafts as JSON for later migration. Export your Google Sheets separately for a full data backup.</p>
+<p id="officeMessage" role="status" class="text-sm my-2"></p>
+<h3 class="font-bold mt-5 mb-2">Tasks &amp; Reminders</h3>
+<form id="officeTaskForm" class="flex flex-wrap items-end gap-3">
+<label class="text-sm">Task<input name="title" required maxlength="200" class="block border rounded p-2"></label>
+<label class="text-sm">Assigned staff<input name="staff" maxlength="100" class="block border rounded p-2"></label>
+<label class="text-sm">Due date<input name="due" type="date" required class="block border rounded p-2"></label>
+<button type="submit" class="bg-blue-700 text-white rounded p-2">Add Task</button></form><div id="officeTasks"></div>
+<h3 class="font-bold mt-5 mb-2">Vehicle &amp; Driver Schedule</h3>
+<label class="text-sm">Trip date<input id="officeScheduleDate" type="date" onchange="renderOfficeHub()" class="border rounded p-2 ml-2"></label><div id="officeSchedule"></div>
+<h3 class="font-bold mt-5 mb-2">Vendor Dues · INR</h3><div id="officeVendors"></div></dialog>
 <script>
 
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQSDa1PdP9-7UKovVE4ZOd9cS2vRvrNX1zQtp-v1p9lu-7MRqLTklSTLBIlm_INa_7kA/exec";
@@ -1226,6 +1240,7 @@
                 addStatusButton(row, b);
                 addAssignmentButton(row, b);
                 addExpenseButton(row, b);
+                compactBookingActions(row);
                 tbody.appendChild(row);
             });
         }
@@ -2394,6 +2409,152 @@ function renderBookingReport() {
  } catch(error) {body.replaceChildren();document.getElementById('reportSummary').textContent='';message.textContent=error.message;}
 }
 document.getElementById('reportForm').addEventListener('submit',event=>{event.preventDefault();renderBookingReport();});
+const taskPrefix = 'baba_task_v1:' + SCRIPT_URL + ':';
+
+function readOfficeTasks() {
+    const tasks = [];
+    for (let index = 0; index < localStorage.length; index++) {
+        const key = localStorage.key(index);
+        if (!key.startsWith(taskPrefix)) continue;
+        const task = JSON.parse(localStorage.getItem(key));
+        if (!task || typeof task.id !== 'string' || typeof task.title !== 'string') throw Error('A saved task could not be read.');
+        tasks.push(task);
+    }
+    return tasks.sort((a, b) => String(a.due).localeCompare(String(b.due)));
+}
+
+function openOfficeHub() {
+    document.getElementById('officeTaskForm').reset();
+    document.getElementById('officeTaskForm').elements.namedItem('due').value = operationsDay();
+    document.getElementById('officeScheduleDate').value = operationsDay();
+    document.getElementById('officeMessage').textContent = '';
+    renderOfficeHub();
+    document.getElementById('officeHubDialog').showModal();
+}
+
+function officeLine(container, text) {
+    const item = document.createElement('div');
+    item.textContent = text;
+    item.className = 'border rounded-lg p-3 my-2 text-sm';
+    container.appendChild(item);
+    return item;
+}
+
+function renderOfficeHub() {
+    const tasks = document.getElementById('officeTasks');
+    const schedule = document.getElementById('officeSchedule');
+    const vendors = document.getElementById('officeVendors');
+    tasks.replaceChildren(); schedule.replaceChildren(); vendors.replaceChildren();
+    try {
+        const taskList = readOfficeTasks();
+        for (const task of taskList) {
+            const label = task.done ? 'Completed' : task.due < operationsDay() ? 'Overdue' : 'Pending';
+            const row = officeLine(tasks, task.title + ' · ' + task.due + ' · ' + (task.staff || 'Unassigned') + ' · ' + label);
+            const button = document.createElement('button');
+            button.type = 'button'; button.className = 'ml-3 underline text-blue-700';
+            button.textContent = task.done ? 'Reopen' : 'Mark done';
+            button.addEventListener('click', () => {
+                try {
+                    const current = JSON.parse(localStorage.getItem(taskPrefix + task.id));
+                    current.done = !current.done;
+                    localStorage.setItem(taskPrefix + task.id, JSON.stringify(current));
+                    renderOfficeHub();
+                } catch (error) { document.getElementById('officeMessage').textContent = error.message; }
+            });
+            row.appendChild(button);
+        }
+        if (!taskList.length) officeLine(tasks, 'No tasks saved yet.');
+        if (!bookingsLoaded) {
+            officeLine(schedule, 'Load bookings, then reopen Operations.');
+            officeLine(vendors, 'Load bookings, then reopen Operations.');
+            return;
+        }
+        const day = document.getElementById('officeScheduleDate').value;
+        const vendorTotals = new Map();
+        let scheduleCount = 0;
+        for (const booking of allBookingsData) {
+            const start = operationsDay(booking.startDate || ''), end = operationsDay(booking.endDate || '');
+            if (day && start && end && start <= day && end >= day && ['Confirmed','Ongoing'].includes(getBookingStatus(booking))) {
+                scheduleCount++;
+                try {
+                    const assigned = readAssignment(booking);
+                    officeLine(schedule, String(booking.name || '') + ' · ' + String(booking.pickup || '') + ' → ' + String(booking.drop || '')
+                        + ' · ' + (assigned ? assigned.registration + ' · ' + assigned.driver + ' · ' + assigned.mobile + ' · Pickup ' + (assigned.time || 'Not set') : 'Vehicle / driver assignment pending'));
+                } catch { officeLine(schedule, String(booking.name || '') + ' · Assignment could not be read.'); }
+            }
+            try {
+                for (const expense of readExpenses(booking)) {
+                    const vendor = String(expense.vendor || 'Unknown').trim();
+                    const key = vendor.toLowerCase();
+                    const total = vendorTotals.get(key) || {name:vendor,cost:0,paid:0};
+                    total.cost += expense.cost; total.paid += expense.paid;
+                    vendorTotals.set(key, total);
+                }
+            } catch { officeLine(vendors, 'Expenses for ' + String(booking.name || '') + ' could not be read. Totals are incomplete.'); }
+        }
+        if (!scheduleCount) officeLine(schedule, 'No active trips on the selected date.');
+        for (const vendor of vendorTotals.values()) officeLine(vendors, vendor.name + ' · Cost ' + paymentMoney(vendor.cost) + ' · Paid ' + paymentMoney(vendor.paid) + ' · Due ' + paymentMoney(vendor.cost - vendor.paid));
+        if (!vendorTotals.size) officeLine(vendors, 'Add vendor costs through Expenses / Profit.');
+    } catch (error) { document.getElementById('officeMessage').textContent = error.message; }
+}
+
+document.getElementById('officeTaskForm').addEventListener('submit', event => {
+    event.preventDefault();
+    try {
+        const fields = event.target.elements;
+        const task = {id:crypto.randomUUID(),title:fields.namedItem('title').value.trim(),staff:fields.namedItem('staff').value.trim(),due:fields.namedItem('due').value,done:false};
+        if (!task.title || !task.due) throw Error('Enter a task and due date.');
+        localStorage.setItem(taskPrefix + task.id, JSON.stringify(task));
+        event.target.reset(); fields.namedItem('due').value = operationsDay();
+        document.getElementById('officeMessage').textContent = 'Task saved in this browser.';
+        renderOfficeHub();
+    } catch (error) { document.getElementById('officeMessage').textContent = 'Could not save task. ' + error.message; }
+});
+
+function downloadDraftBackup() {
+    try {
+        const prefixes = ['baba_booking_edit_v1:','baba_payment_drafts_v1:','baba_status_v1:','baba_lead_notes_v1:','baba_quote_v1:','baba_assignment_v1:','baba_expenses_v1:','baba_task_v1:'];
+        const entries = [];
+        for (let index = 0; index < localStorage.length; index++) {
+            const key = localStorage.key(index);
+            if (prefixes.some(prefix => key.startsWith(prefix)) || key === 'baba_completed_bookings_manual') entries.push({key,value:localStorage.getItem(key)});
+        }
+        const backup = {format:'baba-crm-drafts',version:1,createdAt:new Date().toISOString(),entries};
+        const url = URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}));
+        const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'Baba_CRM_Drafts_' + operationsDay() + '.json'; anchor.click();
+        setTimeout(() => URL.revokeObjectURL(url),1000);
+        document.getElementById('officeMessage').textContent = entries.length + ' browser draft records exported. Keep this file for the later Sheet migration.';
+    } catch (error) { document.getElementById('officeMessage').textContent = 'Backup failed. ' + error.message; }
+}
+
+function quoteToBookingForm() {
+    try {
+        const quote = quoteValues();
+        if (!confirm('Fill the new booking form from this quotation? Any unsaved new booking form details will be replaced.')) return;
+        document.getElementById('bookingForm').reset();
+        const mapping = {custName:quote.customer,custPhone:quote.phone,startDate:quote.start,endDate:quote.end,totalAmount:quote.amount,advanceAmount:'0',tourRoute:quote.itinerary};
+        for (const [id,value] of Object.entries(mapping)) document.getElementById(id).value = value;
+        const vehicle = document.getElementById('vehicleSelect');
+        const match = [...vehicle.options].find(option => option.value.toLowerCase() === quote.vehicle.toLowerCase());
+        if (match) vehicle.value = match.value;
+        updateDriverNight();
+        document.getElementById('quotesDialog').close();
+        openEntry('booking');
+        alert('Quotation details filled. Check vehicle, pickup, drop and all booking fields before Save Booking. Saving sends the booking to your existing Sheet.');
+    } catch (error) { document.getElementById('quoteMessage').textContent = error.message; }
+}
+
+function compactBookingActions(row) {
+    const cell = row.lastElementChild;
+    const menu = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.textContent = 'Booking actions';
+    summary.className = 'cursor-pointer rounded border px-3 py-2 font-semibold text-blue-900';
+    menu.appendChild(summary);
+    const actions = document.createElement('div'); actions.className = 'space-y-1 mt-2';
+    while (cell.firstChild) actions.appendChild(cell.firstChild);
+    menu.appendChild(actions); cell.appendChild(menu);
+}
 </script>
 </body>
 </html>
