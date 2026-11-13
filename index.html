@@ -219,7 +219,7 @@
                 </div>
             </div>
             <div class="flex gap-2.5 items-center">
-                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Vehicles v7</span>
+                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Expenses v8</span>
                 <button onclick="openFreshGstModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">📄 Create Fresh GST Invoice</button>
                 <button onclick="openPasswordModal()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🔑 Change Password</button>
                 <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🚪 Logout</button>
@@ -578,6 +578,15 @@
 <label class="block">Pickup time<input name="time" type="time" class="block w-full border rounded p-2"></label>
 <label class="block">Driver instructions<textarea name="notes" rows="3" maxlength="1000" class="block w-full border rounded p-2"></textarea></label>
 <button type="submit" class="bg-blue-700 text-white rounded p-2">Save Assignment Draft</button><button type="button" onclick="document.getElementById('assignmentDialog').close()" class="border rounded p-2">Close</button></form><p id="assignmentMessage" role="status" class="my-3 text-sm"></p></dialog>
+<dialog id="expensesDialog" aria-labelledby="expensesTitle" style="width:min(900px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px"><h2 id="expensesTitle" class="text-xl font-bold">Trip Expenses &amp; Profit</h2><p id="expenseCustomer" class="my-2"></p><p class="text-sm text-slate-600 my-3">All amounts are in INR. Drafts are saved in this browser. Estimated profit uses the Sheet booking amount minus recorded costs, before tax adjustments and unrecorded expenses.</p><p id="expenseSummary" class="bg-blue-50 p-3 rounded font-semibold"></p>
+<form id="expenseForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3">
+<label>Category<select name="category" class="block w-full border rounded p-2"><option>Hotel</option><option>Hired Vehicle</option><option>Driver</option><option>Fuel</option><option>Toll / Parking</option><option>Nepal Operator</option><option>Other</option></select></label>
+<label>Vendor / paid to<input name="vendor" required maxlength="100" class="block w-full border rounded p-2"></label>
+<label>Expense date<input name="date" type="date" required class="block w-full border rounded p-2"></label>
+<label>Total cost (INR)<input name="cost" type="number" min="0.01" step="0.01" required class="block w-full border rounded p-2"></label>
+<label>Paid so far (INR)<input name="paid" type="number" min="0" step="0.01" value="0" required class="block w-full border rounded p-2"></label>
+<label>Note<input name="note" maxlength="300" class="block w-full border rounded p-2"></label>
+<button type="submit" class="bg-blue-700 text-white rounded p-2">Save Expense Draft</button><button type="button" onclick="document.getElementById('expensesDialog').close()" class="border rounded p-2">Close</button></form><p id="expenseMessage" role="status" class="text-sm my-2"></p><div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead><tr><th>Date</th><th>Category / Vendor</th><th>Cost</th><th>Paid</th><th>Due</th><th>Note</th><th>Action</th></tr></thead><tbody id="expenseHistory"></tbody></table></div></dialog>
 <script>
 
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQSDa1PdP9-7UKovVE4ZOd9cS2vRvrNX1zQtp-v1p9lu-7MRqLTklSTLBIlm_INa_7kA/exec";
@@ -1205,6 +1214,7 @@
                 addPaymentButton(row, b);
                 addStatusButton(row, b);
                 addAssignmentButton(row, b);
+                addExpenseButton(row, b);
                 tbody.appendChild(row);
             });
         }
@@ -2262,6 +2272,74 @@ document.getElementById('assignmentForm').addEventListener('submit', event => {
   localStorage.setItem(assignmentKey(assignmentBooking),JSON.stringify(value));
   document.getElementById('assignmentMessage').textContent = 'Assignment draft saved in this browser. Sheet sync is pending.';
  } catch(error) { document.getElementById('assignmentMessage').textContent = 'Could not save assignment. ' + error.message; }
+});
+
+let expenseBooking = null;
+let editingExpenseId = '';
+function expenseKey(booking) { return 'baba_expenses_v1:' + JSON.stringify([SCRIPT_URL,String(booking.phone || ''),String(booking.timestamp || '')]); }
+function readExpenses(booking) {
+ const raw=localStorage.getItem(expenseKey(booking));
+ if(!raw) return [];
+ const rows=JSON.parse(raw);
+ if(!Array.isArray(rows) || rows.some(row=>!row || typeof row.id!=='string' || !Number.isSafeInteger(row.cost) || !Number.isSafeInteger(row.paid) || row.cost<=0 || row.paid<0 || row.paid>row.cost)) throw Error('Saved expense data could not be read.');
+ return rows;
+}
+function expenseTotals(booking,rows) {
+ const cost=rows.reduce((sum,row)=>sum+row.cost,0),paid=rows.reduce((sum,row)=>sum+row.paid,0);
+ return {cost,paid,due:cost-paid,profit:paymentPaise(booking.total)-cost};
+}
+function addExpenseButton(row,booking) {
+ const button=document.createElement('button');button.type='button';button.textContent='Expenses / Profit';
+ button.className='block w-full bg-amber-100 text-amber-900 rounded p-1 font-semibold';
+ button.addEventListener('click',()=>openExpenses(booking));row.lastElementChild.prepend(button);
+}
+function openExpenses(booking) {
+ expenseBooking=booking;editingExpenseId='';
+ const form=document.getElementById('expenseForm');form.reset();form.elements.namedItem('date').value=operationsDay();
+ document.getElementById('expenseCustomer').textContent=String(booking.name || '')+' · '+String(booking.phone || '');
+ document.getElementById('expenseMessage').textContent='';
+ renderExpenses();document.getElementById('expensesDialog').showModal();
+}
+function renderExpenses() {
+ const body=document.getElementById('expenseHistory');body.replaceChildren();
+ try {
+  const rows=readExpenses(expenseBooking),totals=expenseTotals(expenseBooking,rows);
+  document.getElementById('expenseSummary').textContent='Recorded cost '+paymentMoney(totals.cost)+' · Paid '+paymentMoney(totals.paid)+' · Vendor due '+paymentMoney(totals.due)+' · Estimated profit '+paymentMoney(totals.profit);
+  for(const entry of rows) {
+   const row=document.createElement('tr');
+   for(const value of [entry.date,entry.category+' / '+entry.vendor,paymentMoney(entry.cost),paymentMoney(entry.paid),paymentMoney(entry.cost-entry.paid),entry.note]) {
+    const cell=document.createElement('td');cell.textContent=value;cell.className='p-2 border-b';row.appendChild(cell);
+   }
+   const cell=document.createElement('td');const edit=document.createElement('button');edit.type='button';edit.textContent='Edit';edit.className='text-blue-700 underline p-2';
+   edit.addEventListener('click',()=>{
+    editingExpenseId=entry.id;const form=document.getElementById('expenseForm');
+    for(const key of ['category','vendor','date','note']) form.elements.namedItem(key).value=entry[key] || '';
+    form.elements.namedItem('cost').value=entry.cost/100;form.elements.namedItem('paid').value=entry.paid/100;
+    document.getElementById('expenseMessage').textContent='Editing expense. Update paid amount or other details, then save.';
+   });cell.appendChild(edit);row.appendChild(cell);body.appendChild(row);
+  }
+  if(!rows.length) document.getElementById('expenseMessage').textContent='Add costs to build this trip estimate.';
+ } catch(error) { document.getElementById('expenseMessage').textContent=error.message; }
+}
+document.getElementById('expenseForm').addEventListener('submit',event=>{
+ event.preventDefault();
+ try {
+  if(!expenseBooking.phone || !expenseBooking.timestamp) throw Error('Booking mobile and timestamp required.');
+  const fields=event.target.elements;
+  const entry={id:editingExpenseId || crypto.randomUUID()};
+  for(const key of ['category','vendor','date','note']) entry[key]=fields.namedItem(key).value.trim();
+  for(const key of ['cost','paid']) {
+   const text=fields.namedItem(key).value;
+   if(!/^\d+(\.\d{1,2})?$/.test(text)) throw Error('Use valid amounts with at most two decimal places.');
+   entry[key]=paymentPaise(text);
+  }
+  if(!entry.vendor || !entry.date || entry.cost<=0 || entry.paid>entry.cost) throw Error('Check vendor, date, cost and paid amount.');
+  const rows=readExpenses(expenseBooking),index=rows.findIndex(row=>row.id===entry.id);
+  if(index<0) rows.push(entry);else rows[index]=entry;
+  localStorage.setItem(expenseKey(expenseBooking),JSON.stringify(rows));
+  editingExpenseId='';event.target.reset();fields.namedItem('date').value=operationsDay();renderExpenses();
+  document.getElementById('expenseMessage').textContent='Expense draft saved in this browser. Sheet sync is pending.';
+ } catch(error) { document.getElementById('expenseMessage').textContent='Could not save expense. '+error.message; }
 });
 </script>
 </body>
