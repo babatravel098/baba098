@@ -1120,6 +1120,7 @@
                         <button onclick="deleteBooking('${b.phone}', '${b.timestamp}')" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold hover:bg-red-200 cursor-pointer">Delete</button>
                     </td>
                 `;
+                addBookingEditButton(row, b);
                 tbody.appendChild(row);
             });
         }
@@ -1496,5 +1497,153 @@
             });
         }
     </script>
+<dialog id="bookingEditDialog" aria-labelledby="bookingEditTitle" style="width:min(720px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
+<form id="bookingEditForm">
+<h2 id="bookingEditTitle" class="text-xl font-bold text-blue-900">Edit Booking · Draft Preview</h2>
+<p class="text-sm text-slate-600 my-3">Step 1 · Changes are saved in this browser on this website. Google Sheet editing will be connected in a later step.</p>
+<div id="bookingEditFields" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+<p id="bookingEditBalance" class="my-3 font-semibold"></p>
+<p id="bookingEditMessage" role="status" class="my-3 text-sm text-blue-800"></p>
+<div class="flex flex-wrap gap-2">
+<button type="submit" class="rounded-lg bg-blue-700 text-white px-4 py-2">Save Draft Preview</button>
+<button type="button" id="discardBookingDraft" class="rounded-lg border px-4 py-2">Discard Draft</button>
+<button type="button" onclick="document.getElementById('bookingEditDialog').close()" class="rounded-lg border px-4 py-2">Close</button>
+</div></form></dialog>
+<script>
+const bookingEditFields = [
+    ['name', 'Customer name', 'text', true],
+    ['phone', 'Mobile number', 'tel', true],
+    ['address', 'Customer address', 'text'],
+    ['staff', 'Booking staff', 'text'],
+    ['pickup', 'Pickup location', 'text', true],
+    ['drop', 'Drop location', 'text', true],
+    ['tourRoute', 'Route / visiting places', 'text'],
+    ['vehicle', 'Vehicle', 'text', true],
+    ['startDate', 'Start date', 'date', true],
+    ['endDate', 'End date', 'date', true],
+    ['total', 'Total amount (INR)', 'number', true],
+    ['advance', 'Advance already received (INR)', 'number', true]
+];
+let editingBooking = null;
+
+function bookingDraftKey(booking) {
+    return 'baba_booking_edit_v1:' + JSON.stringify([SCRIPT_URL, String(booking.phone ?? ''), String(booking.timestamp ?? '')]);
+}
+
+function readBookingDraft(booking) {
+    const raw = localStorage.getItem(bookingDraftKey(booking));
+    if (!raw) return null;
+    const draft = JSON.parse(raw);
+    if (draft.version !== 1 || !draft.values || typeof draft.values !== 'object') {
+        throw new Error('Saved draft could not be read. Use Discard Draft to reset it.');
+    }
+    return draft;
+}
+
+function addBookingEditButton(row, booking) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'block w-full text-center bg-blue-700 text-white px-2 py-1 rounded font-semibold';
+    button.textContent = 'Edit Booking';
+    button.addEventListener('click', () => openBookingEdit(booking));
+    row.lastElementChild.prepend(button);
+}
+
+function openBookingEdit(booking) {
+    editingBooking = booking;
+    let values = booking;
+    let message = 'Edit the details below, then save a draft preview.';
+    try {
+        const draft = readBookingDraft(booking);
+        if (draft) {
+            values = {...booking, ...draft.values};
+            message = 'Browser draft loaded. The main booking list shows Google Sheet data.';
+        }
+    } catch (error) {
+        message = error.message;
+    }
+    const container = document.getElementById('bookingEditFields');
+    container.replaceChildren();
+    for (const [key, title, type, required] of bookingEditFields) {
+        const label = document.createElement('label');
+        label.className = 'block text-sm text-slate-700';
+        label.textContent = title;
+        const input = document.createElement('input');
+        input.name = key;
+        input.type = type;
+        input.required = Boolean(required);
+        input.className = 'block w-full border rounded-lg p-2 mt-1';
+        input.value = type === 'date' ? operationsDay(values[key] ?? '') : String(values[key] ?? '');
+        if (type === 'number') {
+            input.min = '0';
+            input.step = '0.01';
+        }
+        // Payment entries are handled separately from booking detail edits.
+        if (key === 'advance') input.readOnly = true;
+        label.appendChild(input);
+        container.appendChild(label);
+    }
+    document.getElementById('bookingEditMessage').textContent = message;
+    updateEditBalance();
+    const dialog = document.getElementById('bookingEditDialog');
+    if (!dialog.open) dialog.showModal();
+}
+
+function updateEditBalance() {
+    const fields = document.getElementById('bookingEditForm').elements;
+    const balance = Number(fields.namedItem('total').value) - Number(fields.namedItem('advance').value);
+    document.getElementById('bookingEditBalance').textContent = 'Draft balance · ' + new Intl.NumberFormat('en-IN', {
+        style: 'currency', currency: 'INR'
+    }).format(balance);
+}
+
+function validateBookingEdit(values) {
+    if (!values.name || !values.phone || !values.pickup || !values.drop || !values.vehicle) {
+        throw new Error('Fill customer, mobile, pickup, drop and vehicle details.');
+    }
+    if (!/^[+\d\s()-]{7,20}$/.test(values.phone)) throw new Error('Enter a valid mobile number.');
+    if (!values.startDate || !values.endDate || values.endDate < values.startDate) {
+        throw new Error('End date must be on or after the start date.');
+    }
+    if (!Number.isFinite(values.total) || values.total < 0 || !Number.isFinite(values.advance) || values.advance < 0) {
+        throw new Error('Enter a valid non-negative amount.');
+    }
+    if (values.total < values.advance) throw new Error('Total cannot be below the advance received. Refund handling will be added with payments.');
+}
+
+document.getElementById('bookingEditForm').addEventListener('input', updateEditBalance);
+document.getElementById('bookingEditForm').addEventListener('submit', event => {
+    event.preventDefault();
+    const message = document.getElementById('bookingEditMessage');
+    try {
+        const values = {};
+        for (const [key, , type] of bookingEditFields) {
+            const value = event.currentTarget.elements.namedItem(key).value.trim();
+            values[key] = type === 'number' ? Number(value) : value;
+        }
+        validateBookingEdit(values);
+        if (!editingBooking.phone || !editingBooking.timestamp) {
+            throw new Error('Original booking mobile and timestamp are needed to identify this draft.');
+        }
+        const draft = {version:1, values, savedAt:new Date().toISOString()};
+        localStorage.setItem(bookingDraftKey(editingBooking), JSON.stringify(draft));
+        message.textContent = 'Draft saved in this browser. Reopen Edit Booking to review it. Google Sheet sync is pending.';
+    } catch (error) {
+        message.textContent = 'Draft could not be saved. ' + error.message;
+    }
+});
+
+document.getElementById('discardBookingDraft').addEventListener('click', () => {
+    if (!confirm('Discard this booking draft and reload the Google Sheet details?')) return;
+    try {
+        localStorage.removeItem(bookingDraftKey(editingBooking));
+        openBookingEdit(editingBooking);
+        document.getElementById('bookingEditMessage').textContent = 'Draft discarded. Google Sheet details loaded.';
+    } catch (error) {
+        document.getElementById('bookingEditMessage').textContent = 'Draft could not be discarded. ' + error.message;
+    }
+});
+
+</script>
 </body>
 </html>
