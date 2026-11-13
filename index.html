@@ -219,7 +219,7 @@
                 </div>
             </div>
             <div class="flex gap-2.5 items-center">
-                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Google Sheets</span>
+                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Status v3</span>
                 <button onclick="openFreshGstModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">📄 Create Fresh GST Invoice</button>
                 <button onclick="openPasswordModal()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🔑 Change Password</button>
                 <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🚪 Logout</button>
@@ -442,7 +442,11 @@
                 </div>
 
                 <!-- Date Filter Bar for GST Invoices Tab -->
-                <div id="opsFilter" class="hidden mb-3 rounded-lg bg-blue-50 p-2 text-sm">
+                <div class="flex flex-wrap gap-2 mb-3">
+<button type="button" onclick="openOperations('ongoing')" class="border rounded-lg px-3 py-1 text-sm">Ongoing bookings</button>
+<button type="button" onclick="openOperations('cancelled')" class="border rounded-lg px-3 py-1 text-sm">Cancelled bookings</button>
+<span class="text-xs text-slate-500 self-center">Status changes are saved in this browser</span>
+</div><div id="opsFilter" class="hidden mb-3 rounded-lg bg-blue-50 p-2 text-sm">
                     <span id="opsFilterLabel"></span>
                     <button type="button" onclick="operationsFilter = ''; renderTable()" class="ml-2 underline">Clear filter</button>
                 </div>
@@ -493,7 +497,54 @@
         </a>
     </div>
 
-    <script>
+    
+<dialog id="bookingEditDialog" aria-labelledby="bookingEditTitle" style="width:min(720px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
+<form id="bookingEditForm">
+<h2 id="bookingEditTitle" class="text-xl font-bold text-blue-900">Edit Booking · Draft Preview</h2>
+<p class="text-sm text-slate-600 my-3">Step 1 · Changes are saved in this browser on this website. Google Sheet editing will be connected in a later step.</p>
+<div id="bookingEditFields" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+<p id="bookingEditBalance" class="my-3 font-semibold"></p>
+<p id="bookingEditMessage" role="status" class="my-3 text-sm text-blue-800"></p>
+<div class="flex flex-wrap gap-2">
+<button type="submit" class="rounded-lg bg-blue-700 text-white px-4 py-2">Save Draft Preview</button>
+<button type="button" id="discardBookingDraft" class="rounded-lg border px-4 py-2">Discard Draft</button>
+<button type="button" onclick="document.getElementById('bookingEditDialog').close()" class="rounded-lg border px-4 py-2">Close</button>
+</div></form></dialog>
+
+<dialog id="paymentDialog" aria-labelledby="paymentTitle" style="width:min(880px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
+<h2 id="paymentTitle" class="text-xl font-bold text-blue-900">Add Payment &amp; History · Draft Preview</h2>
+<p id="paymentCustomer" class="mt-2 font-semibold"></p>
+<p class="my-3 text-sm text-slate-600">Payments are stored in this browser on this website. This preview uses the Google Sheet total and advance. Booking edit drafts can be reviewed through Edit Booking. Sheet sync will be connected later.</p>
+<div id="paymentSummary" class="p-3 bg-indigo-50 rounded-lg font-semibold leading-7"></div>
+<p id="paymentConflict" class="my-3 text-amber-800" role="status"></p>
+<form id="paymentDraftForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-4">
+<label class="text-sm">Payment amount (INR)<input id="paymentAmount" type="number" min="0.01" step="0.01" required class="block w-full border p-2 rounded-lg mt-1"></label>
+<label class="text-sm">Payment date<input id="paymentDate" type="date" required class="block w-full border p-2 rounded-lg mt-1"></label>
+<label class="text-sm">Payment mode<select id="paymentMode" class="block w-full border p-2 rounded-lg mt-1"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Card</option><option>Cheque</option><option>Other</option></select></label>
+<label class="text-sm">Reference / UTR (optional)<input id="paymentReference" maxlength="100" class="block w-full border p-2 rounded-lg mt-1"></label>
+<label class="text-sm sm:col-span-2">Note (optional)<input id="paymentNote" maxlength="300" class="block w-full border p-2 rounded-lg mt-1"></label>
+<button id="paymentSave" class="rounded-lg bg-indigo-700 text-white px-4 py-2 disabled:opacity-50" type="submit">Save Payment Draft</button>
+</form>
+<p id="paymentMessage" role="status" class="my-3 text-sm text-blue-800"></p>
+<h3 class="font-semibold my-2">Draft payment history</h3>
+<div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead><tr><th class="p-2">Date</th><th class="p-2">Amount</th><th class="p-2">Mode</th><th class="p-2">Reference</th><th class="p-2">Note</th><th class="p-2">Action</th></tr></thead><tbody id="paymentHistory"></tbody></table></div>
+<button type="button" onclick="if (!paymentSaving) document.getElementById('paymentDialog').close()" class="rounded-lg border px-4 py-2 mt-4">Close</button>
+</dialog>
+
+<dialog id="bookingStatusDialog" aria-labelledby="bookingStatusTitle" style="width:min(650px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
+<h2 id="bookingStatusTitle" class="text-xl font-bold text-blue-900">Booking Status</h2>
+<p id="statusCustomer" class="font-semibold my-2"></p>
+<p class="text-sm text-slate-600 my-3">Status updates are saved in this browser and reflected in booking views. Google Sheet sync is pending. Cancellation amounts and refunds will be handled separately.</p>
+<form id="bookingStatusForm" class="space-y-3">
+<label class="block text-sm">Status<select id="statusValue" class="block w-full border p-2 rounded-lg"><option>Confirmed</option><option>Ongoing</option><option>Completed</option><option>Cancelled</option></select></label>
+<label class="block text-sm">Note / cancellation reason<textarea id="statusNote" maxlength="500" rows="3" class="block w-full border p-2 rounded-lg" placeholder="Reason is required for cancellation"></textarea></label>
+<button id="statusSave" type="submit" class="bg-blue-700 text-white px-4 py-2 rounded-lg disabled:opacity-50">Save Status Draft</button>
+<button type="button" onclick="document.getElementById('bookingStatusDialog').close()" class="border px-4 py-2 rounded-lg">Close</button>
+</form><p id="statusMessage" role="status" class="text-sm text-blue-800 my-3"></p>
+<h3 class="font-semibold mt-4">Status history</h3><ul id="statusHistory" class="text-sm"></ul>
+</dialog>
+<script>
+
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQSDa1PdP9-7UKovVE4ZOd9cS2vRvrNX1zQtp-v1p9lu-7MRqLTklSTLBIlm_INa_7kA/exec";
         const GST_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzNuP7Qr7qFxFOS3UzIB_5r-JCEEg7AlEf1QFN6WkEU_3h37ywZ6qbcSgv6yf7WhTMX/exec";
         const LEADS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzJ5hZ3GWHHdivmIG9kUg_YiClwOgqAafvoZs9dtA_P34ilYqfNGY7EbnAFjjO9PUXW/exec";
@@ -507,7 +558,7 @@
         const operationsLabels = {
             pickups: "Today's pickups",
             followups: 'Due follow-ups',
-            collections: 'Pending collections'
+            collections: 'Pending collections', ongoing: 'Ongoing bookings', cancelled: 'Cancelled bookings'
         };
         const operationsDate = new Intl.DateTimeFormat('en-CA', {
             timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
@@ -528,7 +579,7 @@
 
         function isPickupToday(booking) {
             return operationsDay(booking.startDate ?? '') === operationsDay()
-                && !getCompletedSet().includes((booking.phone || '') + '_' + (booking.timestamp || ''));
+                && ['Confirmed', 'Ongoing'].includes(getBookingStatus(booking));
         }
 
         function isFollowupDue(lead) {
@@ -565,17 +616,8 @@
         }
 
         function toggleCompleteBooking(phone, timestamp) {
-            let comp = getCompletedSet();
-            let key = phone + "_" + timestamp;
-            if (comp.includes(key)) {
-                comp = comp.filter(k => k !== key);
-                alert('Booking moved back to New/Active tab.');
-            } else {
-                comp.push(key);
-                alert('Booking marked as Completed successfully!');
-            }
-            localStorage.setItem('baba_completed_bookings_manual', JSON.stringify(comp));
-            fetchBookings();
+            const booking = allBookingsData.find(item => String(item.phone) === String(phone) && String(item.timestamp) === String(timestamp));
+            if (booking) openBookingStatus(booking, getBookingStatus(booking) === 'Completed' ? 'Confirmed' : 'Completed');
         }
 
         window.onload = function() {
@@ -1056,19 +1098,22 @@
             const filteredData = allBookingsData.filter(b => {
                 if (!matchesSearch(b.name, b.phone, b.pickup, b.drop, b.tourRoute, b.vehicle)) return false;
                 let key = (b.phone || '') + "_" + (b.timestamp || '');
-                let isCompletedManually = completedSet.includes(key);
+                const status = getBookingStatus(b);
+                let isCompletedManually = status === 'Completed';
+                if (operationsFilter === 'cancelled') return status === 'Cancelled';
+                if (operationsFilter === 'ongoing') return status === 'Ongoing';
 
                 if (operationsFilter === 'collections') return bookingBalance(b) > 0;
                 if (operationsFilter === 'pickups') return isPickupToday(b);
                 if (currentTab === 'completed') {
                     return isCompletedManually;
                 } else {
-                    return !isCompletedManually;
+                    return !isCompletedManually && status !== 'Cancelled';
                 }
             });
 
             if(filteredData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Yahan ${currentTab === 'completed' ? 'koi completed booking nahi hai. (New Booking table se "Mark Completed" button dabayein)' : 'koi new booking nahi hai'}.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">No bookings match this view.</td></tr>`;
                 return;
             }
 
@@ -1077,7 +1122,7 @@
                 const displayStart = formatDisplayDate(b.startDate);
                 const displayEnd = formatDisplayDate(b.endDate);
                 let key = (b.phone || '') + "_" + (b.timestamp || '');
-                let isDone = completedSet.includes(key);
+                let isDone = getBookingStatus(b) === 'Completed';
 
                 const reviewLink = "https://g.page/r/CWQggXZxge_yEAE/review";
                 const waRemindText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0AHello ${b.name || 'Sir/Ma\'am'},%0AThis is a friendly reminder for your upcoming tour starting on *${displayStart}* to *${displayEnd}* (Route: ${b.tourRoute || 'N/A'}).%0AWe are fully prepared for your comfortable journey! For any queries, call us at 8726667104.%0A%0AThank you for choosing us!`;
@@ -1122,6 +1167,7 @@
                 `;
                 addBookingEditButton(row, b);
                 addPaymentButton(row, b);
+                addStatusButton(row, b);
                 tbody.appendChild(row);
             });
         }
@@ -1497,20 +1543,9 @@
                 btn.disabled = false;
             });
         }
-    </script>
-<dialog id="bookingEditDialog" aria-labelledby="bookingEditTitle" style="width:min(720px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
-<form id="bookingEditForm">
-<h2 id="bookingEditTitle" class="text-xl font-bold text-blue-900">Edit Booking · Draft Preview</h2>
-<p class="text-sm text-slate-600 my-3">Step 1 · Changes are saved in this browser on this website. Google Sheet editing will be connected in a later step.</p>
-<div id="bookingEditFields" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
-<p id="bookingEditBalance" class="my-3 font-semibold"></p>
-<p id="bookingEditMessage" role="status" class="my-3 text-sm text-blue-800"></p>
-<div class="flex flex-wrap gap-2">
-<button type="submit" class="rounded-lg bg-blue-700 text-white px-4 py-2">Save Draft Preview</button>
-<button type="button" id="discardBookingDraft" class="rounded-lg border px-4 py-2">Discard Draft</button>
-<button type="button" onclick="document.getElementById('bookingEditDialog').close()" class="rounded-lg border px-4 py-2">Close</button>
-</div></form></dialog>
-<script>
+    
+
+
 const bookingEditFields = [
     ['name', 'Customer name', 'text', true],
     ['phone', 'Mobile number', 'tel', true],
@@ -1645,27 +1680,9 @@ document.getElementById('discardBookingDraft').addEventListener('click', () => {
     }
 });
 
-</script>
-<dialog id="paymentDialog" aria-labelledby="paymentTitle" style="width:min(880px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
-<h2 id="paymentTitle" class="text-xl font-bold text-blue-900">Add Payment &amp; History · Draft Preview</h2>
-<p id="paymentCustomer" class="mt-2 font-semibold"></p>
-<p class="my-3 text-sm text-slate-600">Payments are stored in this browser on this website. This preview uses the Google Sheet total and advance. Booking edit drafts can be reviewed through Edit Booking. Sheet sync will be connected later.</p>
-<div id="paymentSummary" class="p-3 bg-indigo-50 rounded-lg font-semibold leading-7"></div>
-<p id="paymentConflict" class="my-3 text-amber-800" role="status"></p>
-<form id="paymentDraftForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-4">
-<label class="text-sm">Payment amount (INR)<input id="paymentAmount" type="number" min="0.01" step="0.01" required class="block w-full border p-2 rounded-lg mt-1"></label>
-<label class="text-sm">Payment date<input id="paymentDate" type="date" required class="block w-full border p-2 rounded-lg mt-1"></label>
-<label class="text-sm">Payment mode<select id="paymentMode" class="block w-full border p-2 rounded-lg mt-1"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Card</option><option>Cheque</option><option>Other</option></select></label>
-<label class="text-sm">Reference / UTR (optional)<input id="paymentReference" maxlength="100" class="block w-full border p-2 rounded-lg mt-1"></label>
-<label class="text-sm sm:col-span-2">Note (optional)<input id="paymentNote" maxlength="300" class="block w-full border p-2 rounded-lg mt-1"></label>
-<button id="paymentSave" class="rounded-lg bg-indigo-700 text-white px-4 py-2 disabled:opacity-50" type="submit">Save Payment Draft</button>
-</form>
-<p id="paymentMessage" role="status" class="my-3 text-sm text-blue-800"></p>
-<h3 class="font-semibold my-2">Draft payment history</h3>
-<div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead><tr><th class="p-2">Date</th><th class="p-2">Amount</th><th class="p-2">Mode</th><th class="p-2">Reference</th><th class="p-2">Note</th><th class="p-2">Action</th></tr></thead><tbody id="paymentHistory"></tbody></table></div>
-<button type="button" onclick="if (!paymentSaving) document.getElementById('paymentDialog').close()" class="rounded-lg border px-4 py-2 mt-4">Close</button>
-</dialog>
-<script>
+
+
+
 let paymentBooking = null;
 let paymentSaving = false;
 const paymentModes = ['Cash', 'UPI', 'Bank Transfer', 'Card', 'Cheque', 'Other'];
@@ -1832,6 +1849,97 @@ window.addEventListener('storage', event => {
 });
 
 document.getElementById("paymentDialog").addEventListener("cancel", event => { if (paymentSaving) event.preventDefault(); });
+
+const bookingStatuses = ['Confirmed', 'Ongoing', 'Completed', 'Cancelled'];
+let statusBooking = null;
+
+function statusKey(booking) {
+    return 'baba_status_v1:' + JSON.stringify([SCRIPT_URL, String(booking.phone ?? ''), String(booking.timestamp ?? '')]);
+}
+
+function readStatusRecord(booking) {
+    const raw = localStorage.getItem(statusKey(booking));
+    if (!raw) return null;
+    const record = JSON.parse(raw);
+    if (record.version !== 1 || !bookingStatuses.includes(record.status) || !Array.isArray(record.history)) {
+        throw new Error('Saved status could not be read. Please retain browser data for recovery.');
+    }
+    return record;
+}
+
+function getBookingStatus(booking) {
+    try {
+        const record = readStatusRecord(booking);
+        if (record) return record.status;
+    } catch { return 'Review status'; }
+    return getCompletedSet().includes((booking.phone || '') + '_' + (booking.timestamp || '')) ? 'Completed' : 'Confirmed';
+}
+
+function addStatusButton(row, booking) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'block w-full rounded border border-slate-300 text-slate-700 px-2 py-1 font-semibold';
+    button.textContent = getBookingStatus(booking) + ' · Status';
+    button.addEventListener('click', () => openBookingStatus(booking));
+    row.lastElementChild.prepend(button);
+}
+
+function openBookingStatus(booking, proposed) {
+    statusBooking = booking;
+    document.getElementById('statusCustomer').textContent = String(booking.name || '') + ' · ' + String(booking.phone || '');
+    document.getElementById('statusNote').value = '';
+    document.getElementById('statusMessage').textContent = '';
+    document.getElementById('statusSave').disabled = false;
+    const history = document.getElementById('statusHistory');
+    history.replaceChildren();
+    try {
+        const record = readStatusRecord(booking);
+        document.getElementById('statusValue').value = proposed || getBookingStatus(booking);
+        const entries = record ? record.history : [];
+        for (const entry of [...entries].reverse()) {
+            const item = document.createElement('li');
+            item.className = 'border-b py-2';
+            item.textContent = new Date(entry.at).toLocaleString('en-IN', {timeZone:'Asia/Kolkata'})
+                + ' · ' + entry.from + ' → ' + entry.to + (entry.note ? ' · ' + entry.note : '');
+            history.appendChild(item);
+        }
+        if (!entries.length) history.textContent = 'Status history will appear after the first change.';
+    } catch (error) {
+        document.getElementById('statusMessage').textContent = error.message;
+        document.getElementById('statusSave').disabled = true;
+    }
+    const dialog = document.getElementById('bookingStatusDialog');
+    if (!dialog.open) dialog.showModal();
+}
+
+function saveBookingStatus(booking, status, note) {
+    if (!bookingStatuses.includes(status)) throw new Error('Choose a valid status.');
+    if (!booking.phone || !booking.timestamp) throw new Error('Booking mobile and timestamp are required.');
+    if (status === 'Cancelled' && !note.trim()) throw new Error('Enter the cancellation reason.');
+    const record = readStatusRecord(booking);
+    const previous = getBookingStatus(booking);
+    if (previous === status) throw new Error('This booking already has the selected status.');
+    const history = record ? record.history : [];
+    const next = {version:1, status, history:[...history, {from:previous,to:status,note:note.trim(),at:new Date().toISOString()}]};
+    localStorage.setItem(statusKey(booking), JSON.stringify(next));
+}
+
+document.getElementById('bookingStatusForm').addEventListener('submit', event => {
+    event.preventDefault();
+    try {
+        saveBookingStatus(statusBooking, document.getElementById('statusValue').value, document.getElementById('statusNote').value);
+        renderTable();
+        openBookingStatus(statusBooking);
+        document.getElementById('statusMessage').textContent = 'Status saved in this browser. Google Sheet sync is pending.';
+    } catch (error) {
+        document.getElementById('statusMessage').textContent = 'Could not save status. ' + error.message;
+    }
+});
+
+window.addEventListener('storage', event => {
+    if (event.key && event.key.startsWith('baba_status_v1:')) renderTable();
+});
+
 </script>
 </body>
 </html>
