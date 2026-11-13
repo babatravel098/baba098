@@ -219,7 +219,7 @@
                 </div>
             </div>
             <div class="flex gap-2.5 items-center">
-                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Customers v4</span>
+                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Leads v5</span>
                 <button onclick="openFreshGstModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">📄 Create Fresh GST Invoice</button>
                 <button onclick="openPasswordModal()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🔑 Change Password</button>
                 <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🚪 Logout</button>
@@ -550,6 +550,15 @@
 <label for="customerSearch" class="text-sm font-semibold">Find customer</label><input id="customerSearch" type="search" oninput="renderCustomerDirectory()" placeholder="Customer name or mobile" class="block w-full border rounded-lg p-2 mt-1 mb-4">
 <div class="grid grid-cols-1 md:grid-cols-3 gap-5"><div id="customerDirectory" class="space-y-2 overflow-y-auto" style="max-height:55vh"></div><section id="customerDetail" class="md:col-span-2" aria-live="polite"></section></div>
 </dialog>
+<dialog id="leadNotesDialog" style="width:min(650px,95vw);max-height:90vh;padding:24px;border:0;border-radius:16px" aria-labelledby="leadNotesTitle">
+<h2 id="leadNotesTitle" class="text-xl font-bold">Lead Notes &amp; Assignment</h2><p id="leadNotesCustomer" class="my-2"></p><p class="text-sm text-slate-600 mb-3">Drafts are saved in this browser. Sheet sync and dashboard follow-up updates will be connected later.</p>
+<form id="leadNotesForm" class="space-y-3">
+<label class="block">Assigned staff<input name="staff" maxlength="100" class="block w-full border rounded p-2"></label>
+<label class="block">Lead source<select name="source" class="block w-full border rounded p-2"><option>Unknown</option><option>Phone Call</option><option>WhatsApp</option><option>Google</option><option>Website</option><option>Referral</option><option>Walk-in</option><option>Other</option></select></label>
+<label class="block">Next follow-up<input name="followup" type="datetime-local" class="block w-full border rounded p-2"></label>
+<label class="block">Discussion notes<textarea name="notes" rows="5" maxlength="5000" class="block w-full border rounded p-2"></textarea></label>
+<button class="bg-blue-700 text-white rounded px-4 py-2" type="submit">Save Lead Draft</button><button class="border rounded px-4 py-2" type="button" onclick="document.getElementById('leadNotesDialog').close()">Close</button>
+</form><p id="leadNotesMessage" role="status" class="text-sm my-3"></p></dialog>
 <script>
 
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQSDa1PdP9-7UKovVE4ZOd9cS2vRvrNX1zQtp-v1p9lu-7MRqLTklSTLBIlm_INa_7kA/exec";
@@ -1037,6 +1046,7 @@
                             <button onclick="deleteLead('${l.id}')" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold">Delete</button>
                         </td>
                     `;
+                    addLeadNotesButton(row, l);
                     tbody.appendChild(row);
                 });
                 return;
@@ -2062,6 +2072,44 @@ function showCustomerProfile(key) {
     detail.scrollIntoView({block:'nearest'});
 }
 
+
+let selectedNotesLead = null;
+function leadNotesKey(lead) {
+    if (!lead.leadId && !(lead.phone && lead.timestamp)) throw new Error('Lead ID or original mobile and timestamp required.');
+    return 'baba_lead_notes_v1:' + JSON.stringify([LEADS_SCRIPT_URL, lead.leadId || [lead.phone, lead.timestamp]]);
+}
+function addLeadNotesButton(row, lead) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Notes / Assign Staff';
+    button.className = 'block w-full bg-blue-100 text-blue-800 rounded p-2 mb-2';
+    button.addEventListener('click', () => openLeadNotes(lead));
+    row.lastElementChild.prepend(button);
+}
+function openLeadNotes(lead) {
+    selectedNotesLead = lead;
+    const form = document.getElementById('leadNotesForm');
+    form.reset();
+    document.getElementById('leadNotesCustomer').textContent = String(lead.name || '') + ' · ' + String(lead.phone || '');
+    const message = document.getElementById('leadNotesMessage');
+    message.textContent = '';
+    try {
+        const raw = localStorage.getItem(leadNotesKey(lead));
+        const values = raw ? JSON.parse(raw) : {staff:'',source:'Unknown',notes:'',followup:lead.followup || ''};
+        for (const key of ['staff','source','notes','followup']) form.elements.namedItem(key).value = values[key] || '';
+        message.textContent = raw ? 'Browser draft loaded.' : 'Add discussion details below.';
+    } catch(error) { message.textContent = error.message; }
+    document.getElementById('leadNotesDialog').showModal();
+}
+document.getElementById('leadNotesForm').addEventListener('submit', event => {
+    event.preventDefault();
+    try {
+        const values = {version:1,updatedAt:new Date().toISOString()};
+        for (const key of ['staff','source','notes','followup']) values[key] = event.target.elements.namedItem(key).value.trim();
+        localStorage.setItem(leadNotesKey(selectedNotesLead),JSON.stringify(values));
+        document.getElementById('leadNotesMessage').textContent = 'Lead draft saved in this browser. Sheet sync is pending.';
+    } catch(error) { document.getElementById('leadNotesMessage').textContent = 'Could not save draft. ' + error.message; }
+});
 </script>
 </body>
 </html>
