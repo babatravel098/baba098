@@ -219,7 +219,7 @@
                 </div>
             </div>
             <div class="flex gap-2.5 items-center">
-                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Status v3</span>
+                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Customers v4</span>
                 <button onclick="openFreshGstModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">📄 Create Fresh GST Invoice</button>
                 <button onclick="openPasswordModal()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🔑 Change Password</button>
                 <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🚪 Logout</button>
@@ -233,6 +233,7 @@
                 <button type="button" onclick="openOperations('collections')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Pending collections</span><strong id="opsCollections" class="text-2xl text-blue-900">—</strong></button>
             </div>
             <div class="flex flex-wrap gap-2">
+<button type="button" onclick="openCustomers()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Customers / History</button>
                 <button type="button" onclick="openEntry('booking')" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">+ New Booking</button>
                 <button type="button" onclick="openEntry('lead')" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">+ Add Lead</button>
             </div>
@@ -542,6 +543,12 @@
 <button type="button" onclick="document.getElementById('bookingStatusDialog').close()" class="border px-4 py-2 rounded-lg">Close</button>
 </form><p id="statusMessage" role="status" class="text-sm text-blue-800 my-3"></p>
 <h3 class="font-semibold mt-4">Status history</h3><ul id="statusHistory" class="text-sm"></ul>
+</dialog>
+<dialog id="customersDialog" aria-labelledby="customersTitle" style="width:min(1100px,96vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
+<div class="flex justify-between items-center gap-3"><h2 id="customersTitle" class="text-xl font-bold text-blue-900">Customers &amp; History</h2><button type="button" onclick="document.getElementById('customersDialog').close()" class="border rounded-lg px-3 py-2">Close</button></div>
+<p id="customerLoadState" class="text-xs text-slate-600 my-3"></p>
+<label for="customerSearch" class="text-sm font-semibold">Find customer</label><input id="customerSearch" type="search" oninput="renderCustomerDirectory()" placeholder="Customer name or mobile" class="block w-full border rounded-lg p-2 mt-1 mb-4">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-5"><div id="customerDirectory" class="space-y-2 overflow-y-auto" style="max-height:55vh"></div><section id="customerDetail" class="md:col-span-2" aria-live="polite"></section></div>
 </dialog>
 <script>
 
@@ -1939,6 +1946,121 @@ document.getElementById('bookingStatusForm').addEventListener('submit', event =>
 window.addEventListener('storage', event => {
     if (event.key && event.key.startsWith('baba_status_v1:')) renderTable();
 });
+
+function customerPhone(value) {
+    let digits = String(value ?? '').replace(/\D/g, '');
+    if (digits.startsWith('00')) digits = digits.slice(2);
+    if (/^91[6-9]\d{9}$/.test(digits)) digits = digits.slice(2);
+    return digits;
+}
+
+function buildCustomerProfiles(bookings, leads) {
+    const profiles = new Map();
+    function add(record, kind, index) {
+        const phone = customerPhone(record.phone);
+        const key = phone || kind + '-missing-' + index;
+        if (!profiles.has(key)) profiles.set(key, {key, phone, names:[], addresses:[], bookings:[], leads:[]});
+        const profile = profiles.get(key);
+        const name = String(record.name || '').trim();
+        const address = String(record.address || '').trim();
+        if (name && !profile.names.includes(name)) profile.names.push(name);
+        if (address && !profile.addresses.includes(address)) profile.addresses.push(address);
+        profile[kind].push(record);
+    }
+    bookings.forEach((record, index) => add(record, 'bookings', index));
+    leads.forEach((record, index) => add(record, 'leads', index));
+    return [...profiles.values()].sort((a,b) => (a.names[0] || '').localeCompare(b.names[0] || ''));
+}
+
+function customerElement(tag, text, className) {
+    const element = document.createElement(tag);
+    element.textContent = text;
+    element.className = className || '';
+    return element;
+}
+
+function openCustomers() {
+    document.getElementById('customerSearch').value = '';
+    document.getElementById('customerDetail').replaceChildren();
+    renderCustomerDirectory();
+    document.getElementById('customersDialog').showModal();
+}
+
+function renderCustomerDirectory() {
+    const query = document.getElementById('customerSearch').value.trim().toLowerCase();
+    const digits = customerPhone(query);
+    const profiles = buildCustomerProfiles(allBookingsData, allLeadsData);
+    const visible = profiles.filter(profile => !query || profile.names.some(name => name.toLowerCase().includes(query))
+        || profile.phone.includes(query) || (digits && profile.phone.includes(digits)));
+    document.getElementById('customerLoadState').textContent =
+        (bookingsLoaded ? 'Bookings loaded' : 'Bookings have not loaded yet') + ' · '
+        + (leadsLoaded ? 'Leads loaded' : 'Leads have not loaded yet')
+        + ' · ' + profiles.length + ' customer groups. Shared mobile numbers are grouped together.';
+    const list = document.getElementById('customerDirectory');
+    list.replaceChildren();
+    for (const profile of visible) {
+        const button = customerElement('button', (profile.names.join(' / ') || 'Unnamed customer') + '\n'
+            + (profile.phone || 'Mobile missing') + ' · ' + profile.bookings.length + ' bookings · ' + profile.leads.length + ' enquiries',
+            'w-full text-left border rounded-lg p-3 hover:bg-blue-50 whitespace-pre-line');
+        button.type = 'button';
+        button.addEventListener('click', () => showCustomerProfile(profile.key));
+        list.appendChild(button);
+    }
+    if (!visible.length) list.appendChild(customerElement('p', 'No matching customers in the loaded records.', 'text-sm text-slate-500'));
+}
+
+function showCustomerProfile(key) {
+    const profile = buildCustomerProfiles(allBookingsData, allLeadsData).find(item => item.key === key);
+    const detail = document.getElementById('customerDetail');
+    detail.replaceChildren();
+    if (!profile) return;
+    detail.appendChild(customerElement('h3', profile.names.join(' / ') || 'Unnamed customer', 'text-xl font-bold text-blue-900'));
+    detail.appendChild(customerElement('p', profile.phone || 'Mobile missing', 'text-sm my-1'));
+    detail.appendChild(customerElement('p', profile.addresses.join(' / '), 'text-sm text-slate-600 mb-3'));
+    const total = profile.bookings.reduce((sum, booking) => sum + (Number(booking.total) || 0), 0);
+    const advance = profile.bookings.reduce((sum, booking) => sum + (Number(booking.advance) || 0), 0);
+    const money = value => new Intl.NumberFormat('en-IN', {style:'currency', currency:'INR'}).format(value);
+    detail.appendChild(customerElement('p', 'Sheet totals · Booked ' + money(total) + ' · Advance ' + money(advance)
+        + ' · Balance ' + money(total - advance), 'bg-blue-50 p-3 rounded-lg font-semibold'));
+    detail.appendChild(customerElement('p', 'Totals include all listed bookings. Cancellation charges and refunds are not calculated here.', 'text-xs text-slate-500 my-2'));
+    detail.appendChild(customerElement('h4', 'Booking history', 'font-bold mt-4 mb-2'));
+    if (!profile.bookings.length) detail.appendChild(customerElement('p', 'No bookings for this mobile number.', 'text-sm'));
+    for (const booking of profile.bookings) {
+        const card = customerElement('div', '', 'border rounded-lg p-3 mb-3 text-sm');
+        card.appendChild(customerElement('p', (booking.pickup || '—') + ' → ' + (booking.drop || '—'), 'font-semibold'));
+        card.appendChild(customerElement('p', formatDisplayDate(booking.startDate) + ' – ' + formatDisplayDate(booking.endDate)
+            + ' · ' + (booking.vehicle || '—') + ' · ' + getBookingStatus(booking)));
+        card.appendChild(customerElement('p', 'Sheet total ' + money(Number(booking.total) || 0)
+            + ' · Advance ' + money(Number(booking.advance) || 0) + ' · Balance ' + money(bookingBalance(booking))));
+        try {
+            const drafts = readPaymentDrafts(booking);
+            const summary = paymentSummary(booking, drafts);
+            card.appendChild(customerElement('p', 'Browser draft payments ' + paymentMoney(summary.draftTotal)
+                + ' · Draft balance ' + paymentMoney(summary.balance), 'text-indigo-700 mt-2'));
+            if (summary.changed) card.appendChild(customerElement('p', 'Review payment drafts because Sheet amounts changed.', 'text-amber-800'));
+            for (const entry of drafts.entries) {
+                card.appendChild(customerElement('p', entry.date + ' · ' + paymentMoney(entry.amount) + ' · ' + entry.mode
+                    + (entry.reference ? ' · ' + entry.reference : ''), 'text-xs mt-1'));
+            }
+        } catch {
+            card.appendChild(customerElement('p', 'Payment drafts could not be read in this browser.', 'text-amber-800'));
+        }
+        const receipt = customerElement('button', 'Download booking receipt', 'text-blue-700 underline mt-2');
+        receipt.type = 'button';
+        receipt.addEventListener('click', () => generatePDF(booking));
+        card.appendChild(receipt);
+        detail.appendChild(card);
+    }
+    detail.appendChild(customerElement('h4', 'Enquiry history', 'font-bold mt-4 mb-2'));
+    if (!profile.leads.length) detail.appendChild(customerElement('p', leadsLoaded ? 'No enquiries for this mobile number.' : 'Leads have not loaded yet.', 'text-sm'));
+    for (const lead of profile.leads) {
+        const card = customerElement('div', '', 'border rounded-lg p-3 mb-2 text-sm');
+        card.appendChild(customerElement('p', lead.details || 'No details', 'font-semibold'));
+        card.appendChild(customerElement('p', (lead.status || '—') + ' · Follow-up ' + String(lead.followup || '—').replace('T',' ')));
+        detail.appendChild(card);
+    }
+    detail.scrollIntoView({block:'nearest'});
+}
 
 </script>
 </body>
