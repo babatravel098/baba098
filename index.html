@@ -219,7 +219,7 @@
                 </div>
             </div>
             <div class="flex gap-2.5 items-center">
-                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Quotations v6</span>
+                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Vehicles v7</span>
                 <button onclick="openFreshGstModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">📄 Create Fresh GST Invoice</button>
                 <button onclick="openPasswordModal()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🔑 Change Password</button>
                 <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🚪 Logout</button>
@@ -571,6 +571,13 @@
 <label class="block text-sm">Exclusions<textarea rows="3" name="exclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
 <label class="block text-sm">Total package amount (INR)<input type="number" name="amount" required min="0" step="0.01" class="block w-full border rounded p-2 mt-1"></label>
 <label class="block text-sm">Payment and cancellation terms<textarea rows="3" name="terms" class="block w-full border rounded p-2 mt-1"></textarea></label><div class="sm:col-span-2 flex gap-2 flex-wrap"><button class="bg-blue-700 text-white rounded p-2" type="submit">Save Draft</button><button class="border rounded p-2" type="button" onclick="downloadQuote()">Download PDF</button><button class="border rounded p-2" type="button" onclick="document.getElementById('quotesDialog').close()">Close</button></div></form><p id="quoteMessage" role="status"></p></dialog>
+<dialog id="assignmentDialog" style="width:min(650px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px" aria-labelledby="assignmentTitle"><h2 id="assignmentTitle" class="text-xl font-bold">Vehicle &amp; Driver Assignment</h2><p id="assignmentCustomer" class="my-3"></p><p class="text-sm text-slate-600 mb-3">Assignments are saved in this browser. Conflict checks use loaded bookings and assignments saved here. Travel dates come from the Sheet.</p><form id="assignmentForm" class="space-y-3">
+<label class="block">Vehicle registration number<input name="registration" required maxlength="30" class="block w-full border rounded p-2"></label>
+<label class="block">Driver name<input name="driver" required maxlength="100" class="block w-full border rounded p-2"></label>
+<label class="block">Driver mobile<input name="mobile" type="tel" required maxlength="20" class="block w-full border rounded p-2"></label>
+<label class="block">Pickup time<input name="time" type="time" class="block w-full border rounded p-2"></label>
+<label class="block">Driver instructions<textarea name="notes" rows="3" maxlength="1000" class="block w-full border rounded p-2"></textarea></label>
+<button type="submit" class="bg-blue-700 text-white rounded p-2">Save Assignment Draft</button><button type="button" onclick="document.getElementById('assignmentDialog').close()" class="border rounded p-2">Close</button></form><p id="assignmentMessage" role="status" class="my-3 text-sm"></p></dialog>
 <script>
 
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQSDa1PdP9-7UKovVE4ZOd9cS2vRvrNX1zQtp-v1p9lu-7MRqLTklSTLBIlm_INa_7kA/exec";
@@ -1197,6 +1204,7 @@
                 addBookingEditButton(row, b);
                 addPaymentButton(row, b);
                 addStatusButton(row, b);
+                addAssignmentButton(row, b);
                 tbody.appendChild(row);
             });
         }
@@ -2196,6 +2204,65 @@ function downloadQuote() {
   doc.save('Tour_Quotation_'+q.customer.replace(/[^a-z0-9]/gi,'_')+'.pdf');
  } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
 }
+
+let assignmentBooking = null;
+const assignmentFields = ['registration','driver','mobile','time','notes'];
+function assignmentKey(booking) {
+ return 'baba_assignment_v1:' + JSON.stringify([SCRIPT_URL, String(booking.phone || ''), String(booking.timestamp || '')]);
+}
+function readAssignment(booking) {
+ const raw = localStorage.getItem(assignmentKey(booking));
+ if(!raw) return null;
+ const value = JSON.parse(raw);
+ if(value.version !== 1 || typeof value.registration !== 'string' || typeof value.mobile !== 'string') throw Error('An existing assignment could not be read.');
+ return value;
+}
+function addAssignmentButton(row, booking) {
+ const button = document.createElement('button');
+ button.type = 'button'; button.textContent = 'Vehicle / Driver';
+ button.className = 'block w-full rounded bg-slate-100 text-slate-800 p-1 font-semibold';
+ button.addEventListener('click', () => openAssignment(booking));
+ row.lastElementChild.prepend(button);
+}
+function openAssignment(booking) {
+ assignmentBooking = booking;
+ const form = document.getElementById('assignmentForm'); form.reset();
+ document.getElementById('assignmentCustomer').textContent = String(booking.name || '') + ' · ' + formatDisplayDate(booking.startDate) + ' to ' + formatDisplayDate(booking.endDate);
+ const message = document.getElementById('assignmentMessage'); message.textContent = '';
+ try {
+  const saved = readAssignment(booking);
+  if(saved) for(const key of assignmentFields) form.elements.namedItem(key).value = saved[key] || '';
+ } catch(error) { message.textContent = error.message; }
+ document.getElementById('assignmentDialog').showModal();
+}
+function assignmentConflicts(booking, candidate, bookings) {
+ const start = operationsDay(booking.startDate || ''), end = operationsDay(booking.endDate || '');
+ if(!start || !end || end < start) throw Error('Valid booking travel dates are required.');
+ const conflicts = [];
+ for(const other of bookings) {
+  if(assignmentKey(other) === assignmentKey(booking) || ['Completed','Cancelled'].includes(getBookingStatus(other))) continue;
+  const saved = readAssignment(other);
+  if(!saved) continue;
+  const sameVehicle = saved.registration.replace(/[^a-z0-9]/gi,'').toUpperCase() === candidate.registration.replace(/[^a-z0-9]/gi,'').toUpperCase();
+  const sameDriver = customerPhone(saved.mobile) === customerPhone(candidate.mobile);
+  const from = operationsDay(other.startDate || ''), to = operationsDay(other.endDate || '');
+  if((sameVehicle || sameDriver) && (!from || !to || (start <= to && end >= from))) conflicts.push(String(other.name || other.phone) + ' (' + (sameVehicle ? 'vehicle' : 'driver') + ')');
+ }
+ return conflicts;
+}
+document.getElementById('assignmentForm').addEventListener('submit', event => {
+ event.preventDefault();
+ try {
+  if(!assignmentBooking.phone || !assignmentBooking.timestamp) throw Error('Booking mobile and timestamp are required.');
+  const value = {version:1,updatedAt:new Date().toISOString()};
+  for(const key of assignmentFields) value[key] = event.target.elements.namedItem(key).value.trim();
+  if(!value.registration.replace(/[^a-z0-9]/gi,'') || !value.driver || !/^[+0-9 ()-]{7,20}$/.test(value.mobile)) throw Error('Check vehicle registration, driver name and mobile.');
+  const conflicts = assignmentConflicts(assignmentBooking,value,allBookingsData);
+  if(conflicts.length && !confirm('Possible date overlap with ' + conflicts.join(', ') + '. Save this assignment anyway?')) return;
+  localStorage.setItem(assignmentKey(assignmentBooking),JSON.stringify(value));
+  document.getElementById('assignmentMessage').textContent = 'Assignment draft saved in this browser. Sheet sync is pending.';
+ } catch(error) { document.getElementById('assignmentMessage').textContent = 'Could not save assignment. ' + error.message; }
+});
 </script>
 </body>
 </html>
