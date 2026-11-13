@@ -219,16 +219,25 @@
                 </div>
             </div>
             <div class="flex gap-2.5 items-center">
-                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">🟢 Live Cloud Synced</span>
+                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Google Sheets</span>
                 <button onclick="openFreshGstModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">📄 Create Fresh GST Invoice</button>
                 <button onclick="openPasswordModal()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🔑 Change Password</button>
                 <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🚪 Logout</button>
             </div>
         </header>
 
-        <main class="max-w-7xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <main class="max-w-7xl mx-auto p-4 space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" aria-label="Daily operations">
+                <button type="button" onclick="openOperations('pickups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Today's pickups</span><strong id="opsPickups" class="text-2xl text-blue-900">—</strong></button>
+                <button type="button" onclick="openOperations('followups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Due follow-ups</span><strong id="opsFollowups" class="text-2xl text-blue-900">—</strong></button>
+                <button type="button" onclick="openOperations('collections')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Pending collections</span><strong id="opsCollections" class="text-2xl text-blue-900">—</strong></button>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" onclick="openEntry('booking')" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">+ New Booking</button>
+                <button type="button" onclick="openEntry('lead')" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">+ Add Lead</button>
+            </div>
             <!-- Left: New Booking Form OR Lead Form -->
-            <section class="bg-white p-5 rounded-xl shadow-md lg:col-span-1 h-fit space-y-4">
+            <section id="crmEntry" class="hidden bg-white p-5 rounded-xl shadow-md space-y-4"><button type="button" onclick="document.getElementById('crmEntry').classList.add('hidden')" class="text-sm font-semibold text-slate-600">Close form ×</button>
                 <div class="flex border-b pb-2 gap-2">
                     <button onclick="switchForm('booking')" id="bookingFormTab" class="flex-1 bg-blue-600 text-white py-1.5 rounded text-xs font-semibold cursor-pointer">➕ New Booking</button>
                     <button onclick="switchForm('lead')" id="leadFormTab" class="flex-1 bg-slate-200 text-slate-700 py-1.5 rounded text-xs font-semibold cursor-pointer">📞 Add Lead / Inquiry</button>
@@ -384,7 +393,7 @@
                             <input type="number" id="advanceAmount" required class="w-full border p-2 rounded text-sm font-bold text-green-700">
                         </div>
                     </div>
-                    <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white p-2.5 rounded font-semibold hover:bg-blue-700 transition shadow cursor-pointer">Save Booking & Generate Receipt</button>
+                    <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white p-2.5 rounded font-semibold hover:bg-blue-700 transition shadow cursor-pointer">Save Booking</button>
                 </form>
 
                 <!-- Lead Form (Hidden by default) -->
@@ -422,7 +431,7 @@
             <!-- Right: Live Bookings / Leads Table -->
             <section class="bg-white p-5 rounded-xl shadow-md lg:col-span-2">
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-4 border-b pb-2 gap-2">
-                    <h2 class="text-lg font-semibold text-blue-900">📋 Management Dashboard</h2>
+                    <h2 class="text-lg font-semibold text-blue-900">Operations Dashboard</h2>
                     <div class="flex gap-2 flex-wrap">
                         <button onclick="switchTab('new')" id="newTabBtn" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer">🆕 New Bookings</button>
                         <button onclick="switchTab('completed')" id="completedTabBtn" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer">✅ Completed</button>
@@ -433,6 +442,11 @@
                 </div>
 
                 <!-- Date Filter Bar for GST Invoices Tab -->
+                <div id="opsFilter" class="hidden mb-3 rounded-lg bg-blue-50 p-2 text-sm">
+                    <span id="opsFilterLabel"></span>
+                    <button type="button" onclick="operationsFilter = ''; renderTable()" class="ml-2 underline">Clear filter</button>
+                </div>
+                <div class="mb-3"><label for="crmSearch" class="block text-xs font-semibold text-slate-700">Search current list</label><input id="crmSearch" type="search" placeholder="Customer, mobile, route or invoice number" class="w-full border rounded-lg p-2 text-sm" oninput="renderTable()"></div>
                 <div id="gstFilterBar" class="hidden bg-purple-50 p-3 rounded-lg border border-purple-200 mb-3 flex flex-wrap items-center gap-3 text-xs">
                     <div>
                         <label class="font-semibold text-purple-900">From Date:</label>
@@ -487,13 +501,67 @@
         let allBookingsData = [];
         let allGstInvoicesData = [];
         let allLeadsData = [];
+        let operationsFilter = '';
+        let bookingsLoaded = false;
+        let leadsLoaded = false;
+        const operationsLabels = {
+            pickups: "Today's pickups",
+            followups: 'Due follow-ups',
+            collections: 'Pending collections'
+        };
+        const operationsDate = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
+        });
+
+        function operationsDay(value) {
+            const text = String(value ?? '').trim();
+            if (/^\d{4}-\d{2}-\d{2}(?:$|[T ])/.test(text)) return text.slice(0, 10);
+            const date = value === undefined ? new Date() : new Date(text.replace(/\s+GM$/, ' GMT'));
+            if (Number.isNaN(date.getTime())) return '';
+            const parts = operationsDate.formatToParts(date);
+            return ['year', 'month', 'day'].map(key => parts.find(part => part.type === key).value).join('-');
+        }
+
+        function bookingBalance(booking) {
+            return (Number(booking.total) || 0) - (Number(booking.advance) || 0);
+        }
+
+        function isPickupToday(booking) {
+            return operationsDay(booking.startDate ?? '') === operationsDay()
+                && !getCompletedSet().includes((booking.phone || '') + '_' + (booking.timestamp || ''));
+        }
+
+        function isFollowupDue(lead) {
+            const day = operationsDay(lead.followup ?? '');
+            return day && day <= operationsDay() && ['Pending', 'Called'].includes(lead.status);
+        }
+
+        function renderOperations() {
+            const pending = allBookingsData.reduce((sum, booking) => sum + Math.max(0, bookingBalance(booking)), 0);
+            document.getElementById('opsPickups').textContent = bookingsLoaded ? allBookingsData.filter(isPickupToday).length : '—';
+            document.getElementById('opsFollowups').textContent = leadsLoaded ? allLeadsData.filter(isFollowupDue).length : '—';
+            document.getElementById('opsCollections').textContent = bookingsLoaded
+                ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(pending)
+                : '—';
+        }
+
+        function openOperations(filter) {
+            switchTab(filter === 'followups' ? 'leads' : 'new');
+            operationsFilter = filter;
+            renderTable();
+        }
         let currentTab = 'new';
         let currentInvoiceNo = "2026-2027/41";
 
         // Manual completed set using localStorage so you can instantly manage completed tours
         function getCompletedSet() {
             let comp = localStorage.getItem('baba_completed_bookings_manual');
-            return comp ? JSON.parse(comp) : [];
+            try {
+                const rows = comp ? JSON.parse(comp) : [];
+                return Array.isArray(rows) ? rows : [];
+            } catch {
+                return [];
+            }
         }
 
         function toggleCompleteBooking(phone, timestamp) {
@@ -567,7 +635,13 @@
             location.reload();
         }
 
+        function openEntry(type) {
+            switchForm(type);
+            document.getElementById('crmEntry').scrollIntoView({ block: 'nearest' });
+        }
+
         function switchForm(type) {
+            document.getElementById('crmEntry').classList.remove('hidden');
             const bTab = document.getElementById('bookingFormTab');
             const lTab = document.getElementById('leadFormTab');
             const bForm = document.getElementById('bookingForm');
@@ -608,7 +682,7 @@
 
             try {
                 await fetch(`${LEADS_SCRIPT_URL}?${params.toString()}`, { mode: 'no-cors' });
-                alert('📞 Inquiry / Lead saved & synced to Google Sheet successfully!');
+                alert('Lead request sent. Check the lead list or Sheet before submitting again.');
                 document.getElementById('leadForm').reset();
                 setTimeout(fetchLeads, 1800);
             } catch(err) {
@@ -655,11 +729,12 @@
                 tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400">Loading leads from cloud...</td></tr>`;
             }
 
-            fetch(LEADS_SCRIPT_URL)
-            .then(res => res.json())
+            readSheetRows(LEADS_SCRIPT_URL)
             .then(data => {
                 if(!data) data = [];
                 allLeadsData = data.reverse();
+                leadsLoaded = true;
+                renderOperations();
                 if(currentTab === 'leads') renderTable();
             })
             .catch(err => {
@@ -734,22 +809,41 @@
             }
         }
 
+        async function readSheetRows(url) {
+            let response;
+            try {
+                response = await fetch(url);
+            } catch {
+                throw new Error('Apps Script se connection nahi ho saka. Deployment access aur URL check karein.');
+            }
+            if (!response.ok) throw new Error('Apps Script HTTP error ' + response.status + '.');
+            let rows;
+            try {
+                rows = await response.json();
+            } catch {
+                throw new Error('Apps Script ne JSON ki jagah doosra response diya. /exec deployment check karein.');
+            }
+            if (!Array.isArray(rows)) throw new Error('Apps Script response mein rows ki list nahi mili.');
+            return rows.filter(row => row && typeof row === 'object' && !Array.isArray(row));
+        }
+
         function fetchBookings() {
             const tbody = document.getElementById('bookingTableBody');
             if(currentTab === 'new' || currentTab === 'completed') {
                 tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Loading data from cloud...</td></tr>`;
             }
 
-            fetch(SCRIPT_URL)
-            .then(response => response.json())
+            readSheetRows(SCRIPT_URL)
             .then(data => {
                 if(!data) data = [];
                 allBookingsData = data.reverse();
+                bookingsLoaded = true;
+                renderOperations();
                 if(currentTab === 'new' || currentTab === 'completed') renderTable();
             })
             .catch(error => {
                 if(currentTab === 'new' || currentTab === 'completed') {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500">Data load karne mein samasya aayi.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500">Bookings: ${escapeHtml(error.message)}</td></tr>`;
                 }
             });
         }
@@ -760,8 +854,7 @@
                 tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Loading GST invoices...</td></tr>`;
             }
 
-            fetch(GST_SCRIPT_URL)
-            .then(response => response.json())
+            readSheetRows(GST_SCRIPT_URL)
             .then(data => {
                 if(!data) data = [];
                 allGstInvoicesData = data.reverse();
@@ -769,7 +862,7 @@
             })
             .catch(error => {
                 if(currentTab === 'gst') {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500">GST data load karne mein samasya aayi.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500">GST Bills: ${escapeHtml(error.message)}</td></tr>`;
                 }
             });
         }
@@ -782,7 +875,9 @@
         }
 
         function switchTab(tab) {
+            operationsFilter = '';
             currentTab = tab;
+            document.getElementById('crmSearch').value = '';
             const newBtn = document.getElementById('newTabBtn');
             const compBtn = document.getElementById('completedTabBtn');
             const gstBtn = document.getElementById('gstTabBtn');
@@ -812,15 +907,18 @@
             }
         }
 
-        function formatDisplayDate(dateStr) {
-            if (!dateStr) return '';
-            let s = String(dateStr).trim();
-            if (s.includes('T')) s = s.split('T')[0];
-            const parts = s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
-            if (parts) {
-                return `${parts[3]}-${parts[2]}-${parts[1]}`;
-            }
-            return s;
+        function formatDisplayDate(value) {
+            if (!value) return '';
+            const text = String(value).trim();
+            const calendarDate = text.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:$|[T ])/);
+            const date = calendarDate
+                ? new Date(Date.UTC(Number(calendarDate[1]), Number(calendarDate[2]) - 1, Number(calendarDate[3])))
+                : new Date(text.replace(/\s+GM$/, ' GMT'));
+            if (Number.isNaN(date.getTime())) return text;
+            return new Intl.DateTimeFormat('en-IN', {
+                day: 'numeric', month: 'short', year: 'numeric',
+                timeZone: calendarDate ? 'UTC' : 'Asia/Kolkata'
+            }).format(date);
         }
 
         function parseTimestampDate(val) {
@@ -831,7 +929,21 @@
             return d;
         }
 
+        function escapeHtml(value) {
+            const node = document.createElement('span');
+            node.textContent = value;
+            return node.innerHTML;
+        }
+
+        function matchesSearch(...values) {
+            const query = document.getElementById('crmSearch').value.trim().toLowerCase();
+            return !query || values.some(value => String(value ?? '').toLowerCase().includes(query));
+        }
+
         function renderTable() {
+            renderOperations();
+            document.getElementById('opsFilter').classList.toggle('hidden', !operationsFilter);
+            document.getElementById('opsFilterLabel').textContent = operationsLabels[operationsFilter] || '';
             const tbody = document.getElementById('bookingTableBody');
             const headerRow = document.getElementById('tableHeaderRow');
             tbody.innerHTML = '';
@@ -848,7 +960,11 @@
                     tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400">Yahan koi lead ya inquiry nahi hai.</td></tr>`;
                     return;
                 }
-                allLeadsData.forEach(l => {
+                const visibleLeads = allLeadsData.filter(lead =>
+                    matchesSearch(lead.name, lead.phone, lead.details, lead.status)
+                    && (operationsFilter !== 'followups' || isFollowupDue(lead)));
+                if (!visibleLeads.length) tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-500">No matching leads.</td></tr>';
+                visibleLeads.forEach(l => {
                     const row = document.createElement('tr');
                     row.className = "border-b hover:bg-slate-50";
                     let waText = `Hello ${l.name},\n\nThank you for contacting Baba Tour & Travels, Gorakhpur regarding your travel inquiry. We would love to assist you with the best vehicle options, comfortable rides, and affordable package rates for your upcoming journey!\n\nPlease let us know your travel dates and requirements so we can share the best quotation with you.\n\nBest Regards,\nBaba Tour & Travels\nRailway Station Road, Gorakhpur\nHelpline: +91 8726667104 / 9026060471\nGSTIN: 09AARPU5006D1ZI`;
@@ -907,7 +1023,7 @@
                     return;
                 }
 
-                filteredGst.forEach(inv => {
+                filteredGst.filter(inv => matchesSearch(inv.invoiceNo, inv.customerName, inv.clientGstin)).forEach(inv => {
                     const row = document.createElement('tr');
                     row.className = "border-b hover:bg-slate-50";
                     row.innerHTML = `
@@ -938,9 +1054,12 @@
             let completedSet = getCompletedSet();
 
             const filteredData = allBookingsData.filter(b => {
+                if (!matchesSearch(b.name, b.phone, b.pickup, b.drop, b.tourRoute, b.vehicle)) return false;
                 let key = (b.phone || '') + "_" + (b.timestamp || '');
                 let isCompletedManually = completedSet.includes(key);
 
+                if (operationsFilter === 'collections') return bookingBalance(b) > 0;
+                if (operationsFilter === 'pickups') return isPickupToday(b);
                 if (currentTab === 'completed') {
                     return isCompletedManually;
                 } else {
@@ -988,7 +1107,7 @@
                         Adv: <span class="text-green-600 font-semibold">₹${b.advance || 0}</span><br>
                         Bal: <span class="text-red-600 font-bold">₹${balance}</span>
                     </td>
-                    <td class="p-2 text-gray-600">${b.staff || '-'}</td>
+                    <td class="p-2 text-gray-600">${/^\d+(?:\.\d+)?$/.test(String(b.staff ?? '').trim()) ? 'Check Sheet mapping' : escapeHtml(b.staff || '—')}</td>
                     <td class="p-2 space-y-1">
                         <button onclick="toggleCompleteBooking('${b.phone}', '${b.timestamp}')" class="block w-full text-center ${isDone ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white px-2 py-1 rounded font-semibold text-[11px] cursor-pointer shadow">
                             ${isDone ? '🔄 Move to Active' : '✅ Mark Completed'}
@@ -1311,7 +1430,7 @@
                 state: invState,
                 taxableAmt: taxableAmt.toFixed(2),
                 sgst: (!isIgst && taxRatePercent > 0) ? (taxTotal / 2).toFixed(2) : "0.00",
-                cgst: (!isIgst && taxRatePercent > 0) ? (taxTotal / 2).getvalue ? "0.00" : (taxTotal / 2).toFixed(2) : "0.00",
+                cgst: (!isIgst && taxRatePercent > 0) ? (taxTotal / 2).toFixed(2) : "0.00",
                 igst: isIgst ? taxTotal.toFixed(2) : "0.00",
                 grandTotal: grandTotal.toFixed(2),
                 timestamp: new Date().toLocaleString()
@@ -1319,13 +1438,13 @@
 
             fetch(`${GST_SCRIPT_URL}?${params.toString()}`, { mode: 'no-cors' })
             .then(() => {
-                alert('✅ GST Invoice ' + invNumberToSave + ' saved / updated successfully!');
+                alert('✅ GST Invoice ' + invNumberToSave + ' request sent. Verify the invoice in the Sheet.');
                 closeGstModal();
                 if(currentTab === 'gst') fetchGstInvoices();
             })
             .catch(err => {
                 console.error(err);
-                alert('✅ GST Invoice sent to sheet!');
+                alert('GST request failed to send. Check the Sheet before retrying.');
                 closeGstModal();
             });
         }
@@ -1361,12 +1480,19 @@
 
             fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: new URLSearchParams(formData) })
             .then(() => {
-                alert('Booking saved!');
+                alert('Booking request sent. Refresh the list and check the Sheet before submitting again.');
                 document.getElementById('bookingForm').reset();
                 updateDriverNight();
-                btn.innerText = "Save Booking & Generate Receipt";
+                btn.innerText = "Save Booking";
                 btn.disabled = false;
                 setTimeout(fetchBookings, 2000);
+            })
+            .catch(() => {
+                alert('Booking request failed to send. Check the Sheet before retrying.');
+            })
+            .finally(() => {
+                btn.innerText = "Save Booking";
+                btn.disabled = false;
             });
         }
     </script>
