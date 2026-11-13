@@ -1121,6 +1121,7 @@
                     </td>
                 `;
                 addBookingEditButton(row, b);
+                addPaymentButton(row, b);
                 tbody.appendChild(row);
             });
         }
@@ -1644,6 +1645,193 @@ document.getElementById('discardBookingDraft').addEventListener('click', () => {
     }
 });
 
+</script>
+<dialog id="paymentDialog" aria-labelledby="paymentTitle" style="width:min(880px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
+<h2 id="paymentTitle" class="text-xl font-bold text-blue-900">Add Payment &amp; History · Draft Preview</h2>
+<p id="paymentCustomer" class="mt-2 font-semibold"></p>
+<p class="my-3 text-sm text-slate-600">Payments are stored in this browser on this website. This preview uses the Google Sheet total and advance. Booking edit drafts can be reviewed through Edit Booking. Sheet sync will be connected later.</p>
+<div id="paymentSummary" class="p-3 bg-indigo-50 rounded-lg font-semibold leading-7"></div>
+<p id="paymentConflict" class="my-3 text-amber-800" role="status"></p>
+<form id="paymentDraftForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-4">
+<label class="text-sm">Payment amount (INR)<input id="paymentAmount" type="number" min="0.01" step="0.01" required class="block w-full border p-2 rounded-lg mt-1"></label>
+<label class="text-sm">Payment date<input id="paymentDate" type="date" required class="block w-full border p-2 rounded-lg mt-1"></label>
+<label class="text-sm">Payment mode<select id="paymentMode" class="block w-full border p-2 rounded-lg mt-1"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Card</option><option>Cheque</option><option>Other</option></select></label>
+<label class="text-sm">Reference / UTR (optional)<input id="paymentReference" maxlength="100" class="block w-full border p-2 rounded-lg mt-1"></label>
+<label class="text-sm sm:col-span-2">Note (optional)<input id="paymentNote" maxlength="300" class="block w-full border p-2 rounded-lg mt-1"></label>
+<button id="paymentSave" class="rounded-lg bg-indigo-700 text-white px-4 py-2 disabled:opacity-50" type="submit">Save Payment Draft</button>
+</form>
+<p id="paymentMessage" role="status" class="my-3 text-sm text-blue-800"></p>
+<h3 class="font-semibold my-2">Draft payment history</h3>
+<div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead><tr><th class="p-2">Date</th><th class="p-2">Amount</th><th class="p-2">Mode</th><th class="p-2">Reference</th><th class="p-2">Note</th><th class="p-2">Action</th></tr></thead><tbody id="paymentHistory"></tbody></table></div>
+<button type="button" onclick="if (!paymentSaving) document.getElementById('paymentDialog').close()" class="rounded-lg border px-4 py-2 mt-4">Close</button>
+</dialog>
+<script>
+let paymentBooking = null;
+let paymentSaving = false;
+const paymentModes = ['Cash', 'UPI', 'Bank Transfer', 'Card', 'Cheque', 'Other'];
+
+function paymentStorageKey(booking) {
+    return 'baba_payment_drafts_v1:' + JSON.stringify([SCRIPT_URL, String(booking.phone ?? ''), String(booking.timestamp ?? '')]);
+}
+
+function paymentPaise(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number) || number < 0 || number > 1000000000) throw new Error('Invalid amount.');
+    return Math.round(number * 100);
+}
+
+function paymentMoney(paise) {
+    return new Intl.NumberFormat('en-IN', {style:'currency', currency:'INR'}).format(paise / 100);
+}
+
+function readPaymentDrafts(booking) {
+    const raw = localStorage.getItem(paymentStorageKey(booking));
+    if (!raw) return {version:1, total:paymentPaise(booking.total), advance:paymentPaise(booking.advance), entries:[]};
+    const data = JSON.parse(raw);
+    if (data.version !== 1 || !Number.isSafeInteger(data.total) || !Number.isSafeInteger(data.advance) || !Array.isArray(data.entries)
+        || data.entries.some(entry => !entry || typeof entry.id !== 'string' || !Number.isSafeInteger(entry.amount) || entry.amount <= 0
+            || typeof entry.date !== 'string' || !paymentModes.includes(entry.mode))) {
+        throw new Error('Saved payment drafts could not be read. Browser data has been retained.');
+    }
+    return data;
+}
+
+function paymentSummary(booking, data) {
+    const total = paymentPaise(booking.total);
+    const advance = paymentPaise(booking.advance);
+    const draftTotal = data.entries.reduce((sum, entry) => sum + entry.amount, 0);
+    return {total, advance, draftTotal, balance:total - advance - draftTotal,
+        changed:data.entries.length > 0 && (data.total !== total || data.advance !== advance)};
+}
+
+function addPaymentButton(row, booking) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'block w-full rounded bg-indigo-100 text-indigo-800 px-2 py-1 font-semibold';
+    button.textContent = 'Add Payment / History';
+    button.addEventListener('click', () => openPayments(booking));
+    row.lastElementChild.prepend(button);
+}
+
+function openPayments(booking) {
+    paymentBooking = booking;
+    document.getElementById('paymentCustomer').textContent = String(booking.name || '') + ' · ' + String(booking.phone || '');
+    document.getElementById('paymentDraftForm').reset();
+    document.getElementById('paymentDate').value = operationsDay();
+    document.getElementById('paymentMessage').textContent = '';
+    renderPaymentHistory();
+    document.getElementById('paymentDialog').showModal();
+}
+
+function renderPaymentHistory() {
+    const save = document.getElementById('paymentSave');
+    save.disabled = true;
+    const body = document.getElementById('paymentHistory');
+    body.replaceChildren();
+    try {
+        const data = readPaymentDrafts(paymentBooking);
+        const summary = paymentSummary(paymentBooking, data);
+        document.getElementById('paymentSummary').textContent =
+            'Sheet total ' + paymentMoney(summary.total) + ' · Sheet advance ' + paymentMoney(summary.advance)
+            + ' · Draft payments ' + paymentMoney(summary.draftTotal) + ' · Draft balance ' + paymentMoney(summary.balance);
+        document.getElementById('paymentConflict').textContent = summary.changed
+            ? 'Sheet total or advance changed since these drafts were entered. Review and discard outdated drafts before adding another payment.' : '';
+        for (const entry of data.entries) {
+            const row = document.createElement('tr');
+            for (const value of [entry.date, paymentMoney(entry.amount), entry.mode, entry.reference || '—', entry.note || '—']) {
+                const cell = document.createElement('td');
+                cell.className = 'p-2 border-b align-top';
+                cell.textContent = value;
+                row.appendChild(cell);
+            }
+            const cell = document.createElement('td');
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.textContent = 'Discard';
+            remove.className = 'p-2 text-red-700 underline';
+            remove.addEventListener('click', () => discardPaymentDraft(entry.id));
+            cell.appendChild(remove);
+            row.appendChild(cell);
+            body.appendChild(row);
+        }
+        if (!data.entries.length) {
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+            cell.colSpan = 6;
+            cell.textContent = 'No draft payments added. Existing Sheet advance is included in the summary above.';
+            cell.className = 'p-3 text-slate-500';
+            row.appendChild(cell);
+            body.appendChild(row);
+        }
+        save.disabled = paymentSaving || summary.changed || summary.balance <= 0;
+    } catch (error) {
+        document.getElementById('paymentMessage').textContent = error.message;
+    }
+}
+
+async function withPaymentLock(action) {
+    // Serialize payment changes across tabs of the same website.
+    if (navigator.locks) return navigator.locks.request(paymentStorageKey(paymentBooking), action);
+    return action();
+}
+
+document.getElementById('paymentDraftForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (paymentSaving) return;
+    paymentSaving = true;
+    document.getElementById('paymentSave').disabled = true;
+    try {
+        const amountText = document.getElementById('paymentAmount').value.trim();
+        if (!/^\d+(\.\d{1,2})?$/.test(amountText)) throw new Error('Enter an amount with at most two decimal places.');
+        const amount = paymentPaise(amountText);
+        const date = document.getElementById('paymentDate').value;
+        const mode = document.getElementById('paymentMode').value;
+        if (!date || date > operationsDay()) throw new Error('Choose today or an earlier payment date.');
+        if (!paymentModes.includes(mode)) throw new Error('Choose a payment mode.');
+        if (!paymentBooking.phone || !paymentBooking.timestamp) throw new Error('Booking mobile and timestamp are required.');
+        await withPaymentLock(() => {
+            const data = readPaymentDrafts(paymentBooking);
+            const summary = paymentSummary(paymentBooking, data);
+            if (summary.changed) throw new Error('Review drafts because the Sheet amount changed.');
+            if (amount <= 0 || amount > summary.balance) throw new Error('Payment must be greater than zero and within the draft balance.');
+            data.entries.push({id:crypto.randomUUID(), amount, date, mode,
+                reference:document.getElementById('paymentReference').value.trim(),
+                note:document.getElementById('paymentNote').value.trim(), createdAt:new Date().toISOString()});
+            data.total = summary.total;
+            data.advance = summary.advance;
+            localStorage.setItem(paymentStorageKey(paymentBooking), JSON.stringify(data));
+        });
+        event.target.reset();
+        document.getElementById('paymentDate').value = operationsDay();
+        document.getElementById('paymentMessage').textContent = 'Payment draft saved in this browser. Google Sheet sync is pending.';
+    } catch (error) {
+        document.getElementById('paymentMessage').textContent = 'Payment draft could not be saved. ' + error.message;
+    } finally {
+        paymentSaving = false;
+        renderPaymentHistory();
+    }
+});
+
+async function discardPaymentDraft(id) {
+    if (paymentSaving || !confirm('Discard this browser payment draft?')) return;
+    try {
+        await withPaymentLock(() => {
+            const data = readPaymentDrafts(paymentBooking);
+            data.entries = data.entries.filter(entry => entry.id !== id);
+            localStorage.setItem(paymentStorageKey(paymentBooking), JSON.stringify(data));
+        });
+        document.getElementById('paymentMessage').textContent = 'Payment draft discarded.';
+    } catch (error) {
+        document.getElementById('paymentMessage').textContent = 'Could not discard draft. ' + error.message;
+    }
+    renderPaymentHistory();
+}
+
+window.addEventListener('storage', event => {
+    if (paymentBooking && event.key === paymentStorageKey(paymentBooking) && document.getElementById('paymentDialog').open) renderPaymentHistory();
+});
+
+document.getElementById("paymentDialog").addEventListener("cancel", event => { if (paymentSaving) event.preventDefault(); });
 </script>
 </body>
 </html>
