@@ -219,7 +219,7 @@
                 </div>
             </div>
             <div class="flex gap-2.5 items-center">
-                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Leads v5</span>
+                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Quotations v6</span>
                 <button onclick="openFreshGstModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">📄 Create Fresh GST Invoice</button>
                 <button onclick="openPasswordModal()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🔑 Change Password</button>
                 <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🚪 Logout</button>
@@ -232,7 +232,7 @@
                 <button type="button" onclick="openOperations('followups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Due follow-ups</span><strong id="opsFollowups" class="text-2xl text-blue-900">—</strong></button>
                 <button type="button" onclick="openOperations('collections')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Pending collections</span><strong id="opsCollections" class="text-2xl text-blue-900">—</strong></button>
             </div>
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2"><button type="button" onclick="openQuotes()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Quotations / Itinerary</button>
 <button type="button" onclick="openCustomers()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Customers / History</button>
                 <button type="button" onclick="openEntry('booking')" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">+ New Booking</button>
                 <button type="button" onclick="openEntry('lead')" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">+ Add Lead</button>
@@ -559,6 +559,18 @@
 <label class="block">Discussion notes<textarea name="notes" rows="5" maxlength="5000" class="block w-full border rounded p-2"></textarea></label>
 <button class="bg-blue-700 text-white rounded px-4 py-2" type="submit">Save Lead Draft</button><button class="border rounded px-4 py-2" type="button" onclick="document.getElementById('leadNotesDialog').close()">Close</button>
 </form><p id="leadNotesMessage" role="status" class="text-sm my-3"></p></dialog>
+<dialog id="quotesDialog" aria-labelledby="quotesTitle" style="width:min(900px,96vw);max-height:90vh;border:0;border-radius:16px;padding:24px"><h2 id="quotesTitle" class="font-bold text-xl">Tour Quotation &amp; Itinerary</h2><p class="text-sm my-2">Drafts are saved in this browser. Use English text for PDF export and review all details before sharing.</p><label>Saved quotations<select id="quoteSaved" class="border rounded p-2 m-2" onchange="loadQuote(this.value)"></select></label><button type="button" onclick="newQuote()" class="border p-2 rounded">New quotation</button><form id="quoteForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3"><label class="block text-sm">Customer name<input type="text" name="customer" required class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Mobile<input type="tel" name="phone" class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Travel start<input type="date" name="start" required class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Travel end<input type="date" name="end" required class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Passengers<input type="number" name="pax" required min="1" step="1" class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Vehicle<input type="text" name="vehicle" class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Hotels / rooms / meals<textarea rows="3" name="hotel" class="block w-full border rounded p-2 mt-1"></textarea></label>
+<label class="block text-sm">Day-wise itinerary<textarea rows="3" name="itinerary" class="block w-full border rounded p-2 mt-1"></textarea></label>
+<label class="block text-sm">Inclusions<textarea rows="3" name="inclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
+<label class="block text-sm">Exclusions<textarea rows="3" name="exclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
+<label class="block text-sm">Total package amount (INR)<input type="number" name="amount" required min="0" step="0.01" class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Payment and cancellation terms<textarea rows="3" name="terms" class="block w-full border rounded p-2 mt-1"></textarea></label><div class="sm:col-span-2 flex gap-2 flex-wrap"><button class="bg-blue-700 text-white rounded p-2" type="submit">Save Draft</button><button class="border rounded p-2" type="button" onclick="downloadQuote()">Download PDF</button><button class="border rounded p-2" type="button" onclick="document.getElementById('quotesDialog').close()">Close</button></div></form><p id="quoteMessage" role="status"></p></dialog>
 <script>
 
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQSDa1PdP9-7UKovVE4ZOd9cS2vRvrNX1zQtp-v1p9lu-7MRqLTklSTLBIlm_INa_7kA/exec";
@@ -2110,6 +2122,80 @@ document.getElementById('leadNotesForm').addEventListener('submit', event => {
         document.getElementById('leadNotesMessage').textContent = 'Lead draft saved in this browser. Sheet sync is pending.';
     } catch(error) { document.getElementById('leadNotesMessage').textContent = 'Could not save draft. ' + error.message; }
 });
+
+const quoteFieldNames = ["customer","phone","start","end","pax","vehicle","hotel","itinerary","inclusions","exclusions","amount","terms"];
+let activeQuoteId = '';
+const quotePrefix = 'baba_quote_v1:' + SCRIPT_URL + ':';
+function newQuote() {
+ document.getElementById('quoteForm').reset();
+ activeQuoteId = crypto.randomUUID();
+ document.getElementById('quoteSaved').value = '';
+ document.getElementById('quoteMessage').textContent = 'New quotation draft';
+}
+function refreshQuotes() {
+ const select = document.getElementById('quoteSaved');
+ select.replaceChildren(new Option('Choose saved quotation',''));
+ for(let i=0;i<localStorage.length;i++) {
+  const key=localStorage.key(i);
+  if(!key.startsWith(quotePrefix)) continue;
+  try { const q=JSON.parse(localStorage.getItem(key)); select.add(new Option(q.customer+' · '+q.start,q.id)); } catch {}
+ }
+}
+function openQuotes() {
+ try { refreshQuotes(); newQuote(); document.getElementById('quotesDialog').showModal(); }
+ catch(error) { alert('Could not open quotations. '+error.message); }
+}
+function loadQuote(id) {
+ if(!id) return;
+ try {
+  const q=JSON.parse(localStorage.getItem(quotePrefix+id));
+  if(!q || q.id!==id) throw Error('Draft unavailable');
+  for(const key of quoteFieldNames) document.getElementById('quoteForm').elements.namedItem(key).value=q[key] || '';
+  activeQuoteId=id;
+  document.getElementById('quoteMessage').textContent='Saved draft loaded';
+ } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
+}
+function quoteValues() {
+ const form=document.getElementById('quoteForm');
+ if(!form.reportValidity()) throw Error('Complete required fields.');
+ const q={id:activeQuoteId};
+ for(const key of quoteFieldNames) q[key]=form.elements.namedItem(key).value.trim();
+ if(!q.customer || q.end<q.start) throw Error('Check customer name and travel dates.');
+ if(!Number.isInteger(Number(q.pax)) || Number(q.pax)<1 || !Number.isFinite(Number(q.amount)) || Number(q.amount)<0) throw Error('Check passengers and amount.');
+ return q;
+}
+document.getElementById('quoteForm').addEventListener('submit',event=>{
+ event.preventDefault();
+ try {
+  const q=quoteValues();
+  localStorage.setItem(quotePrefix+q.id,JSON.stringify(q)); refreshQuotes();
+  document.getElementById('quoteSaved').value=q.id;
+  document.getElementById('quoteMessage').textContent='Quotation draft saved in this browser.';
+ } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
+});
+function downloadQuote() {
+ try {
+  const q=quoteValues();
+  if(!window.jspdf) throw Error('PDF library is still loading. Try again.');
+  const doc=new window.jspdf.jsPDF(); let y=20;
+  function write(text,size) {
+   doc.setFontSize(size);
+   const lines=doc.splitTextToSize(String(text),175);
+   for(const line of lines) { if(y>277){doc.addPage();y=20;} doc.text(line,17,y);y+=6; }
+   y+=4;
+  }
+  write('BABA TOUR & TRAVELS, GORAKHPUR',16);
+  write('TOUR QUOTATION',13);
+  write('Customer: '+q.customer+' | Mobile: '+q.phone,11);
+  write('Travel: '+q.start+' to '+q.end+' | Passengers: '+q.pax,11);
+  write('Vehicle: '+q.vehicle,11);
+  write('Package amount: INR '+Number(q.amount).toLocaleString('en-IN',{minimumFractionDigits:2}),13);
+  for(const [key,title] of [['hotel','HOTELS / ROOMS / MEALS'],['itinerary','DAY-WISE ITINERARY'],['inclusions','INCLUSIONS'],['exclusions','EXCLUSIONS'],['terms','TERMS']]) {
+   if(q[key]) { write(title,12);write(q[key],11); }
+  }
+  doc.save('Tour_Quotation_'+q.customer.replace(/[^a-z0-9]/gi,'_')+'.pdf');
+ } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
+}
 </script>
 </body>
 </html>
