@@ -28,5 +28,7 @@ module.exports = async (req, res) => {
   }
 
   const html = fs.readFileSync(path.join(process.cwd(), 'lib', 'dashboard.html'), 'utf8');
-  return res.status(200).type('html').send(html);
+ res.statusCode = 200;
+res.setHeader('Content-Type', 'text/html; charset=utf-8');
+return res.end(html);
 };
