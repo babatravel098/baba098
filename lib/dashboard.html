@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head><base href="/">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -203,7 +203,7 @@
                 <form id="bookingForm" class="space-y-3" onsubmit="saveBooking(event)">
                     <h2 class="text-sm font-bold text-blue-900">New Booking Entry</h2>
                     <div>
-                        <label class="text-xs font-semibold text-gray-600">ग्राहक का नाम (Customer Name)</label>
+                        <label class="text-xs font-semibold text-gray-600">Customer Name</label>
                         <input type="text" id="custName" required class="w-full border p-2 rounded text-sm">
                     </div>
                     <div>
@@ -212,7 +212,7 @@
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="text-xs font-semibold text-gray-600">मोबाइल नंबर (Mobile)</label>
+                            <label class="text-xs font-semibold text-gray-600">Mobile</label>
                             <input type="tel" id="custPhone" required class="w-full border p-2 rounded text-sm">
                         </div>
                         <div>
@@ -221,35 +221,35 @@
                         </div>
                     </div>
                     <div>
-                        <label class="text-xs font-semibold text-gray-600">ग्राहक पूरा पता (Customer Address)</label>
+                        <label class="text-xs font-semibold text-gray-600">Customer Address</label>
                         <input type="text" id="custAddress" required class="w-full border p-2 rounded text-sm">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="text-xs font-semibold text-gray-600">पिकअप (Pickup Location)</label>
+                            <label class="text-xs font-semibold text-gray-600">Pickup Location</label>
                             <input type="text" id="pickup" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Gorakhpur">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold text-gray-600">ड्रॉप / गंतव्य (Drop / Destination)</label>
+                            <label class="text-xs font-semibold text-gray-600">Drop / Destination</label>
                             <input type="text" id="drop" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Masrooe">
                         </div>
                     </div>
                     <div>
-                        <label class="text-xs font-semibold text-gray-600">यात्रा का पूरा रूट / Via (Visiting Places)</label>
+                        <label class="text-xs font-semibold text-gray-600">Visiting Places</label>
                         <input type="text" id="tourRoute" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Gorakhpur - Ayodhya - Varanasi">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="text-xs font-semibold text-gray-600">यात्रा शुरू (From Date)</label>
+                            <label class="text-xs font-semibold text-gray-600">From Date</label>
                             <input type="date" id="startDate" required class="w-full border p-2 rounded text-sm">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold text-gray-600">वापसी तारीख (To Date)</label>
+                            <label class="text-xs font-semibold text-gray-600">To Date</label>
                             <input type="date" id="endDate" required class="w-full border p-2 rounded text-sm">
                         </div>
                     </div>
                     <div>
-                       <label class="text-xs font-semibold text-gray-600">गाड़ी चुनें (Vehicle Name)</label>
+                       <label class="text-xs font-semibold text-gray-600">Vehicle Name</label>
                         <select id="vehicleSelect" onchange="updateDriverNight()" class="w-full border p-2 rounded text-sm bg-white font-medium text-blue-900">
                             <optgroup label="🚍 Buses (Driver Night: ₹800)">
                                 <option value="56 Seater Bus">56 Seater Bus</option>
@@ -287,7 +287,7 @@
                     </div>
                     <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2 rounded border">
                         <div>
-                            <label class="text-[10px] font-semibold text-gray-600">तय KM</label>
+                            <label class="text-[10px] font-semibold text-gray-600">Total Distance (km)</label>
                             <input type="text" id="agreedKm" placeholder="500 KM" class="w-full border p-1 rounded text-xs">
                         </div>
                         <div>
@@ -341,11 +341,11 @@
 
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="text-xs font-semibold text-gray-600">कुल रकम (Total ₹)</label>
+                            <label class="text-xs font-semibold text-gray-600">Total ₹</label>
                             <input type="number" id="totalAmount" required class="w-full border p-2 rounded text-sm font-bold text-blue-900">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold text-gray-600">एडवांस (Advance ₹)</label>
+                            <label class="text-xs font-semibold text-gray-600">Advance ₹</label>
                             <input type="number" id="advanceAmount" required class="w-full border p-2 rounded text-sm font-bold text-green-700">
                         </div>
                     </div>
@@ -757,7 +757,7 @@ function openEntry(type) {
             .catch(err => {
                 console.error("Error fetching leads:", err);
                 if(currentTab === 'leads') {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-red-500">Leads load karne mein samasya aayi.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-red-500">Could not load leads.</td></tr>`;
                 }
             });
         }
@@ -831,16 +831,16 @@ function openEntry(type) {
             try {
                 response = await fetch(url);
             } catch {
-                throw new Error('Apps Script se connection nahi ho saka. Deployment access aur URL check karein.');
+                throw new Error('Could not connect to Apps Script. Check the deployment access and URL.');
             }
             if (!response.ok) throw new Error('Apps Script HTTP error ' + response.status + '.');
             let rows;
             try {
                 rows = await response.json();
             } catch {
-                throw new Error('Apps Script ne JSON ki jagah doosra response diya. /exec deployment check karein.');
+                throw new Error('Apps Script returned an unexpected response. Check the /exec deployment.');
             }
-            if (!Array.isArray(rows)) throw new Error('Apps Script response mein rows ki list nahi mili.');
+            if (!Array.isArray(rows)) throw new Error('The Apps Script response did not contain a list of rows.');
             return rows.filter(row => row && typeof row === 'object' && !Array.isArray(row));
         }
 
@@ -1006,7 +1006,7 @@ function fetchBookings() {
                     <th class="p-2">Quick Action</th>
                 `;
                 if(allLeadsData.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400">Yahan koi lead ya inquiry nahi hai.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400">No leads or inquiries found.</td></tr>`;
                     return;
                 }
                 const visibleLeads = allLeadsData.filter(lead =>
@@ -1069,7 +1069,7 @@ function fetchBookings() {
                 });
 
                 if(filteredGst.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Chuni gayi date ke beech koi GST invoice nahi mili.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">No GST invoices found in the selected date range.</td></tr>`;
                     return;
                 }
 
@@ -1170,7 +1170,7 @@ function fetchBookings() {
                         <button onclick='sendWhatsApp(${JSON.stringify(b)})' class="block w-full text-center bg-green-600 text-white px-2 py-0.5 rounded font-semibold cursor-pointer">WhatsApp</button>
                         <button onclick='generatePDF(${JSON.stringify(b)})' class="block w-full text-center bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold hover:bg-blue-200 cursor-pointer">Receipt</button>
                         <button onclick='openVyaparGstModal(${JSON.stringify(b)})' class="block w-full text-center bg-purple-600 text-white px-2 py-0.5 rounded font-semibold hover:bg-purple-700 cursor-pointer">GST Invoice</button>
-                        <button onclick="deleteBooking('${b.phone}', '${b.timestamp}')" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold hover:bg-red-200 cursor-pointer">Delete</button>
+                        <button onclick="deleteCrmBooking(this, '${b.bookingId}')" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold hover:bg-red-200 cursor-pointer">Delete</button>
                     </td>
                 `;
                 addBookingEditButton(row, b);
@@ -1224,7 +1224,7 @@ function fetchBookings() {
             });
 
             if(filteredGst.length === 0) {
-                alert('Chuni gayi date ke beech download karne ke liye koi GST invoice nahi hai.');
+                alert('No GST invoices to download in the selected date range.');
                 return;
             }
 
@@ -2488,6 +2488,36 @@ function compactBookingActions(row) {
     const actions = document.createElement('div'); actions.className = 'space-y-1 mt-2';
     while (cell.firstChild) actions.appendChild(cell.firstChild);
     menu.appendChild(actions); cell.appendChild(menu);
+}
+</script>
+<script>
+async function deleteCrmBooking(button, bookingId) {
+    if (!confirm(`Permanently delete booking ${bookingId} and all its advance and payment records from the CRM Sheet?`)) return;
+
+    button.disabled = true;
+    try {
+        const response = await fetch('/api/dashboard?action=delete', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ booking_id: bookingId })
+        });
+        const result = await response.json();
+
+        if (result.status === 'payments_exist') {
+            alert('This booking has a payment record and was not deleted.');
+            return;
+        }
+        if (!response.ok || result.status !== 'deleted') {
+            alert(result.error || 'Could not confirm deletion. Refresh the booking list.');
+            return;
+        }
+        fetchBookings();
+    } catch {
+        alert('Could not confirm deletion. Refresh the booking list before trying again.');
+    } finally {
+        button.disabled = false;
+    }
 }
 </script>
 </body>
