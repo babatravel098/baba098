@@ -189,7 +189,7 @@
             </div>
             <div class="flex flex-wrap gap-2"><button type="button" onclick="openOfficeHub()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Office Operations</button><button type="button" onclick="openBookingReport()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Booking Reports</button><button type="button" onclick="openQuotes()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Quotations / Itinerary</button>
 <button type="button" onclick="openCustomers()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Customers / History</button>
-                <button type="button" onclick="openEntry('booking')" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">+ New Booking</button><button type="button" onclick="connectCrmSheet()" class="rounded-lg bg-emerald-700 px-4 py-2 text-white">Connect Google Sheet</button><a href="https://script.google.com/macros/s/AKfycbzXu77bmooy2cXFh7vCPr5BuGZ0N25ZknBdyo20agSCM5JzmnlIfWGReP1HX4O9RUmTsA/exec" target="_blank" rel="noopener noreferrer" class="inline-block px-4 py-2 rounded-lg bg-emerald-700 text-white font-bold">New Sheet Bookings</a>
+                <button type="button" onclick="openEntry('booking')" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">+ New Booking</button><a href="https://script.google.com/macros/s/AKfycbzXu77bmooy2cXFh7vCPr5BuGZ0N25ZknBdyo20agSCM5JzmnlIfWGReP1HX4O9RUmTsA/exec" target="_blank" rel="noopener noreferrer" class="inline-block px-4 py-2 rounded-lg bg-emerald-700 text-white font-bold">New Sheet Bookings</a>
                 <button type="button" onclick="openEntry('lead')" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">+ Add Lead</button>
             </div>
             <!-- Left: New Booking Form OR Lead Form -->
@@ -844,36 +844,17 @@ function openEntry(type) {
             return rows.filter(row => row && typeof row === 'object' && !Array.isArray(row));
         }
 
-        let crmToken = '';
-let crmExpires = 0;
-function connectCrmSheet() {
-    if (!window.google?.accounts?.oauth2) {
-        alert('Google authorization could not load. Refresh and try again.');
-        return;
+        async function readPrivateCrmBookings() {
+    const response = await fetch('/api/dashboard?data=bookings', {
+        credentials: 'same-origin'
+    });
+    if (response.status === 401) {
+        throw new Error('CRM session expired. Please sign in again.');
     }
-    google.accounts.oauth2.initTokenClient({
-        client_id: '679114631889-9r6mtbtm8el7t87s4e3m1aii2g0nj7gk.apps.googleusercontent.com',
-        scope: 'https://www.googleapis.com/auth/spreadsheets.readonly',
-        callback: result => {
-            if (!result.access_token) return alert(result.error || 'Google access was not granted.');
-            crmToken = result.access_token;
-            crmExpires = Date.now() + Number(result.expires_in || 0) * 1000;
-            fetchBookings();
-        },
-        error_callback: error => alert(error.type || 'Google popup did not open.')
-    }).requestAccessToken();
-}
-
-async function readPrivateCrmBookings() {
-    if (!crmToken || Date.now() >= crmExpires) {
-        throw new Error('Click Connect Google Sheet above to load bookings.');
+    if (!response.ok) {
+        throw new Error('Could not load bookings. Use the refresh button to retry.');
     }
-    const url = new URL('https://sheets.googleapis.com/v4/spreadsheets/1I6cFI9mU3z8EPc5cRxNZy25cj3E4sO6xVnXHBFqUQsE/values:batchGet');
-    url.searchParams.append('ranges', 'Bookings!A1:R');
-    url.searchParams.append('ranges', 'Payments!A1:I');
-    const response = await fetch(url, {headers: {Authorization: 'Bearer ' + crmToken}});
-    if (!response.ok) throw new Error('Google Sheets HTTP ' + response.status + '. Check access or reconnect.');
-    const {valueRanges} = await response.json();
+    const { valueRanges } = await response.json();
     const [bookings, payments] = valueRanges.map(range => range.values || []);
     if (bookings[0]?.[0] !== 'booking_id' || payments[0]?.[1] !== 'booking_id') {
         throw new Error('CRM sheet headers do not match.');
