@@ -1,0 +1,2513 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head><base href="/">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baba Tour & Travels - Advanced GST Billing & CRM Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="manifest" href="manifest.json">
+<script src="https://accounts.google.com/gsi/client" async defer></script></head>
+<body class="bg-slate-100 font-sans">
+
+    <!-- Advanced GST Invoice Generator Modal (Vyapar Style) -->
+    <div id="gstModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-5xl w-full space-y-4 max-h-[95vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 id="modalTitle" class="text-lg font-bold text-blue-900">🧾 Advanced GST Tax Invoice Generator</h3>
+                <button onclick="closeGstModal()" class="text-gray-500 hover:text-red-600 font-bold text-lg cursor-pointer">✕</button>
+            </div>
+
+            <div class="space-y-4 text-xs">
+                <!-- Top Header Info -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-lg border">
+                    <div>
+                        <label class="font-semibold text-gray-700">Customer / Company Name</label>
+                        <input type="text" id="invCustomerName" class="w-full border p-2 rounded mt-1 font-semibold" placeholder="Client Name">
+                    </div>
+                    <div>
+                        <label class="font-semibold text-gray-700">Client GSTIN</label>
+                        <input type="text" id="invCustomerGstin" class="w-full border p-2 rounded mt-1 uppercase font-mono" placeholder="09AACCI...">
+                    </div>
+                    <div>
+                        <label class="font-semibold text-gray-700">Invoice Date</label>
+                        <input type="date" id="invDate" class="w-full border p-2 rounded mt-1">
+                    </div>
+                    <div>
+                        <label class="font-semibold text-gray-700">Invoice Number (Auto)</label>
+                        <input type="text" id="invNumberDisplay" readonly class="w-full border p-2 rounded mt-1 font-mono font-bold bg-gray-100 text-blue-900">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-lg border">
+                    <div>
+                        <label class="font-semibold text-gray-700">State of Supply</label>
+                        <select id="invState" class="w-full border p-2 rounded mt-1 bg-white">
+                            <option value="09-Uttar Pradesh">09-Uttar Pradesh</option>
+                            <option value="01-Jammu & Kashmir">01-Jammu & Kashmir</option>
+                            <option value="03-Punjab">03-Punjab</option>
+                            <option value="04-Chandigarh">04-Chandigarh</option>
+                            <option value="06-Haryana">06-Haryana</option>
+                            <option value="07-Delhi">07-Delhi</option>
+                            <option value="08-Rajasthan">08-Rajasthan</option>
+                            <option value="10-Bihar">10-Bihar</option>
+                            <option value="19-West Bengal">19-West Bengal</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Items Table Container with HSN Code -->
+                <div class="border rounded-lg overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-200 text-slate-700">
+                                <th class="p-2 w-10">#</th>
+                                <th class="p-2">Item / Service Name</th>
+                                <th class="p-2 w-28">HSN Code</th>
+                                <th class="p-2">Description</th>
+                                <th class="p-2 w-16">KM</th>
+                                <th class="p-2 w-14">QTY</th>
+                                <th class="p-2 w-20">Price (₹)</th>
+                                <th class="p-2 w-20">Amount (₹)</th>
+                                <th class="p-2 w-10"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoiceItemsTable">
+                            <!-- Dynamic Rows -->
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" onclick="addInvoiceRow()" class="bg-blue-100 text-blue-800 px-3 py-1.5 rounded font-semibold text-xs hover:bg-blue-200 cursor-pointer">+ ADD ROW</button>
+
+                <!-- Bottom Section -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border">
+                    <div class="space-y-3">
+                        <div>
+                            <label class="font-semibold text-gray-700">Add Terms & Conditions</label>
+                            <textarea id="invTerms" rows="3" class="w-full border p-2 rounded mt-1">1. Extra locations / routes added during tour will be charged extra.
+2. For GST bill after booking, extra GST will be charged on total amount.</textarea>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 text-right">
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold">Discount:</span>
+                            <div class="flex gap-2 w-1/2">
+                                <input type="number" id="invDiscVal" value="0" oninput="calculateInvoiceTotals()" class="w-full border p-1 rounded text-right">
+                                <select id="invDiscType" onchange="calculateInvoiceTotals()" class="border p-1 rounded bg-white">
+                                    <option value="rs">₹</option>
+                                    <option value="percent">%</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold">Select GST Slab:</span>
+                            <select id="invTaxRate" onchange="calculateInvoiceTotals()" class="border p-1 rounded bg-white w-1/2 font-semibold">
+                                <option value="0.05" selected>GST @ 5% (SGST/CGST 2.5%+2.5%)</option>
+                                <option value="0.05_igst">IGST @ 5% (Interstate)</option>
+                                <option value="0.12">GST @ 12% (SGST/CGST 6%+6%)</option>
+                                <option value="0.12_igst">IGST @ 12% (Interstate)</option>
+                                <option value="0.18">GST @ 18% (SGST/CGST 9%+9%)</option>
+                                <option value="0.18_igst">IGST @ 18% (Interstate)</option>
+                                <option value="0.28">GST @ 28% (SGST/CGST 14%+14%)</option>
+                                <option value="0.28_igst">IGST @ 28% (Interstate)</option>
+                                <option value="0">0% (Tax Exempted)</option>
+                            </select>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold">Driver Night (₹):</span>
+                            <input type="number" id="invDriverNight" value="0" oninput="calculateInvoiceTotals()" class="border p-1 rounded text-right w-1/2">
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold">Toll Tax (₹):</span>
+                            <input type="number" id="invTollTax" value="0" oninput="calculateInvoiceTotals()" class="border p-1 rounded text-right w-1/2">
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold">Parking / Checkpost (₹):</span>
+                            <input type="number" id="invParking" value="0" oninput="calculateInvoiceTotals()" class="border p-1 rounded text-right w-1/2">
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold">Challan / Other (₹):</span>
+                            <input type="number" id="invChallan" value="0" oninput="calculateInvoiceTotals()" class="border p-1 rounded text-right w-1/2">
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t">
+                            <label class="flex items-center gap-2 cursor-pointer font-semibold">
+                                <input type="checkbox" id="invRoundOff" checked onchange="calculateInvoiceTotals()"> Round Off
+                            </label>
+                            <span id="invRoundOffVal" class="text-gray-500">₹0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t text-base font-bold text-blue-900">
+                            <span>Total Amount:</span>
+                            <span id="invGrandTotal">₹0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-1 text-sm font-bold text-green-700">
+                            <span>Advance Received:</span>
+                            <input type="number" id="invReceived" value="0" oninput="calculateInvoiceTotals()" class="border p-1 rounded text-right w-1/2 font-bold text-green-700">
+                        </div>
+                        <div class="flex justify-between items-center pt-1 text-sm font-bold text-red-600">
+                            <span>Balance Due:</span>
+                            <span id="invBalanceDue">₹0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="saveGstToSheet()" class="bg-green-600 text-white px-5 py-2.5 rounded font-semibold hover:bg-green-700 transition cursor-pointer shadow">💾 Save & Sync to Sheet</button>
+                    <button type="button" onclick="generateVyaparGstPdf()" class="bg-purple-600 text-white px-5 py-2.5 rounded font-semibold hover:bg-purple-700 transition cursor-pointer shadow">📥 Download PDF Invoice</button>
+                    <button type="button" onclick="closeGstModal()" class="bg-gray-300 text-gray-700 px-4 py-2.5 rounded font-semibold hover:bg-gray-400 transition cursor-pointer">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content (Hidden until login) -->
+    <div id="mainContent" class="">
+        <header class="bg-blue-900 text-white p-4 shadow-md flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center text-blue-950 text-xl shadow-lg font-black border-2 border-white/20">
+                    <i class="fa-solid fa-van-shuttle"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-wide">🚐 Baba Tour & Travels, Gorakhpur</h1>
+                    <p class="text-[10px] text-blue-200">Railway Station Road | Helpline: 8726667104</p>
+                </div>
+            </div>
+            <div class="flex gap-2.5 items-center">
+                <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Operations v10</span>
+                <button onclick="openFreshGstModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">📄 Create Fresh GST Invoice</button>
+                
+                <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🚪 Logout</button>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto p-4 space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" aria-label="Daily operations">
+                <button type="button" onclick="openOperations('pickups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Today's pickups</span><strong id="opsPickups" class="text-2xl text-blue-900">—</strong></button>
+                <button type="button" onclick="openOperations('followups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Due follow-ups</span><strong id="opsFollowups" class="text-2xl text-blue-900">—</strong></button>
+                <button type="button" onclick="openOperations('collections')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Pending collections</span><strong id="opsCollections" class="text-2xl text-blue-900">—</strong></button>
+            </div>
+            <div class="flex flex-wrap gap-2"><button type="button" onclick="openOfficeHub()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Office Operations</button><button type="button" onclick="openBookingReport()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Booking Reports</button><button type="button" onclick="openQuotes()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Quotations / Itinerary</button>
+<button type="button" onclick="openCustomers()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Customers / History</button>
+                <button type="button" onclick="openEntry('booking')" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">+ New Booking</button><button type="button" onclick="connectCrmSheet()" class="rounded-lg bg-emerald-700 px-4 py-2 text-white">Connect Google Sheet</button><a href="https://script.google.com/macros/s/AKfycbzXu77bmooy2cXFh7vCPr5BuGZ0N25ZknBdyo20agSCM5JzmnlIfWGReP1HX4O9RUmTsA/exec" target="_blank" rel="noopener noreferrer" class="inline-block px-4 py-2 rounded-lg bg-emerald-700 text-white font-bold">New Sheet Bookings</a>
+                <button type="button" onclick="openEntry('lead')" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">+ Add Lead</button>
+            </div>
+            <!-- Left: New Booking Form OR Lead Form -->
+            <section id="crmEntry" class="hidden bg-white p-5 rounded-xl shadow-md space-y-4"><button type="button" onclick="document.getElementById('crmEntry').classList.add('hidden')" class="text-sm font-semibold text-slate-600">Close form ×</button>
+                <div class="flex border-b pb-2 gap-2">
+                    <button onclick="switchForm('booking')" id="bookingFormTab" class="flex-1 bg-blue-600 text-white py-1.5 rounded text-xs font-semibold cursor-pointer">➕ New Booking</button>
+                    <button onclick="switchForm('lead')" id="leadFormTab" class="flex-1 bg-slate-200 text-slate-700 py-1.5 rounded text-xs font-semibold cursor-pointer">📞 Add Lead / Inquiry</button>
+                </div>
+
+                <!-- Booking Form -->
+                <form id="bookingForm" class="space-y-3" onsubmit="saveBooking(event)">
+                    <h2 class="text-sm font-bold text-blue-900">New Booking Entry</h2>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">ग्राहक का नाम (Customer Name)</label>
+                        <input type="text" id="custName" required class="w-full border p-2 rounded text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">Client / Company GSTIN (Optional)</label>
+                        <input type="text" id="clientGstin" placeholder="e.g. 09AACCI3895A1ZL" class="w-full border p-2 rounded text-sm uppercase font-mono">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600">मोबाइल नंबर (Mobile)</label>
+                            <input type="tel" id="custPhone" required class="w-full border p-2 rounded text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600">Booking Office (Staff Name)</label>
+                            <input type="text" id="staffName" placeholder="Ankit / Staff" required class="w-full border p-2 rounded text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">ग्राहक पूरा पता (Customer Address)</label>
+                        <input type="text" id="custAddress" required class="w-full border p-2 rounded text-sm">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600">पिकअप (Pickup Location)</label>
+                            <input type="text" id="pickup" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Gorakhpur">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600">ड्रॉप / गंतव्य (Drop / Destination)</label>
+                            <input type="text" id="drop" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Masrooe">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">यात्रा का पूरा रूट / Via (Visiting Places)</label>
+                        <input type="text" id="tourRoute" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Gorakhpur - Ayodhya - Varanasi">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600">यात्रा शुरू (From Date)</label>
+                            <input type="date" id="startDate" required class="w-full border p-2 rounded text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600">वापसी तारीख (To Date)</label>
+                            <input type="date" id="endDate" required class="w-full border p-2 rounded text-sm">
+                        </div>
+                    </div>
+                    <div>
+                       <label class="text-xs font-semibold text-gray-600">गाड़ी चुनें (Vehicle Name)</label>
+                        <select id="vehicleSelect" onchange="updateDriverNight()" class="w-full border p-2 rounded text-sm bg-white font-medium text-blue-900">
+                            <optgroup label="🚍 Buses (Driver Night: ₹800)">
+                                <option value="56 Seater Bus">56 Seater Bus</option>
+                                <option value="45 Seater Bus">45 Seater Bus</option>
+                                <option value="42 Seater Bus">42 Seater Bus</option>
+                                <option value="35 Seater Bus">35 Seater Bus</option>
+                                <option value="32 Seater Bus">32 Seater Bus</option>
+                            </optgroup>
+                            <optgroup label="🚐 Tempo Travellers & Vans (Driver Night: ₹500)">
+                                <option value="Force Urbania">Force Urbania</option>
+                                <option value="26 Seater Traveller (1)">26 Seater Traveller (Vehicle 1)</option>
+                                <option value="26 Seater Traveller (2)">26 Seater Traveller (Vehicle 2)</option>
+                                <option value="20 Seater Traveller">20 Seater Traveller</option>
+                                <option value="17 Seater Force">17 Seater Force</option>
+                                <option value="12 Seater Traveller">12 Seater Traveller</option>
+                                <option value="Mahindra Supro / Van">Mahindra Supro / Van</option>
+                            </optgroup>
+                            <optgroup label="🚙 SUVs & MUVs (Driver Night: ₹400)">
+                                <option value="Innova Crysta / Hycross">Innova Crysta / Hycross</option>
+                                <option value="Mahindra Marazzo">Mahindra Marazzo</option>
+                                <option value="Force Trax Cruiser">Force Trax Cruiser</option>
+                                <option value="Ertiga">Ertiga</option>
+                                <option value="Kia Carens">Kia Carens</option>
+                                <option value="Toyota Rumion">Toyota Rumion</option>
+                            </optgroup>
+                            <optgroup label="🚗 Sedans & Hatchbacks (Driver Night: ₹300)">
+                                <option value="Maruti Dzire">Maruti Dzire</option>
+                                <option value="Honda Amaze">Honda Amaze</option>
+                                <option value="Hyundai Aura">Hyundai Aura</option>
+                                <option value="Tata Tigor">Tata Tigor</option>
+                                <option value="Maruti WagonR / Swift">Maruti WagonR / Swift</option>
+                                <option value="Hyundai i10 / Tata Tiago">Hyundai i10 / Tata Tiago</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2 rounded border">
+                        <div>
+                            <label class="text-[10px] font-semibold text-gray-600">तय KM</label>
+                            <input type="text" id="agreedKm" placeholder="500 KM" class="w-full border p-1 rounded text-xs">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-semibold text-gray-600">Extra KM (₹)</label>
+                            <input type="number" id="extraKmRate" placeholder="18" class="w-full border p-1 rounded text-xs">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-semibold text-gray-600">Extra Day (₹)</label>
+                            <input type="number" id="extraDayRate" placeholder="2500" class="w-full border p-1 rounded text-xs">
+                        </div>
+                    </div>
+
+                    <!-- Tour Exclusions / Inclusions Options -->
+                    <div class="bg-amber-50 p-2 rounded border border-amber-200 space-y-2">
+                        <p class="text-[11px] font-bold text-amber-900">Tour Terms & Charges Status:</p>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <label class="text-[11px] font-semibold text-gray-700">Driver Night:</label>
+                                <select id="driverNight" class="w-full border p-1 rounded bg-white text-xs font-bold text-orange-800">
+                                    <option value="₹800 Per Night">₹800 Per Night (Bus)</option>
+                                    <option value="₹500 Per Night" selected>₹500 Per Night (Traveller)</option>
+                                    <option value="₹400 Per Night">₹400 Per Night (SUV/MUV)</option>
+                                    <option value="₹300 Per Night">₹300 Per Night (Sedan/Hatch)</option>
+                                    <option value="Included in Total">Included in Total</option>
+                                    <option value="Not Applicable">Not Applicable</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[11px] font-semibold text-gray-700">Parking:</label>
+                                <select id="parkingInc" class="w-full border p-1 rounded bg-white text-xs">
+                                    <option value="Excluded (Extra)">Excluded (Extra)</option>
+                                    <option value="Included">Included</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[11px] font-semibold text-gray-700">Toll Tax:</label>
+                                <select id="tollInc" class="w-full border p-1 rounded bg-white text-xs">
+                                    <option value="Excluded (Extra)">Excluded (Extra)</option>
+                                    <option value="Included">Included</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[11px] font-semibold text-gray-700">Checkpost:</label>
+                                <select id="checkpostInc" class="w-full border p-1 rounded bg-white text-xs">
+                                    <option value="Excluded (Extra)">Excluded (Extra)</option>
+                                    <option value="Included">Included</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600">कुल रकम (Total ₹)</label>
+                            <input type="number" id="totalAmount" required class="w-full border p-2 rounded text-sm font-bold text-blue-900">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600">एडवांस (Advance ₹)</label>
+                            <input type="number" id="advanceAmount" required class="w-full border p-2 rounded text-sm font-bold text-green-700">
+                        </div>
+                    </div>
+                    <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white p-2.5 rounded font-semibold hover:bg-blue-700 transition shadow cursor-pointer">Save Booking</button>
+                </form>
+
+                <!-- Lead Form (Hidden by default) -->
+                <form id="leadForm" class="space-y-3 hidden" onsubmit="saveLead(event)">
+                    <h2 class="text-sm font-bold text-purple-900">New Phone Inquiry / Lead</h2>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">Customer Name</label>
+                        <input type="text" id="leadName" required class="w-full border p-2 rounded text-sm" placeholder="Caller Name">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">Mobile Number</label>
+                        <input type="tel" id="leadPhone" required class="w-full border p-2 rounded text-sm" placeholder="10-digit number">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">Inquiry Details / Requirements</label>
+                        <textarea id="leadDetails" rows="2" required class="w-full border p-2 rounded text-sm" placeholder="e.g. Need Traveller for Pokhara tour next month"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">Follow-up Date & Time</label>
+                        <input type="datetime-local" id="leadFollowup" required class="w-full border p-2 rounded text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600">Status</label>
+                        <select id="leadStatus" class="w-full border p-2 rounded text-sm bg-white font-medium">
+                            <option value="Pending">Pending Follow-up</option>
+                            <option value="Called">Called / Discussed</option>
+                            <option value="Converted">Deal Confirmed (Booking)</option>
+                            <option value="Dropped">Dropped</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full bg-purple-600 text-white p-2.5 rounded font-semibold hover:bg-purple-700 transition shadow cursor-pointer">💾 Save Lead & Sync to Cloud</button>
+                </form>
+            </section>
+
+            <!-- Right: Live Bookings / Leads Table -->
+            <section class="bg-white p-5 rounded-xl shadow-md lg:col-span-2">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-4 border-b pb-2 gap-2">
+                    <h2 class="text-lg font-semibold text-blue-900">Operations Dashboard</h2>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="switchTab('new')" id="newTabBtn" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer">🆕 New Bookings</button>
+                        <button onclick="switchTab('completed')" id="completedTabBtn" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer">✅ Completed</button>
+                        <button onclick="switchTab('gst')" id="gstTabBtn" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer">🧾 GST Invoices</button>
+                        <button onclick="switchTab('leads')" id="leadsTabBtn" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer">📞 Leads & Follow-ups</button>
+                        <button onclick="refreshCurrentTab()" class="bg-blue-100 text-blue-800 px-2.5 py-1.5 rounded text-xs font-semibold cursor-pointer">🔄</button>
+                    </div>
+                </div>
+
+                <!-- Date Filter Bar for GST Invoices Tab -->
+                <div class="flex flex-wrap gap-2 mb-3">
+<button type="button" onclick="openOperations('ongoing')" class="border rounded-lg px-3 py-1 text-sm">Ongoing bookings</button>
+<button type="button" onclick="openOperations('cancelled')" class="border rounded-lg px-3 py-1 text-sm">Cancelled bookings</button>
+<span class="text-xs text-slate-500 self-center">Status changes are saved in this browser</span>
+</div><div id="opsFilter" class="hidden mb-3 rounded-lg bg-blue-50 p-2 text-sm">
+                    <span id="opsFilterLabel"></span>
+                    <button type="button" onclick="operationsFilter = ''; renderTable()" class="ml-2 underline">Clear filter</button>
+                </div>
+                <div class="mb-3"><label for="crmSearch" class="block text-xs font-semibold text-slate-700">Search current list</label><input id="crmSearch" type="search" placeholder="Customer, mobile, route or invoice number" class="w-full border rounded-lg p-2 text-sm" oninput="renderTable()"></div>
+                <div id="gstFilterBar" class="hidden bg-purple-50 p-3 rounded-lg border border-purple-200 mb-3 flex flex-wrap items-center gap-3 text-xs">
+                    <div>
+                        <label class="font-semibold text-purple-900">From Date:</label>
+                        <input type="date" id="filterFromDate" class="border p-1.5 rounded bg-white mt-1">
+                    </div>
+                    <div>
+                        <label class="font-semibold text-purple-900">To Date:</label>
+                        <input type="date" id="filterToDate" class="border p-1.5 rounded bg-white mt-1">
+                    </div>
+                    <div class="flex items-end gap-2 mt-4 sm:mt-0">
+                        <button onclick="renderTable()" class="bg-purple-600 text-white px-3 py-1.5 rounded font-semibold hover:bg-purple-700 cursor-pointer">🔍 Filter</button>
+                        <button onclick="downloadGstExcel()" class="bg-green-600 text-white px-3 py-1.5 rounded font-semibold hover:bg-green-700 cursor-pointer shadow">📊 Download Excel Report</button>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto max-h-[600px]">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-200 text-slate-700 sticky top-0" id="tableHeaderRow">
+                                <th class="p-2">Customer</th>
+                                <th class="p-2">Route & Places</th>
+                                <th class="p-2">Vehicle & Terms</th>
+                                <th class="p-2">Payment</th>
+                                <th class="p-2">Staff</th>
+                                <th class="p-2">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bookingTableBody">
+                            <tr><td colspan="6" class="text-center p-6 text-gray-400">Loading data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Floating Quick Call & WhatsApp Buttons -->
+    <div style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 12px;">
+        <a href="tel:8726667104" title="Call Now" style="background-color: #2563eb; color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-decoration: none;">
+            <i class="fa-solid fa-phone"></i>
+        </a>
+        <a href="https://wa.me/message/CPOLYJU4RQ2UH1" target="_blank" title="Chat on WhatsApp" style="background-color: #25D366; color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-decoration: none;">
+            <i class="fa-brands fa-whatsapp"></i>
+        </a>
+    </div>
+
+    
+<dialog id="bookingEditDialog" aria-labelledby="bookingEditTitle" style="width:min(720px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
+<form id="bookingEditForm">
+<h2 id="bookingEditTitle" class="text-xl font-bold text-blue-900">Edit Booking · Draft Preview</h2>
+<p class="text-sm text-slate-600 my-3">Step 1 · Changes are saved in this browser on this website. Google Sheet editing will be connected in a later step.</p>
+<div id="bookingEditFields" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+<p id="bookingEditBalance" class="my-3 font-semibold"></p>
+<p id="bookingEditMessage" role="status" class="my-3 text-sm text-blue-800"></p>
+<div class="flex flex-wrap gap-2">
+<button type="submit" class="rounded-lg bg-blue-700 text-white px-4 py-2">Save Draft Preview</button>
+<button type="button" id="discardBookingDraft" class="rounded-lg border px-4 py-2">Discard Draft</button>
+<button type="button" onclick="document.getElementById('bookingEditDialog').close()" class="rounded-lg border px-4 py-2">Close</button>
+</div></form></dialog>
+
+<dialog id="paymentDialog" aria-labelledby="paymentTitle" style="width:min(880px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
+<h2 id="paymentTitle" class="text-xl font-bold text-blue-900">Add Payment &amp; History · Draft Preview</h2>
+<p id="paymentCustomer" class="mt-2 font-semibold"></p>
+<p class="my-3 text-sm text-slate-600">Payments are stored in this browser on this website. This preview uses the Google Sheet total and advance. Booking edit drafts can be reviewed through Edit Booking. Sheet sync will be connected later.</p>
+<div id="paymentSummary" class="p-3 bg-indigo-50 rounded-lg font-semibold leading-7"></div>
+<p id="paymentConflict" class="my-3 text-amber-800" role="status"></p>
+<form id="paymentDraftForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-4">
+<label class="text-sm">Payment amount (INR)<input id="paymentAmount" type="number" min="0.01" step="0.01" required class="block w-full border p-2 rounded-lg mt-1"></label>
+<label class="text-sm">Payment date<input id="paymentDate" type="date" required class="block w-full border p-2 rounded-lg mt-1"></label>
+<label class="text-sm">Payment mode<select id="paymentMode" class="block w-full border p-2 rounded-lg mt-1"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Card</option><option>Cheque</option><option>Other</option></select></label>
+<label class="text-sm">Reference / UTR (optional)<input id="paymentReference" maxlength="100" class="block w-full border p-2 rounded-lg mt-1"></label>
+<label class="text-sm sm:col-span-2">Note (optional)<input id="paymentNote" maxlength="300" class="block w-full border p-2 rounded-lg mt-1"></label>
+<button id="paymentSave" class="rounded-lg bg-indigo-700 text-white px-4 py-2 disabled:opacity-50" type="submit">Save Payment Draft</button>
+</form>
+<p id="paymentMessage" role="status" class="my-3 text-sm text-blue-800"></p>
+<h3 class="font-semibold my-2">Draft payment history</h3>
+<div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead><tr><th class="p-2">Date</th><th class="p-2">Amount</th><th class="p-2">Mode</th><th class="p-2">Reference</th><th class="p-2">Note</th><th class="p-2">Action</th></tr></thead><tbody id="paymentHistory"></tbody></table></div>
+<button type="button" onclick="if (!paymentSaving) document.getElementById('paymentDialog').close()" class="rounded-lg border px-4 py-2 mt-4">Close</button>
+</dialog>
+
+<dialog id="bookingStatusDialog" aria-labelledby="bookingStatusTitle" style="width:min(650px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
+<h2 id="bookingStatusTitle" class="text-xl font-bold text-blue-900">Booking Status</h2>
+<p id="statusCustomer" class="font-semibold my-2"></p>
+<p class="text-sm text-slate-600 my-3">Status updates are saved in this browser and reflected in booking views. Google Sheet sync is pending. Cancellation amounts and refunds will be handled separately.</p>
+<form id="bookingStatusForm" class="space-y-3">
+<label class="block text-sm">Status<select id="statusValue" class="block w-full border p-2 rounded-lg"><option>Confirmed</option><option>Ongoing</option><option>Completed</option><option>Cancelled</option></select></label>
+<label class="block text-sm">Note / cancellation reason<textarea id="statusNote" maxlength="500" rows="3" class="block w-full border p-2 rounded-lg" placeholder="Reason is required for cancellation"></textarea></label>
+<button id="statusSave" type="submit" class="bg-blue-700 text-white px-4 py-2 rounded-lg disabled:opacity-50">Save Status Draft</button>
+<button type="button" onclick="document.getElementById('bookingStatusDialog').close()" class="border px-4 py-2 rounded-lg">Close</button>
+</form><p id="statusMessage" role="status" class="text-sm text-blue-800 my-3"></p>
+<h3 class="font-semibold mt-4">Status history</h3><ul id="statusHistory" class="text-sm"></ul>
+</dialog>
+<dialog id="customersDialog" aria-labelledby="customersTitle" style="width:min(1100px,96vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
+<div class="flex justify-between items-center gap-3"><h2 id="customersTitle" class="text-xl font-bold text-blue-900">Customers &amp; History</h2><button type="button" onclick="document.getElementById('customersDialog').close()" class="border rounded-lg px-3 py-2">Close</button></div>
+<p id="customerLoadState" class="text-xs text-slate-600 my-3"></p>
+<label for="customerSearch" class="text-sm font-semibold">Find customer</label><input id="customerSearch" type="search" oninput="renderCustomerDirectory()" placeholder="Customer name or mobile" class="block w-full border rounded-lg p-2 mt-1 mb-4">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-5"><div id="customerDirectory" class="space-y-2 overflow-y-auto" style="max-height:55vh"></div><section id="customerDetail" class="md:col-span-2" aria-live="polite"></section></div>
+</dialog>
+<dialog id="leadNotesDialog" style="width:min(650px,95vw);max-height:90vh;padding:24px;border:0;border-radius:16px" aria-labelledby="leadNotesTitle">
+<h2 id="leadNotesTitle" class="text-xl font-bold">Lead Notes &amp; Assignment</h2><p id="leadNotesCustomer" class="my-2"></p><p class="text-sm text-slate-600 mb-3">Drafts are saved in this browser. Sheet sync and dashboard follow-up updates will be connected later.</p>
+<form id="leadNotesForm" class="space-y-3">
+<label class="block">Assigned staff<input name="staff" maxlength="100" class="block w-full border rounded p-2"></label>
+<label class="block">Lead source<select name="source" class="block w-full border rounded p-2"><option>Unknown</option><option>Phone Call</option><option>WhatsApp</option><option>Google</option><option>Website</option><option>Referral</option><option>Walk-in</option><option>Other</option></select></label>
+<label class="block">Next follow-up<input name="followup" type="datetime-local" class="block w-full border rounded p-2"></label>
+<label class="block">Discussion notes<textarea name="notes" rows="5" maxlength="5000" class="block w-full border rounded p-2"></textarea></label>
+<button class="bg-blue-700 text-white rounded px-4 py-2" type="submit">Save Lead Draft</button><button class="border rounded px-4 py-2" type="button" onclick="document.getElementById('leadNotesDialog').close()">Close</button>
+</form><p id="leadNotesMessage" role="status" class="text-sm my-3"></p></dialog>
+<dialog id="quotesDialog" aria-labelledby="quotesTitle" style="width:min(900px,96vw);max-height:90vh;border:0;border-radius:16px;padding:24px"><h2 id="quotesTitle" class="font-bold text-xl">Tour Quotation &amp; Itinerary</h2><p class="text-sm my-2">Drafts are saved in this browser. Use English text for PDF export and review all details before sharing.</p><label>Saved quotations<select id="quoteSaved" class="border rounded p-2 m-2" onchange="loadQuote(this.value)"></select></label><button type="button" onclick="newQuote()" class="border p-2 rounded">New quotation</button><form id="quoteForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3"><label class="block text-sm">Customer name<input type="text" name="customer" required class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Mobile<input type="tel" name="phone" class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Travel start<input type="date" name="start" required class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Travel end<input type="date" name="end" required class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Passengers<input type="number" name="pax" required min="1" step="1" class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Vehicle<input type="text" name="vehicle" class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Hotels / rooms / meals<textarea rows="3" name="hotel" class="block w-full border rounded p-2 mt-1"></textarea></label>
+<label class="block text-sm">Day-wise itinerary<textarea rows="3" name="itinerary" class="block w-full border rounded p-2 mt-1"></textarea></label>
+<label class="block text-sm">Inclusions<textarea rows="3" name="inclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
+<label class="block text-sm">Exclusions<textarea rows="3" name="exclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
+<label class="block text-sm">Total package amount (INR)<input type="number" name="amount" required min="0" step="0.01" class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Payment and cancellation terms<textarea rows="3" name="terms" class="block w-full border rounded p-2 mt-1"></textarea></label><div class="sm:col-span-2 flex gap-2 flex-wrap"><button class="bg-blue-700 text-white rounded p-2" type="submit">Save Draft</button><button class="border rounded p-2" type="button" onclick="downloadQuote()">Download PDF</button><button class="border rounded p-2" type="button" onclick="quoteToBookingForm()">Fill Booking Form</button><button class="border rounded p-2" type="button" onclick="document.getElementById('quotesDialog').close()">Close</button></div></form><p id="quoteMessage" role="status"></p></dialog>
+<dialog id="assignmentDialog" style="width:min(650px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px" aria-labelledby="assignmentTitle"><h2 id="assignmentTitle" class="text-xl font-bold">Vehicle &amp; Driver Assignment</h2><p id="assignmentCustomer" class="my-3"></p><p class="text-sm text-slate-600 mb-3">Assignments are saved in this browser. Conflict checks use loaded bookings and assignments saved here. Travel dates come from the Sheet.</p><form id="assignmentForm" class="space-y-3">
+<label class="block">Vehicle registration number<input name="registration" required maxlength="30" class="block w-full border rounded p-2"></label>
+<label class="block">Driver name<input name="driver" required maxlength="100" class="block w-full border rounded p-2"></label>
+<label class="block">Driver mobile<input name="mobile" type="tel" required maxlength="20" class="block w-full border rounded p-2"></label>
+<label class="block">Pickup time<input name="time" type="time" class="block w-full border rounded p-2"></label>
+<label class="block">Driver instructions<textarea name="notes" rows="3" maxlength="1000" class="block w-full border rounded p-2"></textarea></label>
+<button type="submit" class="bg-blue-700 text-white rounded p-2">Save Assignment Draft</button><button type="button" onclick="document.getElementById('assignmentDialog').close()" class="border rounded p-2">Close</button></form><p id="assignmentMessage" role="status" class="my-3 text-sm"></p></dialog>
+<dialog id="expensesDialog" aria-labelledby="expensesTitle" style="width:min(900px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px"><h2 id="expensesTitle" class="text-xl font-bold">Trip Expenses &amp; Profit</h2><p id="expenseCustomer" class="my-2"></p><p class="text-sm text-slate-600 my-3">All amounts are in INR. Drafts are saved in this browser. Estimated profit uses the Sheet booking amount minus recorded costs, before tax adjustments and unrecorded expenses.</p><p id="expenseSummary" class="bg-blue-50 p-3 rounded font-semibold"></p>
+<form id="expenseForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3">
+<label>Category<select name="category" class="block w-full border rounded p-2"><option>Hotel</option><option>Hired Vehicle</option><option>Driver</option><option>Fuel</option><option>Toll / Parking</option><option>Nepal Operator</option><option>Other</option></select></label>
+<label>Vendor / paid to<input name="vendor" required maxlength="100" class="block w-full border rounded p-2"></label>
+<label>Expense date<input name="date" type="date" required class="block w-full border rounded p-2"></label>
+<label>Total cost (INR)<input name="cost" type="number" min="0.01" step="0.01" required class="block w-full border rounded p-2"></label>
+<label>Paid so far (INR)<input name="paid" type="number" min="0" step="0.01" value="0" required class="block w-full border rounded p-2"></label>
+<label>Note<input name="note" maxlength="300" class="block w-full border rounded p-2"></label>
+<button type="submit" class="bg-blue-700 text-white rounded p-2">Save Expense Draft</button><button type="button" onclick="document.getElementById('expensesDialog').close()" class="border rounded p-2">Close</button></form><p id="expenseMessage" role="status" class="text-sm my-2"></p><div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead><tr><th>Date</th><th>Category / Vendor</th><th>Cost</th><th>Paid</th><th>Due</th><th>Note</th><th>Action</th></tr></thead><tbody id="expenseHistory"></tbody></table></div></dialog>
+<dialog id="reportDialog" aria-labelledby="reportTitle" style="width:min(1100px,96vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
+<h2 id="reportTitle" class="text-xl font-bold">Booking Report</h2>
+<p class="text-sm my-3">Filter by trip start date. Amounts use Google Sheet bookings. Expenses and status updates include drafts from this browser.</p>
+<form id="reportForm" class="flex flex-wrap gap-3 items-end my-3">
+<label>From<input id="reportFrom" type="date" class="block border rounded p-2"></label>
+<label>To<input id="reportTo" type="date" class="block border rounded p-2"></label>
+<label>Status<select id="reportStatus" class="block border rounded p-2"><option value="">All statuses</option><option>Confirmed</option><option>Ongoing</option><option>Completed</option><option>Cancelled</option></select></label>
+<button type="submit" class="bg-blue-700 text-white rounded p-2">Show Report</button>
+<button type="button" onclick="document.getElementById('reportDialog').close()" class="border rounded p-2">Close</button></form>
+<p id="reportMessage" role="status" class="my-3 text-sm"></p><div id="reportSummary" class="bg-blue-50 p-3 rounded leading-7"></div>
+<div class="overflow-x-auto mt-4"><table class="w-full text-sm text-left"><thead><tr><th class="p-2">Customer / Mobile</th><th class="p-2">Trip start</th><th class="p-2">Status</th><th class="p-2">Booked</th><th class="p-2">Sheet advance</th><th class="p-2">Balance</th><th class="p-2">Recorded cost</th></tr></thead><tbody id="reportRows"></tbody></table></div></dialog>
+<dialog id="officeHubDialog" aria-labelledby="officeHubTitle" style="width:min(1050px,96vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
+<div class="flex justify-between gap-3"><h2 id="officeHubTitle" class="text-xl font-bold">Office Operations</h2><button type="button" onclick="document.getElementById('officeHubDialog').close()" class="border rounded p-2">Close</button></div>
+<p class="text-sm text-slate-600 my-3">Tasks, assignments and expenses use drafts saved in this browser. Reminders are shown when you open this page. Vendor totals group matching names across loaded bookings.</p>
+<button type="button" onclick="downloadDraftBackup()" class="border rounded p-2">Download Draft Backup</button><p class="text-xs my-2">Exports browser drafts as JSON for later migration. Export your Google Sheets separately for a full data backup.</p>
+<p id="officeMessage" role="status" class="text-sm my-2"></p>
+<h3 class="font-bold mt-5 mb-2">Tasks &amp; Reminders</h3>
+<form id="officeTaskForm" class="flex flex-wrap items-end gap-3">
+<label class="text-sm">Task<input name="title" required maxlength="200" class="block border rounded p-2"></label>
+<label class="text-sm">Assigned staff<input name="staff" maxlength="100" class="block border rounded p-2"></label>
+<label class="text-sm">Due date<input name="due" type="date" required class="block border rounded p-2"></label>
+<button type="submit" class="bg-blue-700 text-white rounded p-2">Add Task</button></form><div id="officeTasks"></div>
+<h3 class="font-bold mt-5 mb-2">Vehicle &amp; Driver Schedule</h3>
+<label class="text-sm">Trip date<input id="officeScheduleDate" type="date" onchange="renderOfficeHub()" class="border rounded p-2 ml-2"></label><div id="officeSchedule"></div>
+<h3 class="font-bold mt-5 mb-2">Vendor Dues · INR</h3><div id="officeVendors"></div></dialog>
+<script>
+
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQSDa1PdP9-7UKovVE4ZOd9cS2vRvrNX1zQtp-v1p9lu-7MRqLTklSTLBIlm_INa_7kA/exec";
+        const GST_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzNuP7Qr7qFxFOS3UzIB_5r-JCEEg7AlEf1QFN6WkEU_3h37ywZ6qbcSgv6yf7WhTMX/exec";
+        const LEADS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzJ5hZ3GWHHdivmIG9kUg_YiClwOgqAafvoZs9dtA_P34ilYqfNGY7EbnAFjjO9PUXW/exec";
+        
+        let allBookingsData = [];
+        let allGstInvoicesData = [];
+        let allLeadsData = [];
+        let operationsFilter = '';
+        let bookingsLoaded = false;
+        let leadsLoaded = false;
+        const operationsLabels = {
+            pickups: "Today's pickups",
+            followups: 'Due follow-ups',
+            collections: 'Pending collections', ongoing: 'Ongoing bookings', cancelled: 'Cancelled bookings'
+        };
+        const operationsDate = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
+        });
+
+        function operationsDay(value) {
+            const text = String(value ?? '').trim();
+            if (/^\d{4}-\d{2}-\d{2}(?:$|[T ])/.test(text)) return text.slice(0, 10);
+            const date = value === undefined ? new Date() : new Date(text.replace(/\s+GM$/, ' GMT'));
+            if (Number.isNaN(date.getTime())) return '';
+            const parts = operationsDate.formatToParts(date);
+            return ['year', 'month', 'day'].map(key => parts.find(part => part.type === key).value).join('-');
+        }
+
+        function bookingBalance(booking) {
+            return (Number(booking.total) || 0) - (Number(booking.advance) || 0);
+        }
+
+        function isPickupToday(booking) {
+            return operationsDay(booking.startDate ?? '') === operationsDay()
+                && ['Confirmed', 'Ongoing'].includes(getBookingStatus(booking));
+        }
+
+        function isFollowupDue(lead) {
+            const day = operationsDay(lead.followup ?? '');
+            return day && day <= operationsDay() && ['Pending', 'Called'].includes(lead.status);
+        }
+
+        function renderOperations() {
+            const pending = allBookingsData.reduce((sum, booking) => sum + Math.max(0, bookingBalance(booking)), 0);
+            document.getElementById('opsPickups').textContent = bookingsLoaded ? allBookingsData.filter(isPickupToday).length : '—';
+            document.getElementById('opsFollowups').textContent = leadsLoaded ? allLeadsData.filter(isFollowupDue).length : '—';
+            document.getElementById('opsCollections').textContent = bookingsLoaded
+                ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(pending)
+                : '—';
+        }
+
+        function openOperations(filter) {
+            switchTab(filter === 'followups' ? 'leads' : 'new');
+            operationsFilter = filter;
+            renderTable();
+        }
+        let currentTab = 'new';
+        let currentInvoiceNo = "2026-2027/41";
+
+        // Manual completed set using localStorage so you can instantly manage completed tours
+        function getCompletedSet() {
+            let comp = localStorage.getItem('baba_completed_bookings_manual');
+            try {
+                const rows = comp ? JSON.parse(comp) : [];
+                return Array.isArray(rows) ? rows : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function toggleCompleteBooking(phone, timestamp) {
+            const booking = allBookingsData.find(item => String(item.phone) === String(phone) && String(item.timestamp) === String(timestamp));
+            if (booking) openBookingStatus(booking, getBookingStatus(booking) === 'Completed' ? 'Confirmed' : 'Completed');
+        }
+
+        window.onload = function() {
+    document.getElementById('mainContent').classList.remove('hidden');
+    updateDriverNight();
+    fetchBookings();
+    fetchLeads();
+    loadLastInvoiceNumber();
+};
+function handleLogout() { const form = document.createElement('form'); form.method = 'POST'; form.action = '/api/logout'; document.body.appendChild(form); form.submit(); }
+function openEntry(type) {
+            switchForm(type);
+            document.getElementById('crmEntry').scrollIntoView({ block: 'nearest' });
+        }
+
+        function switchForm(type) {
+            document.getElementById('crmEntry').classList.remove('hidden');
+            const bTab = document.getElementById('bookingFormTab');
+            const lTab = document.getElementById('leadFormTab');
+            const bForm = document.getElementById('bookingForm');
+            const lForm = document.getElementById('leadForm');
+
+            if(type === 'booking') {
+                bTab.className = "flex-1 bg-blue-600 text-white py-1.5 rounded text-xs font-semibold cursor-pointer";
+                lTab.className = "flex-1 bg-slate-200 text-slate-700 py-1.5 rounded text-xs font-semibold cursor-pointer";
+                bForm.classList.remove('hidden');
+                lForm.classList.add('hidden');
+            } else {
+                lTab.className = "flex-1 bg-purple-600 text-white py-1.5 rounded text-xs font-semibold cursor-pointer";
+                bTab.className = "flex-1 bg-slate-200 text-slate-700 py-1.5 rounded text-xs font-semibold cursor-pointer";
+                lForm.classList.remove('hidden');
+                bForm.classList.add('hidden');
+            }
+        }
+
+        async function saveLead(e) {
+            e.preventDefault();
+            const leadId = Date.now();
+            const name = document.getElementById('leadName').value;
+            const phone = document.getElementById('leadPhone').value;
+            const details = document.getElementById('leadDetails').value;
+            const followup = document.getElementById('leadFollowup').value;
+            const status = document.getElementById('leadStatus').value;
+
+            const params = new URLSearchParams({
+                action: "addLead",
+                leadId: leadId,
+                name: name,
+                phone: phone,
+                details: details,
+                followup: followup,
+                status: status,
+                timestamp: new Date().toLocaleString()
+            });
+
+            try {
+                await fetch(`${LEADS_SCRIPT_URL}?${params.toString()}`, { mode: 'no-cors' });
+                alert('Lead request sent. Check the lead list or Sheet before submitting again.');
+                document.getElementById('leadForm').reset();
+                setTimeout(fetchLeads, 1800);
+            } catch(err) {
+                alert('Lead sent to sheet!');
+            }
+        }
+
+        async function updateLeadStatus(leadId, newStatus) {
+            const params = new URLSearchParams({
+                action: "updateLeadStatus",
+                leadId: leadId,
+                status: newStatus
+            });
+
+            try {
+                await fetch(`${LEADS_SCRIPT_URL}?${params.toString()}`, { mode: 'no-cors' });
+                const lead = allLeadsData.find(l => String(l.id) === String(leadId));
+                if(lead) lead.status = newStatus;
+                alert('✅ Status updated successfully to: ' + newStatus);
+            } catch(err) {
+                console.error(err);
+                alert('Status update sent.');
+            }
+        }
+
+        async function deleteLead(leadId) {
+            if(!confirm('Are you sure you want to delete this lead?')) return;
+            const params = new URLSearchParams();
+            params.set('action', 'deleteLead');
+            params.set('leadId', leadId);
+
+            try {
+                await fetch(LEADS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: params });
+                alert('Lead delete request sent.');
+                setTimeout(fetchLeads, 1800);
+            } catch (error) {
+                alert('Could not delete lead.');
+            }
+        }
+
+        function fetchLeads() {
+            const tbody = document.getElementById('bookingTableBody');
+            if(currentTab === 'leads') {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400">Loading leads from cloud...</td></tr>`;
+            }
+
+            readSheetRows(LEADS_SCRIPT_URL)
+            .then(data => {
+                if(!data) data = [];
+                allLeadsData = data.reverse();
+                leadsLoaded = true;
+                renderOperations();
+                if(currentTab === 'leads') renderTable();
+            })
+            .catch(err => {
+                console.error("Error fetching leads:", err);
+                if(currentTab === 'leads') {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-red-500">Leads load karne mein samasya aayi.</td></tr>`;
+                }
+            });
+        }
+
+        function convertLeadToBooking(lead) {
+            switchForm('booking');
+            document.getElementById('custName').value = lead.name || '';
+            document.getElementById('custPhone').value = lead.phone || '';
+            document.getElementById('tourRoute').value = lead.details || '';
+            alert('Lead details loaded into Booking form. Please fill remaining details and save!');
+        }
+
+        function loadLastInvoiceNumber() {
+            let lastNum = localStorage.getItem('baba_last_inv_num');
+            if (lastNum) {
+                let nextVal = parseInt(lastNum) + 1;
+                currentInvoiceNo = `2026-2027/${nextVal}`;
+            } else {
+                currentInvoiceNo = "2026-2027/41";
+            }
+        }
+
+        function updateDriverNight() {
+            const vehicle = document.getElementById('vehicleSelect').value;
+            const driverNightSelect = document.getElementById('driverNight');
+            if(!driverNightSelect) return;
+            if (vehicle.includes('Bus')) {
+                driverNightSelect.value = '₹800 Per Night';
+            } else if (vehicle.includes('Traveller') || vehicle.includes('Urbania') || vehicle.includes('Force') || vehicle.includes('Supro')) {
+                driverNightSelect.value = '₹500 Per Night';
+            } else if (vehicle.includes('Innova') || vehicle.includes('Marazzo') || vehicle.includes('Force Trax Cruiser') || vehicle.includes('Ertiga') || vehicle.includes('Carens') || vehicle.includes('Rumion')) {
+                driverNightSelect.value = '₹400 Per Night';
+            } else {
+                driverNightSelect.value = '₹300 Per Night';
+            }
+        }
+
+        async function deleteBooking(phone, timestamp) { return alert('To delete a booking, use the new CRM Sheet.');
+            if (!confirm('Are you sure you want to permanently delete this booking?')) return;
+            const params = new URLSearchParams();
+            params.set('action', 'delete');
+            params.set('phone', String(phone || '').trim());
+            params.set('timestamp', String(timestamp || '').trim());
+
+            try {
+                await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: params });
+                alert('Delete request sent.');
+                setTimeout(fetchBookings, 1800);
+            } catch (error) {
+                alert('Delete request could not be sent.');
+            }
+        }
+
+        async function deleteGstInvoice(invoiceNo) {
+            if (!confirm('Are you sure you want to permanently delete GST Invoice ' + invoiceNo + '?')) return;
+            const params = new URLSearchParams();
+            params.set('action', 'deleteGst');
+            params.set('invoiceNo', invoiceNo);
+
+            try {
+                await fetch(GST_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: params });
+                alert('GST Invoice delete request sent.');
+                setTimeout(fetchGstInvoices, 1800);
+            } catch (error) {
+                alert('Could not delete invoice.');
+            }
+        }
+
+        async function readSheetRows(url) {
+            let response;
+            try {
+                response = await fetch(url);
+            } catch {
+                throw new Error('Apps Script se connection nahi ho saka. Deployment access aur URL check karein.');
+            }
+            if (!response.ok) throw new Error('Apps Script HTTP error ' + response.status + '.');
+            let rows;
+            try {
+                rows = await response.json();
+            } catch {
+                throw new Error('Apps Script ne JSON ki jagah doosra response diya. /exec deployment check karein.');
+            }
+            if (!Array.isArray(rows)) throw new Error('Apps Script response mein rows ki list nahi mili.');
+            return rows.filter(row => row && typeof row === 'object' && !Array.isArray(row));
+        }
+
+        let crmToken = '';
+let crmExpires = 0;
+function connectCrmSheet() {
+    if (!window.google?.accounts?.oauth2) {
+        alert('Google authorization could not load. Refresh and try again.');
+        return;
+    }
+    google.accounts.oauth2.initTokenClient({
+        client_id: '679114631889-9r6mtbtm8el7t87s4e3m1aii2g0nj7gk.apps.googleusercontent.com',
+        scope: 'https://www.googleapis.com/auth/spreadsheets.readonly',
+        callback: result => {
+            if (!result.access_token) return alert(result.error || 'Google access was not granted.');
+            crmToken = result.access_token;
+            crmExpires = Date.now() + Number(result.expires_in || 0) * 1000;
+            fetchBookings();
+        },
+        error_callback: error => alert(error.type || 'Google popup did not open.')
+    }).requestAccessToken();
+}
+
+async function readPrivateCrmBookings() {
+    if (!crmToken || Date.now() >= crmExpires) {
+        throw new Error('Click Connect Google Sheet above to load bookings.');
+    }
+    const url = new URL('https://sheets.googleapis.com/v4/spreadsheets/1I6cFI9mU3z8EPc5cRxNZy25cj3E4sO6xVnXHBFqUQsE/values:batchGet');
+    url.searchParams.append('ranges', 'Bookings!A1:R');
+    url.searchParams.append('ranges', 'Payments!A1:I');
+    const response = await fetch(url, {headers: {Authorization: 'Bearer ' + crmToken}});
+    if (!response.ok) throw new Error('Google Sheets HTTP ' + response.status + '. Check access or reconnect.');
+    const {valueRanges} = await response.json();
+    const [bookings, payments] = valueRanges.map(range => range.values || []);
+    if (bookings[0]?.[0] !== 'booking_id' || payments[0]?.[1] !== 'booking_id') {
+        throw new Error('CRM sheet headers do not match.');
+    }
+    const money = value => Number(String(value ?? '').replace(/[₹,\s]/g, '')) || 0;
+    const paid = new Map();
+    for (const row of payments.slice(1)) {
+        paid.set(row[1], (paid.get(row[1]) || 0) + Math.round(money(row[3]) * 100));
+    }
+    // Existing dashboard renders booking fields inside HTML templates.
+    const safe = value => String(value ?? '').replace(/[<>&"'\u0060]/g, c => ({
+        '<':'‹', '>':'›', '&':'＆', '"':'＂', "'":'’', '\u0060':'ʼ'
+    })[c]);
+    return bookings.slice(1).filter(row => /^(BK-|LEGACY-)/.test(row[0])).map(row => ({
+        bookingId: safe(row[0]), timestamp: safe(row[0]), name: safe(row[2]),
+        phone: safe(row[3]), address: safe(row[4]), staff: safe(row[5]),
+        pickup: safe(row[6]), drop: safe(row[7]), tourRoute: safe(row[8]),
+        startDate: safe(row[9]), endDate: safe(row[10]), vehicle: safe(row[11]),
+        total: money(row[12]), advance: (paid.get(row[0]) || 0) / 100
+    }));
+}
+function fetchBookings() {
+            const tbody = document.getElementById('bookingTableBody');
+            if(currentTab === 'new' || currentTab === 'completed') {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Loading data from cloud...</td></tr>`;
+            }
+
+            readPrivateCrmBookings()
+            .then(data => {
+                if(!data) data = [];
+                allBookingsData = data.reverse();
+                bookingsLoaded = true;
+                renderOperations();
+                if(currentTab === 'new' || currentTab === 'completed') renderTable();
+            })
+            .catch(error => {
+                if(currentTab === 'new' || currentTab === 'completed') {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500">Bookings: ${escapeHtml(error.message)}</td></tr>`;
+                }
+            });
+        }
+
+        function fetchGstInvoices() {
+            const tbody = document.getElementById('bookingTableBody');
+            if(currentTab === 'gst') {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Loading GST invoices...</td></tr>`;
+            }
+
+            readSheetRows(GST_SCRIPT_URL)
+            .then(data => {
+                if(!data) data = [];
+                allGstInvoicesData = data.reverse();
+                if(currentTab === 'gst') renderTable();
+            })
+            .catch(error => {
+                if(currentTab === 'gst') {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500">GST Bills: ${escapeHtml(error.message)}</td></tr>`;
+                }
+            });
+        }
+
+        function refreshCurrentTab() {
+            if(currentTab === 'new' || currentTab === 'completed') fetchBookings();
+            else if(currentTab === 'gst') fetchGstInvoices();
+            else if(currentTab === 'leads') fetchLeads();
+            else renderTable();
+        }
+
+        function switchTab(tab) {
+            operationsFilter = '';
+            currentTab = tab;
+            document.getElementById('crmSearch').value = '';
+            const newBtn = document.getElementById('newTabBtn');
+            const compBtn = document.getElementById('completedTabBtn');
+            const gstBtn = document.getElementById('gstTabBtn');
+            const leadsBtn = document.getElementById('leadsTabBtn');
+            const gstFilterBar = document.getElementById('gstFilterBar');
+
+            newBtn.className = "bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer";
+            compBtn.className = "bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer";
+            if(gstBtn) gstBtn.className = "bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer";
+            if(leadsBtn) leadsBtn.className = "bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer";
+
+            gstFilterBar.classList.add('hidden');
+
+            if(tab === 'new') {
+                newBtn.className = "bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer";
+                fetchBookings();
+            } else if(tab === 'completed') {
+                compBtn.className = "bg-green-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer";
+                fetchBookings();
+            } else if(tab === 'gst') {
+                gstBtn.className = "bg-purple-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer";
+                gstFilterBar.classList.remove('hidden');
+                fetchGstInvoices();
+            } else if(tab === 'leads') {
+                leadsBtn.className = "bg-amber-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer";
+                fetchLeads();
+            }
+        }
+
+        function formatDisplayDate(value) {
+            if (!value) return '';
+            const text = String(value).trim();
+            const calendarDate = text.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:$|[T ])/);
+            const date = calendarDate
+                ? new Date(Date.UTC(Number(calendarDate[1]), Number(calendarDate[2]) - 1, Number(calendarDate[3])))
+                : new Date(text.replace(/\s+GM$/, ' GMT'));
+            if (Number.isNaN(date.getTime())) return text;
+            return new Intl.DateTimeFormat('en-IN', {
+                day: 'numeric', month: 'short', year: 'numeric',
+                timeZone: calendarDate ? 'UTC' : 'Asia/Kolkata'
+            }).format(date);
+        }
+
+        function parseTimestampDate(val) {
+            if(!val) return null;
+            const d = new Date(val);
+            if(isNaN(d.getTime())) return null;
+            d.setHours(0,0,0,0);
+            return d;
+        }
+
+        function escapeHtml(value) {
+            const node = document.createElement('span');
+            node.textContent = value;
+            return node.innerHTML;
+        }
+
+        function matchesSearch(...values) {
+            const query = document.getElementById('crmSearch').value.trim().toLowerCase();
+            return !query || values.some(value => String(value ?? '').toLowerCase().includes(query));
+        }
+
+        function renderTable() {
+            renderOperations();
+            document.getElementById('opsFilter').classList.toggle('hidden', !operationsFilter);
+            document.getElementById('opsFilterLabel').textContent = operationsLabels[operationsFilter] || '';
+            const tbody = document.getElementById('bookingTableBody');
+            const headerRow = document.getElementById('tableHeaderRow');
+            tbody.innerHTML = '';
+
+            if(currentTab === 'leads') {
+                headerRow.innerHTML = `
+                    <th class="p-2">Customer / Caller</th>
+                    <th class="p-2">Inquiry Details</th>
+                    <th class="p-2">Follow-up Time</th>
+                    <th class="p-2">Status (Changeable)</th>
+                    <th class="p-2">Quick Action</th>
+                `;
+                if(allLeadsData.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400">Yahan koi lead ya inquiry nahi hai.</td></tr>`;
+                    return;
+                }
+                const visibleLeads = allLeadsData.filter(lead =>
+                    matchesSearch(lead.name, lead.phone, lead.details, lead.status)
+                    && (operationsFilter !== 'followups' || isFollowupDue(lead)));
+                if (!visibleLeads.length) tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-500">No matching leads.</td></tr>';
+                visibleLeads.forEach(l => {
+                    const row = document.createElement('tr');
+                    row.className = "border-b hover:bg-slate-50";
+                    let waText = `Hello ${l.name},\n\nThank you for contacting Baba Tour & Travels, Gorakhpur regarding your travel inquiry. We would love to assist you with the best vehicle options, comfortable rides, and affordable package rates for your upcoming journey!\n\nPlease let us know your travel dates and requirements so we can share the best quotation with you.\n\nBest Regards,\nBaba Tour & Travels\nRailway Station Road, Gorakhpur\nHelpline: +91 8726667104 / 9026060471\nGSTIN: 09AARPU5006D1ZI`;
+                    let encodedWaMsg = encodeURIComponent(waText);
+
+                    row.innerHTML = `
+                        <td class="p-2"><b>${l.name}</b><br><span class="text-gray-600">${l.phone}</span></td>
+                        <td class="p-2">${l.details}</td>
+                        <td class="p-2 text-purple-900 font-semibold">${l.followup ? l.followup.replace('T', ' ') : '-'}</td>
+                        <td class="p-2">
+                            <select onchange="updateLeadStatus('${l.id}', this.value)" class="border p-1 rounded bg-white font-semibold text-xs text-blue-900">
+                                <option value="Pending" ${l.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                                <option value="Called" ${l.status === 'Called' ? 'selected' : ''}>Called</option>
+                                <option value="Converted" ${l.status === 'Converted' ? 'selected' : ''}>Converted</option>
+                                <option value="Dropped" ${l.status === 'Dropped' ? 'selected' : ''}>Dropped</option>
+                            </select>
+                        </td>
+                        <td class="p-2 space-y-1">
+                            <a href="https://wa.me/91${l.phone}?text=${encodedWaMsg}" target="_blank" class="block text-center bg-green-600 text-white px-2 py-0.5 rounded font-semibold">WhatsApp</a>
+                            <button onclick="convertLeadToBooking(${JSON.stringify(l).replace(/"/g, '&quot;')})" class="block w-full text-center bg-blue-600 text-white px-2 py-0.5 rounded font-semibold">Convert Booking</button>
+                            <button onclick="deleteLead('${l.id}')" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold">Delete</button>
+                        </td>
+                    `;
+                    addLeadNotesButton(row, l);
+                    tbody.appendChild(row);
+                });
+                return;
+            }
+
+            if(currentTab === 'gst') {
+                headerRow.innerHTML = `
+                    <th class="p-2">Invoice No</th>
+                    <th class="p-2">Customer & GSTIN</th>
+                    <th class="p-2">State & Date</th>
+                    <th class="p-2">Taxable & Total</th>
+                    <th class="p-2">Status</th>
+                    <th class="p-2">Action</th>
+                `;
+
+                const fromVal = document.getElementById('filterFromDate').value;
+                const toVal = document.getElementById('filterToDate').value;
+                const fromDate = fromVal ? new Date(fromVal) : null;
+                const toDate = toVal ? new Date(toVal) : null;
+                if(fromDate) fromDate.setHours(0,0,0,0);
+                if(toDate) toDate.setHours(23,59,59,999);
+
+                const filteredGst = allGstInvoicesData.filter(inv => {
+                    const invDate = parseTimestampDate(inv.timestamp);
+                    if(!invDate) return true;
+                    if(fromDate && invDate < fromDate) return false;
+                    if(toDate && invDate > toDate) return false;
+                    return true;
+                });
+
+                if(filteredGst.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">Chuni gayi date ke beech koi GST invoice nahi mili.</td></tr>`;
+                    return;
+                }
+
+                filteredGst.filter(inv => matchesSearch(inv.invoiceNo, inv.customerName, inv.clientGstin)).forEach(inv => {
+                    const row = document.createElement('tr');
+                    row.className = "border-b hover:bg-slate-50";
+                    row.innerHTML = `
+                        <td class="p-2 font-bold text-purple-900">${inv.invoiceNo}</td>
+                        <td class="p-2"><b>${inv.customerName}</b><br><span class="text-gray-500 text-[10px]">GSTIN: ${inv.clientGstin}</span></td>
+                        <td class="p-2">${inv.state}<br><span class="text-gray-400 text-[10px]">${inv.timestamp}</span></td>
+                        <td class="p-2">Taxable: ₹${inv.taxableAmt}<br><b>Total: ₹${inv.grandTotal}</b></td>
+                        <td class="p-2 text-green-700 font-semibold">Synced ✅</td>
+                        <td class="p-2 space-y-1">
+                            <button onclick='openEditGstModal(${JSON.stringify(inv)})' class="block w-full text-center bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold hover:bg-blue-200 cursor-pointer">Edit</button>
+                            <button onclick="deleteGstInvoice('${inv.invoiceNo}')" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold hover:bg-red-200 cursor-pointer">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                return;
+            }
+
+            headerRow.innerHTML = `
+                <th class="p-2">Customer</th>
+                <th class="p-2">Route & Places</th>
+                <th class="p-2">Vehicle & Terms</th>
+                <th class="p-2">Payment</th>
+                <th class="p-2">Staff</th>
+                <th class="p-2">Action</th>
+            `;
+
+            let completedSet = getCompletedSet();
+
+            const filteredData = allBookingsData.filter(b => {
+                if (!matchesSearch(b.name, b.phone, b.pickup, b.drop, b.tourRoute, b.vehicle)) return false;
+                let key = (b.phone || '') + "_" + (b.timestamp || '');
+                const status = getBookingStatus(b);
+                let isCompletedManually = status === 'Completed';
+                if (operationsFilter === 'cancelled') return status === 'Cancelled';
+                if (operationsFilter === 'ongoing') return status === 'Ongoing';
+
+                if (operationsFilter === 'collections') return bookingBalance(b) > 0;
+                if (operationsFilter === 'pickups') return isPickupToday(b);
+                if (currentTab === 'completed') {
+                    return isCompletedManually;
+                } else {
+                    return !isCompletedManually && status !== 'Cancelled';
+                }
+            });
+
+            if(filteredData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400">No bookings match this view.</td></tr>`;
+                return;
+            }
+
+            filteredData.forEach((b) => {
+                const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+                const displayStart = formatDisplayDate(b.startDate);
+                const displayEnd = formatDisplayDate(b.endDate);
+                let key = (b.phone || '') + "_" + (b.timestamp || '');
+                let isDone = getBookingStatus(b) === 'Completed';
+
+                const reviewLink = "https://g.page/r/CWQggXZxge_yEAE/review";
+                const waRemindText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0AHello ${b.name || 'Sir/Ma\'am'},%0AThis is a friendly reminder for your upcoming tour starting on *${displayStart}* to *${displayEnd}* (Route: ${b.tourRoute || 'N/A'}).%0AWe are fully prepared for your comfortable journey! For any queries, call us at 8726667104.%0A%0AThank you for choosing us!`;
+                const waFeedbackText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0AHello ${b.name || 'Sir/Ma\'am'},%0AWe hope you had a wonderful and comfortable journey with us! ✅%0A%0APlease take a moment to share your valuable feedback and rate us on our Google Profile:%0A👉 ${reviewLink}%0A%0ALooking forward to serving you again!%0ABest Regards, Baba Tour & Travels, Gorakhpur`;
+
+                const row = document.createElement('tr');
+                row.className = "border-b hover:bg-slate-50";
+                row.innerHTML = `
+                    <td class="p-2">
+                        <b>${b.name || 'N/A'}</b><br>
+                        <span class="text-gray-600">${b.phone || ''}</span><br>
+                        <span class="text-gray-400 text-[10px]">${b.address || ''}</span>
+                    </td>
+                    <td class="p-2">
+                        <b>📍 Pickup:</b> ${b.pickup || 'N/A'}<br>
+                        <b>🎯 Drop:</b> ${b.drop || 'N/A'}<br>
+                        <b>🗺️ Route:</b> <span class="text-blue-800 font-semibold">${b.tourRoute || 'N/A'}</span><br>
+                        <span class="text-gray-500 font-bold">📅 ${displayStart} to ${displayEnd}</span>
+                    </td>
+                    <td class="p-2">
+                        <span class="bg-green-100 text-green-800 px-1.5 py-0.5 rounded font-semibold">${b.vehicle || 'N/A'}</span><br>
+                        <span class="text-gray-500 text-[10px]">KM: ${b.agreedKm || 'N/A'}</span><br>
+                        <span class="text-amber-700 text-[9px]">Night: ${b.driverNight || 'N/A'} | Toll: ${b.tollInc || 'N/A'}</span>
+                    </td>
+                    <td class="p-2">
+                        Tot: <b>₹${b.total || 0}</b><br>
+                        Adv: <span class="text-green-600 font-semibold">₹${b.advance || 0}</span><br>
+                        Bal: <span class="text-red-600 font-bold">₹${balance}</span>
+                    </td>
+                    <td class="p-2 text-gray-600">${/^\d+(?:\.\d+)?$/.test(String(b.staff ?? '').trim()) ? 'Check Sheet mapping' : escapeHtml(b.staff || '—')}</td>
+                    <td class="p-2 space-y-1">
+                        <button onclick="toggleCompleteBooking('${b.phone}', '${b.timestamp}')" class="block w-full text-center ${isDone ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white px-2 py-1 rounded font-semibold text-[11px] cursor-pointer shadow">
+                            ${isDone ? '🔄 Move to Active' : '✅ Mark Completed'}
+                        </button>
+                        <a href="https://wa.me/91${b.phone}?text=${waRemindText}" target="_blank" class="block text-center bg-amber-500 text-white px-2 py-0.5 rounded font-semibold text-[10px]">🔔 2-Day Reminder</a>
+                        <a href="https://wa.me/91${b.phone}?text=${waFeedbackText}" target="_blank" class="block text-center bg-teal-600 text-white px-2 py-0.5 rounded font-semibold text-[10px]">⭐ Send Review Link</a>
+                        <button onclick='sendWhatsApp(${JSON.stringify(b)})' class="block w-full text-center bg-green-600 text-white px-2 py-0.5 rounded font-semibold cursor-pointer">WhatsApp</button>
+                        <button onclick='generatePDF(${JSON.stringify(b)})' class="block w-full text-center bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold hover:bg-blue-200 cursor-pointer">Receipt</button>
+                        <button onclick='openVyaparGstModal(${JSON.stringify(b)})' class="block w-full text-center bg-purple-600 text-white px-2 py-0.5 rounded font-semibold hover:bg-purple-700 cursor-pointer">GST Invoice</button>
+                        <button onclick="deleteBooking('${b.phone}', '${b.timestamp}')" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold hover:bg-red-200 cursor-pointer">Delete</button>
+                    </td>
+                `;
+                addBookingEditButton(row, b);
+                addPaymentButton(row, b);
+                addStatusButton(row, b);
+                addAssignmentButton(row, b);
+                addExpenseButton(row, b);
+                compactBookingActions(row);
+                tbody.appendChild(row);
+            });
+        }
+
+        function openEditGstModal(inv) {
+            document.getElementById('modalTitle').innerText = "🧾 Edit GST Tax Invoice (" + inv.invoiceNo + ")";
+            document.getElementById('invCustomerName').value = inv.customerName || '';
+            document.getElementById('invCustomerGstin').value = inv.clientGstin || '';
+            document.getElementById('invDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('invNumberDisplay').value = inv.invoiceNo;
+            document.getElementById('invState').value = inv.state || '09-Uttar Pradesh';
+            
+            const tableBody = document.getElementById('invoiceItemsTable');
+            tableBody.innerHTML = '';
+            addRowData('Tour Service', '9964', 'Edited Invoice Item', 500, 1, inv.taxableAmt || 0);
+
+            document.getElementById('invDriverNight').value = 0;
+            document.getElementById('invTollTax').value = 0;
+            document.getElementById('invParking').value = 0;
+            document.getElementById('invChallan').value = 0;
+            document.getElementById('invDiscVal').value = 0;
+            document.getElementById('invReceived').value = 0;
+            document.getElementById('invTaxRate').value = "0.05";
+
+            calculateInvoiceTotals();
+            document.getElementById('gstModal').classList.remove('hidden');
+        }
+
+        function downloadGstExcel() {
+            const fromVal = document.getElementById('filterFromDate').value;
+            const toVal = document.getElementById('filterToDate').value;
+            const fromDate = fromVal ? new Date(fromVal) : null;
+            const toDate = toVal ? new Date(toVal) : null;
+            if(fromDate) fromDate.setHours(0,0,0,0);
+            if(toDate) toDate.setHours(23,59,59,999);
+
+            const filteredGst = allGstInvoicesData.filter(inv => {
+                const invDate = parseTimestampDate(inv.timestamp);
+                if(!invDate) return true;
+                if(fromDate && invDate < fromDate) return false;
+                if(toDate && invDate > toDate) return false;
+                return true;
+            });
+
+            if(filteredGst.length === 0) {
+                alert('Chuni gayi date ke beech download karne ke liye koi GST invoice nahi hai.');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Timestamp,Invoice No,Customer Name,Client GSTIN,State,Taxable Amount,SGST,CGST,IGST,Grand Total\r\n";
+
+            filteredGst.forEach(inv => {
+                let row = [
+                    `"${inv.timestamp || ''}"`,
+                    `"${inv.invoiceNo || ''}"`,
+                    `"${(inv.customerName || '').replace(/"/g, '""')}"`,
+                    `"${inv.clientGstin || ''}"`,
+                    `"${inv.state || ''}"`,
+                    `"${inv.taxableAmt || 0}"`,
+                    `"${inv.sgst || 0}"`,
+                    `"${inv.cgst || 0}"`,
+                    `"${inv.igst || 0}"`,
+                    `"${inv.grandTotal || 0}"`
+                ];
+                csvContent += row.join(",") + "\r\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `GSTR1_Report_${fromVal || 'All'}to${toVal || 'All'}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function sendWhatsApp(b) {
+            const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+            const displayStart = formatDisplayDate(b.startDate);
+            const displayEnd = formatDisplayDate(b.endDate);
+
+            const waText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0A` +
+                           `Thanks for choosing us! Your booking is confirmed. ✅%0A%0A` +
+                           `📋 *Booking Details:*%0A` +
+                           `• Customer Name: ${b.name || ''}%0A` +
+                           `• Route: ${b.tourRoute || 'N/A'}%0A` +
+                           `• Journey Date: ${displayStart} to ${displayEnd}%0A` +
+                           `• Vehicle: ${b.vehicle || ''}%0A` +
+                           `• Driver Night: ${b.driverNight || ''} | Toll: ${b.tollInc || ''}%0A` +
+                           `• Total: ₹${b.total || 0}/- | Advance: ₹${b.advance || 0}/- | Balance: ₹${balance}/-%0A%0A` +
+                           `🏢 *Baba Tour and Travels* (Railway Station Road, Gorakhpur)%0A` +
+                           `🧾 GSTIN: 09AARPU5006D1ZI | Ph: 8726667104`;
+            window.open(`https://wa.me/91${b.phone}?text=${waText}`, '_blank');
+        }
+
+        function generatePDF(b) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+            const displayStart = formatDisplayDate(b.startDate);
+            const displayEnd = formatDisplayDate(b.endDate);
+
+            doc.setFillColor(30, 58, 138);
+            doc.rect(10, 10, 190, 25, "F");
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(18);
+            doc.text("BABA TOUR AND TRAVELS", 105, 20, { align: "center" });
+            doc.setFontSize(9);
+            doc.text("Railway Station Road, Gorakhpur | GST No: 09AARPU5006D1ZI", 105, 26, { align: "center" });
+            doc.text("Helpline: 8726667104, 9026060471, 9415966902", 105, 31, { align: "center" });
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(13);
+            doc.text("BOOKING CONFIRMATION RECEIPT", 105, 43, { align: "center" });
+            doc.setFontSize(10);
+            let y = 52;
+            const addLine = (l, v) => { doc.text(l, 20, y); doc.text(": " + (v || "N/A"), 75, y); y += 6; };
+            addLine("Customer Name", b.name);
+            addLine("Mobile Number", b.phone);
+            addLine("Pickup Location", b.pickup);
+            addLine("Drop / Destination", b.drop);
+            addLine("Tour Route", b.tourRoute);
+            addLine("Journey Date", `${displayStart} to ${displayEnd}`);
+            addLine("Selected Vehicle", b.vehicle);
+            addLine("Driver Night Status", b.driverNight);
+            addLine("Parking Status", b.parkingInc);
+            addLine("Toll Tax Status", b.tollInc);
+            addLine("Checkpost Status", b.checkpostInc);
+            addLine("Total Amount", `Rs. ${b.total}/-`);
+            addLine("Advance Paid", `Rs. ${b.advance}/-`);
+            addLine("Balance Amount", `Rs. ${balance}/-`);
+            doc.save(`Booking_Receipt_${b.name}.pdf`);
+        }
+
+        function openFreshGstModal() {
+            loadLastInvoiceNumber();
+            document.getElementById('modalTitle').innerText = "🧾 Create Fresh GST Tax Invoice";
+            document.getElementById('invCustomerName').value = '';
+            document.getElementById('invCustomerGstin').value = '';
+            document.getElementById('invDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('invNumberDisplay').value = currentInvoiceNo;
+            
+            const tableBody = document.getElementById('invoiceItemsTable');
+            tableBody.innerHTML = '';
+            addRowData('', '9964', '', '', 1, 0);
+
+            document.getElementById('invDriverNight').value = 0;
+            document.getElementById('invTollTax').value = 0;
+            document.getElementById('invParking').value = 0;
+            document.getElementById('invChallan').value = 0;
+            document.getElementById('invDiscVal').value = 0;
+            document.getElementById('invReceived').value = 0;
+            document.getElementById('invTaxRate').value = "0.05";
+
+            calculateInvoiceTotals();
+            document.getElementById('gstModal').classList.remove('hidden');
+        }
+
+        function openVyaparGstModal(b) {
+            loadLastInvoiceNumber();
+            document.getElementById('modalTitle').innerText = "🧾 Edit & Generate GST Tax Invoice";
+            document.getElementById('invCustomerName').value = b.name || '';
+            document.getElementById('invCustomerGstin').value = b.clientGstin || '';
+            document.getElementById('invDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('invNumberDisplay').value = currentInvoiceNo;
+            
+            const tableBody = document.getElementById('invoiceItemsTable');
+            tableBody.innerHTML = '';
+            
+            let itemDesc = `${b.pickup || 'GORAKHPUR'} TO ${b.drop || 'LOCAL'}, VEHICLE - ${b.vehicle || 'INNOVA'}`;
+            let kmVal = parseInt(b.agreedKm) || 500;
+            let priceVal = parseFloat(b.total) || 4050;
+
+            addRowData(itemDesc, '9964', 'Tour Service', kmVal, 1, priceVal);
+
+            document.getElementById('invDriverNight').value = 0;
+            document.getElementById('invTollTax').value = 0;
+            document.getElementById('invParking').value = 0;
+            document.getElementById('invChallan').value = 0;
+            document.getElementById('invDiscVal').value = 0;
+            document.getElementById('invReceived').value = b.advance || 0;
+            document.getElementById('invTaxRate').value = "0.05";
+
+            calculateInvoiceTotals();
+            document.getElementById('gstModal').classList.remove('hidden');
+        }
+
+        function closeGstModal() {
+            document.getElementById('gstModal').classList.add('hidden');
+        }
+
+        function addInvoiceRow() {
+            addRowData('', '9964', '', '', 1, 0);
+        }
+
+        function addRowData(item, hsn, desc, km, qty, price) {
+            const tableBody = document.getElementById('invoiceItemsTable');
+            const rowCount = tableBody.rows.length + 1;
+            const tr = document.createElement('tr');
+            tr.className = "border-b item-row";
+            tr.innerHTML = `
+                <td class="p-2 text-center row-num">${rowCount}</td>
+                <td class="p-2"><input type="text" class="w-full border p-1 rounded item-name" value="${item}" placeholder="Item name"></td>
+                <td class="p-2"><input type="text" class="w-full border p-1 rounded item-hsn font-mono text-center" value="${hsn}" placeholder="HSN"></td>
+                <td class="p-2"><input type="text" class="w-full border p-1 rounded item-desc" value="${desc}" placeholder="Description"></td>
+                <td class="p-2"><input type="number" class="w-full border p-1 rounded item-km" value="${km}" placeholder="KM" oninput="calculateInvoiceTotals()"></td>
+                <td class="p-2"><input type="number" class="w-full border p-1 rounded item-qty" value="${qty}" placeholder="1" oninput="calculateInvoiceTotals()"></td>
+                <td class="p-2"><input type="number" class="w-full border p-1 rounded item-price" value="${price}" placeholder="0" oninput="calculateInvoiceTotals()"></td>
+                <td class="p-2 text-right font-semibold item-amount">₹0.00</td>
+                <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-red-500 font-bold hover:text-red-700 cursor-pointer">✕</button></td>
+            `;
+            tableBody.appendChild(tr);
+            calculateInvoiceTotals();
+        }
+
+        function removeRow(btn) {
+            btn.closest('tr').remove();
+            const rows = document.querySelectorAll('#invoiceItemsTable .item-row');
+            rows.forEach((r, idx) => {
+                r.querySelector('.row-num').innerText = idx + 1;
+            });
+            calculateInvoiceTotals();
+        }
+
+        function calculateInvoiceTotals() {
+            let subTotal = 0;
+            const rows = document.querySelectorAll('#invoiceItemsTable .item-row');
+            rows.forEach(r => {
+                let qty = parseFloat(r.querySelector('.item-qty').value) || 0;
+                let price = parseFloat(r.querySelector('.item-price').value) || 0;
+                let amt = qty * price;
+                r.querySelector('.item-amount').innerText = `₹${amt.toFixed(2)}`;
+                subTotal += amt;
+            });
+
+            let discVal = parseFloat(document.getElementById('invDiscVal').value) || 0;
+            let discType = document.getElementById('invDiscType').value;
+            let discountAmount = discType === 'percent' ? (subTotal * discVal / 100) : discVal;
+
+            let driverNight = parseFloat(document.getElementById('invDriverNight').value) || 0;
+            let tollTax = parseFloat(document.getElementById('invTollTax').value) || 0;
+            let parking = parseFloat(document.getElementById('invParking').value) || 0;
+            let challan = parseFloat(document.getElementById('invChallan').value) || 0;
+
+            let taxable = subTotal - discountAmount + driverNight + tollTax + parking + challan;
+            
+            let taxRateVal = document.getElementById('invTaxRate').value;
+            let taxRatePercent = parseFloat(taxRateVal) || 0;
+
+            let tax = taxable * taxRatePercent;
+            let total = taxable + tax;
+
+            let roundOffVal = 0;
+            if (document.getElementById('invRoundOff').checked) {
+                let roundedTotal = Math.round(total);
+                roundOffVal = roundedTotal - total;
+                total = roundedTotal;
+            }
+
+            document.getElementById('invRoundOffVal').innerText = `₹${roundOffVal.toFixed(2)}`;
+            document.getElementById('invGrandTotal').innerText = `₹${total.toFixed(2)}`;
+
+            let received = parseFloat(document.getElementById('invReceived').value) || 0;
+            let balance = total - received;
+            document.getElementById('invBalanceDue').innerText = `₹${balance.toFixed(2)}`;
+        }
+
+        function saveGstToSheet() {
+            const customerName = document.getElementById('invCustomerName').value || "Client";
+            const customerGstin = document.getElementById('invCustomerGstin').value || "Unregistered";
+            const invDate = document.getElementById('invDate').value || new Date().toLocaleDateString();
+            const invState = document.getElementById('invState').value;
+            const taxRateVal = document.getElementById('invTaxRate').value;
+            const taxRatePercent = parseFloat(taxRateVal) || 0;
+            const isIgst = taxRateVal.includes('igst');
+            const invNumberToSave = document.getElementById('invNumberDisplay').value;
+
+            let subTotal = 0;
+            const rows = document.querySelectorAll('#invoiceItemsTable .item-row');
+            rows.forEach(r => {
+                let qty = parseFloat(r.querySelector('.item-qty').value) || 1;
+                let price = parseFloat(r.querySelector('.item-price').value) || 0;
+                subTotal += (qty * price);
+            });
+
+            let discVal = parseFloat(document.getElementById('invDiscVal').value) || 0;
+            let discType = document.getElementById('invDiscType').value;
+            let discountAmount = discType === 'percent' ? (subTotal * discVal / 100) : discVal;
+
+            let driverNight = parseFloat(document.getElementById('invDriverNight').value) || 0;
+            let tollTax = parseFloat(document.getElementById('invTollTax').value) || 0;
+            let parking = parseFloat(document.getElementById('invParking').value) || 0;
+            let challan = parseFloat(document.getElementById('invChallan').value) || 0;
+
+            let taxableAmt = subTotal - discountAmount + driverNight + tollTax + parking + challan;
+            let taxTotal = taxableAmt * taxRatePercent;
+            let grandTotal = taxableAmt + taxTotal;
+
+            if (document.getElementById('invRoundOff').checked) {
+                grandTotal = Math.round(grandTotal);
+            }
+
+            const params = new URLSearchParams({
+                action: "addGst",
+                invoiceNo: invNumberToSave,
+                customerName: customerName,
+                clientGstin: customerGstin,
+                state: invState,
+                taxableAmt: taxableAmt.toFixed(2),
+                sgst: (!isIgst && taxRatePercent > 0) ? (taxTotal / 2).toFixed(2) : "0.00",
+                cgst: (!isIgst && taxRatePercent > 0) ? (taxTotal / 2).toFixed(2) : "0.00",
+                igst: isIgst ? taxTotal.toFixed(2) : "0.00",
+                grandTotal: grandTotal.toFixed(2),
+                timestamp: new Date().toLocaleString()
+            });
+
+            fetch(`${GST_SCRIPT_URL}?${params.toString()}`, { mode: 'no-cors' })
+            .then(() => {
+                alert('✅ GST Invoice ' + invNumberToSave + ' request sent. Verify the invoice in the Sheet.');
+                closeGstModal();
+                if(currentTab === 'gst') fetchGstInvoices();
+            })
+            .catch(err => {
+                console.error(err);
+                alert('GST request failed to send. Check the Sheet before retrying.');
+                closeGstModal();
+            });
+        }
+
+        function saveBooking(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.innerText = "Saving..."; btn.disabled = true;
+
+            const formData = {
+                action: "add",
+                name: document.getElementById('custName').value,
+                phone: document.getElementById('custPhone').value,
+                address: document.getElementById('custAddress').value,
+                pickup: document.getElementById('pickup').value,
+                drop: document.getElementById('drop').value,
+                tourRoute: document.getElementById('tourRoute').value,
+                startDate: document.getElementById('startDate').value,
+                endDate: document.getElementById('endDate').value,
+                vehicle: document.getElementById('vehicleSelect').value,
+                agreedKm: document.getElementById('agreedKm').value,
+                extraKmRate: document.getElementById('extraKmRate').value,
+                extraDayRate: document.getElementById('extraDayRate').value,
+                driverNight: document.getElementById('driverNight').value,
+                parkingInc: document.getElementById('parkingInc').value,
+                tollInc: document.getElementById('tollInc').value,
+                checkpostInc: document.getElementById('checkpostInc').value,
+                total: parseFloat(document.getElementById('totalAmount').value) || 0,
+                advance: parseFloat(document.getElementById('advanceAmount').value) || 0,
+                staff: document.getElementById('staffName').value,
+                timestamp: new Date().toLocaleString()
+            };
+
+            const postForm = document.createElement('form');
+            postForm.method = 'POST';
+            postForm.action = 'https://script.google.com/macros/s/AKfycbzXu77bmooy2cXFh7vCPr5BuGZ0N25ZknBdyo20agSCM5JzmnlIfWGReP1HX4O9RUmTsA/exec';
+            for (const [name, value] of Object.entries(formData)) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = String(value ?? '');
+                postForm.appendChild(input);
+            }
+            document.body.appendChild(postForm);
+            postForm.submit();
+        }
+    
+
+
+const bookingEditFields = [
+    ['name', 'Customer name', 'text', true],
+    ['phone', 'Mobile number', 'tel', true],
+    ['address', 'Customer address', 'text'],
+    ['staff', 'Booking staff', 'text'],
+    ['pickup', 'Pickup location', 'text', true],
+    ['drop', 'Drop location', 'text', true],
+    ['tourRoute', 'Route / visiting places', 'text'],
+    ['vehicle', 'Vehicle', 'text', true],
+    ['startDate', 'Start date', 'date', true],
+    ['endDate', 'End date', 'date', true],
+    ['total', 'Total amount (INR)', 'number', true],
+    ['advance', 'Advance already received (INR)', 'number', true]
+];
+let editingBooking = null;
+
+function bookingDraftKey(booking) {
+    return 'baba_booking_edit_v1:' + JSON.stringify([SCRIPT_URL, String(booking.phone ?? ''), String(booking.timestamp ?? '')]);
+}
+
+function readBookingDraft(booking) {
+    const raw = localStorage.getItem(bookingDraftKey(booking));
+    if (!raw) return null;
+    const draft = JSON.parse(raw);
+    if (draft.version !== 1 || !draft.values || typeof draft.values !== 'object') {
+        throw new Error('Saved draft could not be read. Use Discard Draft to reset it.');
+    }
+    return draft;
+}
+
+function addBookingEditButton(row, booking) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'block w-full text-center bg-blue-700 text-white px-2 py-1 rounded font-semibold';
+    button.textContent = 'Edit Booking';
+    button.addEventListener('click', () => openBookingEdit(booking));
+    row.lastElementChild.prepend(button);
+}
+
+function openBookingEdit(booking) {
+    editingBooking = booking;
+    let values = booking;
+    let message = 'Edit the details below, then save a draft preview.';
+    try {
+        const draft = readBookingDraft(booking);
+        if (draft) {
+            values = {...booking, ...draft.values};
+            message = 'Browser draft loaded. The main booking list shows Google Sheet data.';
+        }
+    } catch (error) {
+        message = error.message;
+    }
+    const container = document.getElementById('bookingEditFields');
+    container.replaceChildren();
+    for (const [key, title, type, required] of bookingEditFields) {
+        const label = document.createElement('label');
+        label.className = 'block text-sm text-slate-700';
+        label.textContent = title;
+        const input = document.createElement('input');
+        input.name = key;
+        input.type = type;
+        input.required = Boolean(required);
+        input.className = 'block w-full border rounded-lg p-2 mt-1';
+        input.value = type === 'date' ? operationsDay(values[key] ?? '') : String(values[key] ?? '');
+        if (type === 'number') {
+            input.min = '0';
+            input.step = '0.01';
+        }
+        // Payment entries are handled separately from booking detail edits.
+        if (key === 'advance') input.readOnly = true;
+        label.appendChild(input);
+        container.appendChild(label);
+    }
+    document.getElementById('bookingEditMessage').textContent = message;
+    updateEditBalance();
+    const dialog = document.getElementById('bookingEditDialog');
+    if (!dialog.open) dialog.showModal();
+}
+
+function updateEditBalance() {
+    const fields = document.getElementById('bookingEditForm').elements;
+    const balance = Number(fields.namedItem('total').value) - Number(fields.namedItem('advance').value);
+    document.getElementById('bookingEditBalance').textContent = 'Draft balance · ' + new Intl.NumberFormat('en-IN', {
+        style: 'currency', currency: 'INR'
+    }).format(balance);
+}
+
+function validateBookingEdit(values) {
+    if (!values.name || !values.phone || !values.pickup || !values.drop || !values.vehicle) {
+        throw new Error('Fill customer, mobile, pickup, drop and vehicle details.');
+    }
+    if (!/^[+\d\s()-]{7,20}$/.test(values.phone)) throw new Error('Enter a valid mobile number.');
+    if (!values.startDate || !values.endDate || values.endDate < values.startDate) {
+        throw new Error('End date must be on or after the start date.');
+    }
+    if (!Number.isFinite(values.total) || values.total < 0 || !Number.isFinite(values.advance) || values.advance < 0) {
+        throw new Error('Enter a valid non-negative amount.');
+    }
+    if (values.total < values.advance) throw new Error('Total cannot be below the advance received. Refund handling will be added with payments.');
+}
+
+document.getElementById('bookingEditForm').addEventListener('input', updateEditBalance);
+document.getElementById('bookingEditForm').addEventListener('submit', event => {
+    event.preventDefault();
+    const message = document.getElementById('bookingEditMessage');
+    try {
+        const values = {};
+        for (const [key, , type] of bookingEditFields) {
+            const value = event.currentTarget.elements.namedItem(key).value.trim();
+            values[key] = type === 'number' ? Number(value) : value;
+        }
+        validateBookingEdit(values);
+        if (!editingBooking.phone || !editingBooking.timestamp) {
+            throw new Error('Original booking mobile and timestamp are needed to identify this draft.');
+        }
+        const draft = {version:1, values, savedAt:new Date().toISOString()};
+        localStorage.setItem(bookingDraftKey(editingBooking), JSON.stringify(draft));
+        message.textContent = 'Draft saved in this browser. Reopen Edit Booking to review it. Google Sheet sync is pending.';
+    } catch (error) {
+        message.textContent = 'Draft could not be saved. ' + error.message;
+    }
+});
+
+document.getElementById('discardBookingDraft').addEventListener('click', () => {
+    if (!confirm('Discard this booking draft and reload the Google Sheet details?')) return;
+    try {
+        localStorage.removeItem(bookingDraftKey(editingBooking));
+        openBookingEdit(editingBooking);
+        document.getElementById('bookingEditMessage').textContent = 'Draft discarded. Google Sheet details loaded.';
+    } catch (error) {
+        document.getElementById('bookingEditMessage').textContent = 'Draft could not be discarded. ' + error.message;
+    }
+});
+
+
+
+
+let paymentBooking = null;
+let paymentSaving = false;
+const paymentModes = ['Cash', 'UPI', 'Bank Transfer', 'Card', 'Cheque', 'Other'];
+
+function paymentStorageKey(booking) {
+    return 'baba_payment_drafts_v1:' + JSON.stringify([SCRIPT_URL, String(booking.phone ?? ''), String(booking.timestamp ?? '')]);
+}
+
+function paymentPaise(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number) || number < 0 || number > 1000000000) throw new Error('Invalid amount.');
+    return Math.round(number * 100);
+}
+
+function paymentMoney(paise) {
+    return new Intl.NumberFormat('en-IN', {style:'currency', currency:'INR'}).format(paise / 100);
+}
+
+function readPaymentDrafts(booking) {
+    const raw = localStorage.getItem(paymentStorageKey(booking));
+    if (!raw) return {version:1, total:paymentPaise(booking.total), advance:paymentPaise(booking.advance), entries:[]};
+    const data = JSON.parse(raw);
+    if (data.version !== 1 || !Number.isSafeInteger(data.total) || !Number.isSafeInteger(data.advance) || !Array.isArray(data.entries)
+        || data.entries.some(entry => !entry || typeof entry.id !== 'string' || !Number.isSafeInteger(entry.amount) || entry.amount <= 0
+            || typeof entry.date !== 'string' || !paymentModes.includes(entry.mode))) {
+        throw new Error('Saved payment drafts could not be read. Browser data has been retained.');
+    }
+    return data;
+}
+
+function paymentSummary(booking, data) {
+    const total = paymentPaise(booking.total);
+    const advance = paymentPaise(booking.advance);
+    const draftTotal = data.entries.reduce((sum, entry) => sum + entry.amount, 0);
+    return {total, advance, draftTotal, balance:total - advance - draftTotal,
+        changed:data.entries.length > 0 && (data.total !== total || data.advance !== advance)};
+}
+
+function addPaymentButton(row, booking) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'block w-full rounded bg-indigo-100 text-indigo-800 px-2 py-1 font-semibold';
+    button.textContent = 'Add Payment / History';
+    button.addEventListener('click', () => openPayments(booking));
+    row.lastElementChild.prepend(button);
+}
+
+function openPayments(booking) {
+    paymentBooking = booking;
+    document.getElementById('paymentCustomer').textContent = String(booking.name || '') + ' · ' + String(booking.phone || '');
+    document.getElementById('paymentDraftForm').reset();
+    document.getElementById('paymentDate').value = operationsDay();
+    document.getElementById('paymentMessage').textContent = '';
+    renderPaymentHistory();
+    document.getElementById('paymentDialog').showModal();
+}
+
+function renderPaymentHistory() {
+    const save = document.getElementById('paymentSave');
+    save.disabled = true;
+    const body = document.getElementById('paymentHistory');
+    body.replaceChildren();
+    try {
+        const data = readPaymentDrafts(paymentBooking);
+        const summary = paymentSummary(paymentBooking, data);
+        document.getElementById('paymentSummary').textContent =
+            'Sheet total ' + paymentMoney(summary.total) + ' · Sheet advance ' + paymentMoney(summary.advance)
+            + ' · Draft payments ' + paymentMoney(summary.draftTotal) + ' · Draft balance ' + paymentMoney(summary.balance);
+        document.getElementById('paymentConflict').textContent = summary.changed
+            ? 'Sheet total or advance changed since these drafts were entered. Review and discard outdated drafts before adding another payment.' : '';
+        for (const entry of data.entries) {
+            const row = document.createElement('tr');
+            for (const value of [entry.date, paymentMoney(entry.amount), entry.mode, entry.reference || '—', entry.note || '—']) {
+                const cell = document.createElement('td');
+                cell.className = 'p-2 border-b align-top';
+                cell.textContent = value;
+                row.appendChild(cell);
+            }
+            const cell = document.createElement('td');
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.textContent = 'Discard';
+            remove.className = 'p-2 text-red-700 underline';
+            remove.addEventListener('click', () => discardPaymentDraft(entry.id));
+            cell.appendChild(remove);
+            row.appendChild(cell);
+            body.appendChild(row);
+        }
+        if (!data.entries.length) {
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+            cell.colSpan = 6;
+            cell.textContent = 'No draft payments added. Existing Sheet advance is included in the summary above.';
+            cell.className = 'p-3 text-slate-500';
+            row.appendChild(cell);
+            body.appendChild(row);
+        }
+        save.disabled = paymentSaving || summary.changed || summary.balance <= 0;
+    } catch (error) {
+        document.getElementById('paymentMessage').textContent = error.message;
+    }
+}
+
+async function withPaymentLock(action) {
+    // Serialize payment changes across tabs of the same website.
+    if (navigator.locks) return navigator.locks.request(paymentStorageKey(paymentBooking), action);
+    return action();
+}
+
+document.getElementById('paymentDraftForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (paymentSaving) return;
+    paymentSaving = true;
+    document.getElementById('paymentSave').disabled = true;
+    try {
+        const amountText = document.getElementById('paymentAmount').value.trim();
+        if (!/^\d+(\.\d{1,2})?$/.test(amountText)) throw new Error('Enter an amount with at most two decimal places.');
+        const amount = paymentPaise(amountText);
+        const date = document.getElementById('paymentDate').value;
+        const mode = document.getElementById('paymentMode').value;
+        if (!date || date > operationsDay()) throw new Error('Choose today or an earlier payment date.');
+        if (!paymentModes.includes(mode)) throw new Error('Choose a payment mode.');
+        if (!paymentBooking.phone || !paymentBooking.timestamp) throw new Error('Booking mobile and timestamp are required.');
+        await withPaymentLock(() => {
+            const data = readPaymentDrafts(paymentBooking);
+            const summary = paymentSummary(paymentBooking, data);
+            if (summary.changed) throw new Error('Review drafts because the Sheet amount changed.');
+            if (amount <= 0 || amount > summary.balance) throw new Error('Payment must be greater than zero and within the draft balance.');
+            data.entries.push({id:crypto.randomUUID(), amount, date, mode,
+                reference:document.getElementById('paymentReference').value.trim(),
+                note:document.getElementById('paymentNote').value.trim(), createdAt:new Date().toISOString()});
+            data.total = summary.total;
+            data.advance = summary.advance;
+            localStorage.setItem(paymentStorageKey(paymentBooking), JSON.stringify(data));
+        });
+        event.target.reset();
+        document.getElementById('paymentDate').value = operationsDay();
+        document.getElementById('paymentMessage').textContent = 'Payment draft saved in this browser. Google Sheet sync is pending.';
+    } catch (error) {
+        document.getElementById('paymentMessage').textContent = 'Payment draft could not be saved. ' + error.message;
+    } finally {
+        paymentSaving = false;
+        renderPaymentHistory();
+    }
+});
+
+async function discardPaymentDraft(id) {
+    if (paymentSaving || !confirm('Discard this browser payment draft?')) return;
+    try {
+        await withPaymentLock(() => {
+            const data = readPaymentDrafts(paymentBooking);
+            data.entries = data.entries.filter(entry => entry.id !== id);
+            localStorage.setItem(paymentStorageKey(paymentBooking), JSON.stringify(data));
+        });
+        document.getElementById('paymentMessage').textContent = 'Payment draft discarded.';
+    } catch (error) {
+        document.getElementById('paymentMessage').textContent = 'Could not discard draft. ' + error.message;
+    }
+    renderPaymentHistory();
+}
+
+window.addEventListener('storage', event => {
+    if (paymentBooking && event.key === paymentStorageKey(paymentBooking) && document.getElementById('paymentDialog').open) renderPaymentHistory();
+});
+
+document.getElementById("paymentDialog").addEventListener("cancel", event => { if (paymentSaving) event.preventDefault(); });
+
+const bookingStatuses = ['Confirmed', 'Ongoing', 'Completed', 'Cancelled'];
+let statusBooking = null;
+
+function statusKey(booking) {
+    return 'baba_status_v1:' + JSON.stringify([SCRIPT_URL, String(booking.phone ?? ''), String(booking.timestamp ?? '')]);
+}
+
+function readStatusRecord(booking) {
+    const raw = localStorage.getItem(statusKey(booking));
+    if (!raw) return null;
+    const record = JSON.parse(raw);
+    if (record.version !== 1 || !bookingStatuses.includes(record.status) || !Array.isArray(record.history)) {
+        throw new Error('Saved status could not be read. Please retain browser data for recovery.');
+    }
+    return record;
+}
+
+function getBookingStatus(booking) {
+    try {
+        const record = readStatusRecord(booking);
+        if (record) return record.status;
+    } catch { return 'Review status'; }
+    return getCompletedSet().includes((booking.phone || '') + '_' + (booking.timestamp || '')) ? 'Completed' : 'Confirmed';
+}
+
+function addStatusButton(row, booking) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'block w-full rounded border border-slate-300 text-slate-700 px-2 py-1 font-semibold';
+    button.textContent = getBookingStatus(booking) + ' · Status';
+    button.addEventListener('click', () => openBookingStatus(booking));
+    row.lastElementChild.prepend(button);
+}
+
+function openBookingStatus(booking, proposed) {
+    statusBooking = booking;
+    document.getElementById('statusCustomer').textContent = String(booking.name || '') + ' · ' + String(booking.phone || '');
+    document.getElementById('statusNote').value = '';
+    document.getElementById('statusMessage').textContent = '';
+    document.getElementById('statusSave').disabled = false;
+    const history = document.getElementById('statusHistory');
+    history.replaceChildren();
+    try {
+        const record = readStatusRecord(booking);
+        document.getElementById('statusValue').value = proposed || getBookingStatus(booking);
+        const entries = record ? record.history : [];
+        for (const entry of [...entries].reverse()) {
+            const item = document.createElement('li');
+            item.className = 'border-b py-2';
+            item.textContent = new Date(entry.at).toLocaleString('en-IN', {timeZone:'Asia/Kolkata'})
+                + ' · ' + entry.from + ' → ' + entry.to + (entry.note ? ' · ' + entry.note : '');
+            history.appendChild(item);
+        }
+        if (!entries.length) history.textContent = 'Status history will appear after the first change.';
+    } catch (error) {
+        document.getElementById('statusMessage').textContent = error.message;
+        document.getElementById('statusSave').disabled = true;
+    }
+    const dialog = document.getElementById('bookingStatusDialog');
+    if (!dialog.open) dialog.showModal();
+}
+
+function saveBookingStatus(booking, status, note) {
+    if (!bookingStatuses.includes(status)) throw new Error('Choose a valid status.');
+    if (!booking.phone || !booking.timestamp) throw new Error('Booking mobile and timestamp are required.');
+    if (status === 'Cancelled' && !note.trim()) throw new Error('Enter the cancellation reason.');
+    const record = readStatusRecord(booking);
+    const previous = getBookingStatus(booking);
+    if (previous === status) throw new Error('This booking already has the selected status.');
+    const history = record ? record.history : [];
+    const next = {version:1, status, history:[...history, {from:previous,to:status,note:note.trim(),at:new Date().toISOString()}]};
+    localStorage.setItem(statusKey(booking), JSON.stringify(next));
+}
+
+document.getElementById('bookingStatusForm').addEventListener('submit', event => {
+    event.preventDefault();
+    try {
+        saveBookingStatus(statusBooking, document.getElementById('statusValue').value, document.getElementById('statusNote').value);
+        renderTable();
+        openBookingStatus(statusBooking);
+        document.getElementById('statusMessage').textContent = 'Status saved in this browser. Google Sheet sync is pending.';
+    } catch (error) {
+        document.getElementById('statusMessage').textContent = 'Could not save status. ' + error.message;
+    }
+});
+
+window.addEventListener('storage', event => {
+    if (event.key && event.key.startsWith('baba_status_v1:')) renderTable();
+});
+
+function customerPhone(value) {
+    let digits = String(value ?? '').replace(/\D/g, '');
+    if (digits.startsWith('00')) digits = digits.slice(2);
+    if (/^91[6-9]\d{9}$/.test(digits)) digits = digits.slice(2);
+    return digits;
+}
+
+function buildCustomerProfiles(bookings, leads) {
+    const profiles = new Map();
+    function add(record, kind, index) {
+        const phone = customerPhone(record.phone);
+        const key = phone || kind + '-missing-' + index;
+        if (!profiles.has(key)) profiles.set(key, {key, phone, names:[], addresses:[], bookings:[], leads:[]});
+        const profile = profiles.get(key);
+        const name = String(record.name || '').trim();
+        const address = String(record.address || '').trim();
+        if (name && !profile.names.includes(name)) profile.names.push(name);
+        if (address && !profile.addresses.includes(address)) profile.addresses.push(address);
+        profile[kind].push(record);
+    }
+    bookings.forEach((record, index) => add(record, 'bookings', index));
+    leads.forEach((record, index) => add(record, 'leads', index));
+    return [...profiles.values()].sort((a,b) => (a.names[0] || '').localeCompare(b.names[0] || ''));
+}
+
+function customerElement(tag, text, className) {
+    const element = document.createElement(tag);
+    element.textContent = text;
+    element.className = className || '';
+    return element;
+}
+
+function openCustomers() {
+    document.getElementById('customerSearch').value = '';
+    document.getElementById('customerDetail').replaceChildren();
+    renderCustomerDirectory();
+    document.getElementById('customersDialog').showModal();
+}
+
+function renderCustomerDirectory() {
+    const query = document.getElementById('customerSearch').value.trim().toLowerCase();
+    const digits = customerPhone(query);
+    const profiles = buildCustomerProfiles(allBookingsData, allLeadsData);
+    const visible = profiles.filter(profile => !query || profile.names.some(name => name.toLowerCase().includes(query))
+        || profile.phone.includes(query) || (digits && profile.phone.includes(digits)));
+    document.getElementById('customerLoadState').textContent =
+        (bookingsLoaded ? 'Bookings loaded' : 'Bookings have not loaded yet') + ' · '
+        + (leadsLoaded ? 'Leads loaded' : 'Leads have not loaded yet')
+        + ' · ' + profiles.length + ' customer groups. Shared mobile numbers are grouped together.';
+    const list = document.getElementById('customerDirectory');
+    list.replaceChildren();
+    for (const profile of visible) {
+        const button = customerElement('button', (profile.names.join(' / ') || 'Unnamed customer') + '\n'
+            + (profile.phone || 'Mobile missing') + ' · ' + profile.bookings.length + ' bookings · ' + profile.leads.length + ' enquiries',
+            'w-full text-left border rounded-lg p-3 hover:bg-blue-50 whitespace-pre-line');
+        button.type = 'button';
+        button.addEventListener('click', () => showCustomerProfile(profile.key));
+        list.appendChild(button);
+    }
+    if (!visible.length) list.appendChild(customerElement('p', 'No matching customers in the loaded records.', 'text-sm text-slate-500'));
+}
+
+function showCustomerProfile(key) {
+    const profile = buildCustomerProfiles(allBookingsData, allLeadsData).find(item => item.key === key);
+    const detail = document.getElementById('customerDetail');
+    detail.replaceChildren();
+    if (!profile) return;
+    detail.appendChild(customerElement('h3', profile.names.join(' / ') || 'Unnamed customer', 'text-xl font-bold text-blue-900'));
+    detail.appendChild(customerElement('p', profile.phone || 'Mobile missing', 'text-sm my-1'));
+    detail.appendChild(customerElement('p', profile.addresses.join(' / '), 'text-sm text-slate-600 mb-3'));
+    const total = profile.bookings.reduce((sum, booking) => sum + (Number(booking.total) || 0), 0);
+    const advance = profile.bookings.reduce((sum, booking) => sum + (Number(booking.advance) || 0), 0);
+    const money = value => new Intl.NumberFormat('en-IN', {style:'currency', currency:'INR'}).format(value);
+    detail.appendChild(customerElement('p', 'Sheet totals · Booked ' + money(total) + ' · Advance ' + money(advance)
+        + ' · Balance ' + money(total - advance), 'bg-blue-50 p-3 rounded-lg font-semibold'));
+    detail.appendChild(customerElement('p', 'Totals include all listed bookings. Cancellation charges and refunds are not calculated here.', 'text-xs text-slate-500 my-2'));
+    detail.appendChild(customerElement('h4', 'Booking history', 'font-bold mt-4 mb-2'));
+    if (!profile.bookings.length) detail.appendChild(customerElement('p', 'No bookings for this mobile number.', 'text-sm'));
+    for (const booking of profile.bookings) {
+        const card = customerElement('div', '', 'border rounded-lg p-3 mb-3 text-sm');
+        card.appendChild(customerElement('p', (booking.pickup || '—') + ' → ' + (booking.drop || '—'), 'font-semibold'));
+        card.appendChild(customerElement('p', formatDisplayDate(booking.startDate) + ' – ' + formatDisplayDate(booking.endDate)
+            + ' · ' + (booking.vehicle || '—') + ' · ' + getBookingStatus(booking)));
+        card.appendChild(customerElement('p', 'Sheet total ' + money(Number(booking.total) || 0)
+            + ' · Advance ' + money(Number(booking.advance) || 0) + ' · Balance ' + money(bookingBalance(booking))));
+        try {
+            const drafts = readPaymentDrafts(booking);
+            const summary = paymentSummary(booking, drafts);
+            card.appendChild(customerElement('p', 'Browser draft payments ' + paymentMoney(summary.draftTotal)
+                + ' · Draft balance ' + paymentMoney(summary.balance), 'text-indigo-700 mt-2'));
+            if (summary.changed) card.appendChild(customerElement('p', 'Review payment drafts because Sheet amounts changed.', 'text-amber-800'));
+            for (const entry of drafts.entries) {
+                card.appendChild(customerElement('p', entry.date + ' · ' + paymentMoney(entry.amount) + ' · ' + entry.mode
+                    + (entry.reference ? ' · ' + entry.reference : ''), 'text-xs mt-1'));
+            }
+        } catch {
+            card.appendChild(customerElement('p', 'Payment drafts could not be read in this browser.', 'text-amber-800'));
+        }
+        const receipt = customerElement('button', 'Download booking receipt', 'text-blue-700 underline mt-2');
+        receipt.type = 'button';
+        receipt.addEventListener('click', () => generatePDF(booking));
+        card.appendChild(receipt);
+        detail.appendChild(card);
+    }
+    detail.appendChild(customerElement('h4', 'Enquiry history', 'font-bold mt-4 mb-2'));
+    if (!profile.leads.length) detail.appendChild(customerElement('p', leadsLoaded ? 'No enquiries for this mobile number.' : 'Leads have not loaded yet.', 'text-sm'));
+    for (const lead of profile.leads) {
+        const card = customerElement('div', '', 'border rounded-lg p-3 mb-2 text-sm');
+        card.appendChild(customerElement('p', lead.details || 'No details', 'font-semibold'));
+        card.appendChild(customerElement('p', (lead.status || '—') + ' · Follow-up ' + String(lead.followup || '—').replace('T',' ')));
+        detail.appendChild(card);
+    }
+    detail.scrollIntoView({block:'nearest'});
+}
+
+
+let selectedNotesLead = null;
+function leadNotesKey(lead) {
+    if (!lead.leadId && !(lead.phone && lead.timestamp)) throw new Error('Lead ID or original mobile and timestamp required.');
+    return 'baba_lead_notes_v1:' + JSON.stringify([LEADS_SCRIPT_URL, lead.leadId || [lead.phone, lead.timestamp]]);
+}
+function addLeadNotesButton(row, lead) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Notes / Assign Staff';
+    button.className = 'block w-full bg-blue-100 text-blue-800 rounded p-2 mb-2';
+    button.addEventListener('click', () => openLeadNotes(lead));
+    row.lastElementChild.prepend(button);
+}
+function openLeadNotes(lead) {
+    selectedNotesLead = lead;
+    const form = document.getElementById('leadNotesForm');
+    form.reset();
+    document.getElementById('leadNotesCustomer').textContent = String(lead.name || '') + ' · ' + String(lead.phone || '');
+    const message = document.getElementById('leadNotesMessage');
+    message.textContent = '';
+    try {
+        const raw = localStorage.getItem(leadNotesKey(lead));
+        const values = raw ? JSON.parse(raw) : {staff:'',source:'Unknown',notes:'',followup:lead.followup || ''};
+        for (const key of ['staff','source','notes','followup']) form.elements.namedItem(key).value = values[key] || '';
+        message.textContent = raw ? 'Browser draft loaded.' : 'Add discussion details below.';
+    } catch(error) { message.textContent = error.message; }
+    document.getElementById('leadNotesDialog').showModal();
+}
+document.getElementById('leadNotesForm').addEventListener('submit', event => {
+    event.preventDefault();
+    try {
+        const values = {version:1,updatedAt:new Date().toISOString()};
+        for (const key of ['staff','source','notes','followup']) values[key] = event.target.elements.namedItem(key).value.trim();
+        localStorage.setItem(leadNotesKey(selectedNotesLead),JSON.stringify(values));
+        document.getElementById('leadNotesMessage').textContent = 'Lead draft saved in this browser. Sheet sync is pending.';
+    } catch(error) { document.getElementById('leadNotesMessage').textContent = 'Could not save draft. ' + error.message; }
+});
+
+const quoteFieldNames = ["customer","phone","start","end","pax","vehicle","hotel","itinerary","inclusions","exclusions","amount","terms"];
+let activeQuoteId = '';
+const quotePrefix = 'baba_quote_v1:' + SCRIPT_URL + ':';
+function newQuote() {
+ document.getElementById('quoteForm').reset();
+ activeQuoteId = crypto.randomUUID();
+ document.getElementById('quoteSaved').value = '';
+ document.getElementById('quoteMessage').textContent = 'New quotation draft';
+}
+function refreshQuotes() {
+ const select = document.getElementById('quoteSaved');
+ select.replaceChildren(new Option('Choose saved quotation',''));
+ for(let i=0;i<localStorage.length;i++) {
+  const key=localStorage.key(i);
+  if(!key.startsWith(quotePrefix)) continue;
+  try { const q=JSON.parse(localStorage.getItem(key)); select.add(new Option(q.customer+' · '+q.start,q.id)); } catch {}
+ }
+}
+function openQuotes() {
+ try { refreshQuotes(); newQuote(); document.getElementById('quotesDialog').showModal(); }
+ catch(error) { alert('Could not open quotations. '+error.message); }
+}
+function loadQuote(id) {
+ if(!id) return;
+ try {
+  const q=JSON.parse(localStorage.getItem(quotePrefix+id));
+  if(!q || q.id!==id) throw Error('Draft unavailable');
+  for(const key of quoteFieldNames) document.getElementById('quoteForm').elements.namedItem(key).value=q[key] || '';
+  activeQuoteId=id;
+  document.getElementById('quoteMessage').textContent='Saved draft loaded';
+ } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
+}
+function quoteValues() {
+ const form=document.getElementById('quoteForm');
+ if(!form.reportValidity()) throw Error('Complete required fields.');
+ const q={id:activeQuoteId};
+ for(const key of quoteFieldNames) q[key]=form.elements.namedItem(key).value.trim();
+ if(!q.customer || q.end<q.start) throw Error('Check customer name and travel dates.');
+ if(!Number.isInteger(Number(q.pax)) || Number(q.pax)<1 || !Number.isFinite(Number(q.amount)) || Number(q.amount)<0) throw Error('Check passengers and amount.');
+ return q;
+}
+document.getElementById('quoteForm').addEventListener('submit',event=>{
+ event.preventDefault();
+ try {
+  const q=quoteValues();
+  localStorage.setItem(quotePrefix+q.id,JSON.stringify(q)); refreshQuotes();
+  document.getElementById('quoteSaved').value=q.id;
+  document.getElementById('quoteMessage').textContent='Quotation draft saved in this browser.';
+ } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
+});
+function downloadQuote() {
+ try {
+  const q=quoteValues();
+  if(!window.jspdf) throw Error('PDF library is still loading. Try again.');
+  const doc=new window.jspdf.jsPDF(); let y=20;
+  function write(text,size) {
+   doc.setFontSize(size);
+   const lines=doc.splitTextToSize(String(text),175);
+   for(const line of lines) { if(y>277){doc.addPage();y=20;} doc.text(line,17,y);y+=6; }
+   y+=4;
+  }
+  write('BABA TOUR & TRAVELS, GORAKHPUR',16);
+  write('TOUR QUOTATION',13);
+  write('Customer: '+q.customer+' | Mobile: '+q.phone,11);
+  write('Travel: '+q.start+' to '+q.end+' | Passengers: '+q.pax,11);
+  write('Vehicle: '+q.vehicle,11);
+  write('Package amount: INR '+Number(q.amount).toLocaleString('en-IN',{minimumFractionDigits:2}),13);
+  for(const [key,title] of [['hotel','HOTELS / ROOMS / MEALS'],['itinerary','DAY-WISE ITINERARY'],['inclusions','INCLUSIONS'],['exclusions','EXCLUSIONS'],['terms','TERMS']]) {
+   if(q[key]) { write(title,12);write(q[key],11); }
+  }
+  doc.save('Tour_Quotation_'+q.customer.replace(/[^a-z0-9]/gi,'_')+'.pdf');
+ } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
+}
+
+let assignmentBooking = null;
+const assignmentFields = ['registration','driver','mobile','time','notes'];
+function assignmentKey(booking) {
+ return 'baba_assignment_v1:' + JSON.stringify([SCRIPT_URL, String(booking.phone || ''), String(booking.timestamp || '')]);
+}
+function readAssignment(booking) {
+ const raw = localStorage.getItem(assignmentKey(booking));
+ if(!raw) return null;
+ const value = JSON.parse(raw);
+ if(value.version !== 1 || typeof value.registration !== 'string' || typeof value.mobile !== 'string') throw Error('An existing assignment could not be read.');
+ return value;
+}
+function addAssignmentButton(row, booking) {
+ const button = document.createElement('button');
+ button.type = 'button'; button.textContent = 'Vehicle / Driver';
+ button.className = 'block w-full rounded bg-slate-100 text-slate-800 p-1 font-semibold';
+ button.addEventListener('click', () => openAssignment(booking));
+ row.lastElementChild.prepend(button);
+}
+function openAssignment(booking) {
+ assignmentBooking = booking;
+ const form = document.getElementById('assignmentForm'); form.reset();
+ document.getElementById('assignmentCustomer').textContent = String(booking.name || '') + ' · ' + formatDisplayDate(booking.startDate) + ' to ' + formatDisplayDate(booking.endDate);
+ const message = document.getElementById('assignmentMessage'); message.textContent = '';
+ try {
+  const saved = readAssignment(booking);
+  if(saved) for(const key of assignmentFields) form.elements.namedItem(key).value = saved[key] || '';
+ } catch(error) { message.textContent = error.message; }
+ document.getElementById('assignmentDialog').showModal();
+}
+function assignmentConflicts(booking, candidate, bookings) {
+ const start = operationsDay(booking.startDate || ''), end = operationsDay(booking.endDate || '');
+ if(!start || !end || end < start) throw Error('Valid booking travel dates are required.');
+ const conflicts = [];
+ for(const other of bookings) {
+  if(assignmentKey(other) === assignmentKey(booking) || ['Completed','Cancelled'].includes(getBookingStatus(other))) continue;
+  const saved = readAssignment(other);
+  if(!saved) continue;
+  const sameVehicle = saved.registration.replace(/[^a-z0-9]/gi,'').toUpperCase() === candidate.registration.replace(/[^a-z0-9]/gi,'').toUpperCase();
+  const sameDriver = customerPhone(saved.mobile) === customerPhone(candidate.mobile);
+  const from = operationsDay(other.startDate || ''), to = operationsDay(other.endDate || '');
+  if((sameVehicle || sameDriver) && (!from || !to || (start <= to && end >= from))) conflicts.push(String(other.name || other.phone) + ' (' + (sameVehicle ? 'vehicle' : 'driver') + ')');
+ }
+ return conflicts;
+}
+document.getElementById('assignmentForm').addEventListener('submit', event => {
+ event.preventDefault();
+ try {
+  if(!assignmentBooking.phone || !assignmentBooking.timestamp) throw Error('Booking mobile and timestamp are required.');
+  const value = {version:1,updatedAt:new Date().toISOString()};
+  for(const key of assignmentFields) value[key] = event.target.elements.namedItem(key).value.trim();
+  if(!value.registration.replace(/[^a-z0-9]/gi,'') || !value.driver || !/^[+0-9 ()-]{7,20}$/.test(value.mobile)) throw Error('Check vehicle registration, driver name and mobile.');
+  const conflicts = assignmentConflicts(assignmentBooking,value,allBookingsData);
+  if(conflicts.length && !confirm('Possible date overlap with ' + conflicts.join(', ') + '. Save this assignment anyway?')) return;
+  localStorage.setItem(assignmentKey(assignmentBooking),JSON.stringify(value));
+  document.getElementById('assignmentMessage').textContent = 'Assignment draft saved in this browser. Sheet sync is pending.';
+ } catch(error) { document.getElementById('assignmentMessage').textContent = 'Could not save assignment. ' + error.message; }
+});
+
+let expenseBooking = null;
+let editingExpenseId = '';
+function expenseKey(booking) { return 'baba_expenses_v1:' + JSON.stringify([SCRIPT_URL,String(booking.phone || ''),String(booking.timestamp || '')]); }
+function readExpenses(booking) {
+ const raw=localStorage.getItem(expenseKey(booking));
+ if(!raw) return [];
+ const rows=JSON.parse(raw);
+ if(!Array.isArray(rows) || rows.some(row=>!row || typeof row.id!=='string' || !Number.isSafeInteger(row.cost) || !Number.isSafeInteger(row.paid) || row.cost<=0 || row.paid<0 || row.paid>row.cost)) throw Error('Saved expense data could not be read.');
+ return rows;
+}
+function expenseTotals(booking,rows) {
+ const cost=rows.reduce((sum,row)=>sum+row.cost,0),paid=rows.reduce((sum,row)=>sum+row.paid,0);
+ return {cost,paid,due:cost-paid,profit:paymentPaise(booking.total)-cost};
+}
+function addExpenseButton(row,booking) {
+ const button=document.createElement('button');button.type='button';button.textContent='Expenses / Profit';
+ button.className='block w-full bg-amber-100 text-amber-900 rounded p-1 font-semibold';
+ button.addEventListener('click',()=>openExpenses(booking));row.lastElementChild.prepend(button);
+}
+function openExpenses(booking) {
+ expenseBooking=booking;editingExpenseId='';
+ const form=document.getElementById('expenseForm');form.reset();form.elements.namedItem('date').value=operationsDay();
+ document.getElementById('expenseCustomer').textContent=String(booking.name || '')+' · '+String(booking.phone || '');
+ document.getElementById('expenseMessage').textContent='';
+ renderExpenses();document.getElementById('expensesDialog').showModal();
+}
+function renderExpenses() {
+ const body=document.getElementById('expenseHistory');body.replaceChildren();
+ try {
+  const rows=readExpenses(expenseBooking),totals=expenseTotals(expenseBooking,rows);
+  document.getElementById('expenseSummary').textContent='Recorded cost '+paymentMoney(totals.cost)+' · Paid '+paymentMoney(totals.paid)+' · Vendor due '+paymentMoney(totals.due)+' · Estimated profit '+paymentMoney(totals.profit);
+  for(const entry of rows) {
+   const row=document.createElement('tr');
+   for(const value of [entry.date,entry.category+' / '+entry.vendor,paymentMoney(entry.cost),paymentMoney(entry.paid),paymentMoney(entry.cost-entry.paid),entry.note]) {
+    const cell=document.createElement('td');cell.textContent=value;cell.className='p-2 border-b';row.appendChild(cell);
+   }
+   const cell=document.createElement('td');const edit=document.createElement('button');edit.type='button';edit.textContent='Edit';edit.className='text-blue-700 underline p-2';
+   edit.addEventListener('click',()=>{
+    editingExpenseId=entry.id;const form=document.getElementById('expenseForm');
+    for(const key of ['category','vendor','date','note']) form.elements.namedItem(key).value=entry[key] || '';
+    form.elements.namedItem('cost').value=entry.cost/100;form.elements.namedItem('paid').value=entry.paid/100;
+    document.getElementById('expenseMessage').textContent='Editing expense. Update paid amount or other details, then save.';
+   });cell.appendChild(edit);row.appendChild(cell);body.appendChild(row);
+  }
+  if(!rows.length) document.getElementById('expenseMessage').textContent='Add costs to build this trip estimate.';
+ } catch(error) { document.getElementById('expenseMessage').textContent=error.message; }
+}
+document.getElementById('expenseForm').addEventListener('submit',event=>{
+ event.preventDefault();
+ try {
+  if(!expenseBooking.phone || !expenseBooking.timestamp) throw Error('Booking mobile and timestamp required.');
+  const fields=event.target.elements;
+  const entry={id:editingExpenseId || crypto.randomUUID()};
+  for(const key of ['category','vendor','date','note']) entry[key]=fields.namedItem(key).value.trim();
+  for(const key of ['cost','paid']) {
+   const text=fields.namedItem(key).value;
+   if(!/^\d+(\.\d{1,2})?$/.test(text)) throw Error('Use valid amounts with at most two decimal places.');
+   entry[key]=paymentPaise(text);
+  }
+  if(!entry.vendor || !entry.date || entry.cost<=0 || entry.paid>entry.cost) throw Error('Check vendor, date, cost and paid amount.');
+  const rows=readExpenses(expenseBooking),index=rows.findIndex(row=>row.id===entry.id);
+  if(index<0) rows.push(entry);else rows[index]=entry;
+  localStorage.setItem(expenseKey(expenseBooking),JSON.stringify(rows));
+  editingExpenseId='';event.target.reset();fields.namedItem('date').value=operationsDay();renderExpenses();
+  document.getElementById('expenseMessage').textContent='Expense draft saved in this browser. Sheet sync is pending.';
+ } catch(error) { document.getElementById('expenseMessage').textContent='Could not save expense. '+error.message; }
+});
+
+function bookingReportRows(bookings, from, to, status) {
+ if (from && to && from > to) throw Error('From date must be on or before To date.');
+ return bookings.filter(booking => {
+  const date = operationsDay(booking.startDate || '');
+  return (!from || (date && date >= from)) && (!to || (date && date <= to)) && (!status || getBookingStatus(booking) === status);
+ });
+}
+function openBookingReport() {
+ document.getElementById('reportForm').reset();
+ renderBookingReport();
+ document.getElementById('reportDialog').showModal();
+}
+function renderBookingReport() {
+ const body = document.getElementById('reportRows');body.replaceChildren();
+ document.getElementById('reportSummary').textContent = '';
+ const message = document.getElementById('reportMessage');message.textContent = '';
+ try {
+  if (!bookingsLoaded) throw Error('Load bookings first, then reopen this report.');
+  const rows = bookingReportRows(allBookingsData, document.getElementById('reportFrom').value, document.getElementById('reportTo').value, document.getElementById('reportStatus').value);
+  let total=0, advance=0, costs=0, costErrors=0, withExpenses=0;
+  for (const booking of rows) {
+   const booked=paymentPaise(booking.total),received=paymentPaise(booking.advance);
+   total+=booked;advance+=received;
+   let costLabel='No costs entered';
+   try {
+    const expenses=readExpenses(booking);
+    const cost=expenses.reduce((sum,item)=>sum+item.cost,0);costs+=cost;
+    if(expenses.length){withExpenses++;costLabel=paymentMoney(cost);}
+   } catch {costErrors++;costLabel='Could not read costs';}
+   const row=document.createElement('tr');
+   for(const value of [String(booking.name || '')+' / '+String(booking.phone || ''),formatDisplayDate(booking.startDate) || 'Missing date',getBookingStatus(booking),paymentMoney(booked),paymentMoney(received),paymentMoney(booked-received),costLabel]) {
+    const cell=document.createElement('td');cell.textContent=value;cell.className='border-b p-2';row.appendChild(cell);
+   }
+   body.appendChild(row);
+  }
+  document.getElementById('reportSummary').textContent = rows.length+' bookings · Booked '+paymentMoney(total)+' · Sheet advance '+paymentMoney(advance)+' · Balance '+paymentMoney(total-advance)+' · Recorded costs '+paymentMoney(costs);
+  message.textContent = withExpenses+' of '+rows.length+' bookings have recorded expenses. Payment drafts are visible in Payment History. Cancelled bookings retain their Sheet amounts until settlement.' + (costErrors ? ' Costs could not be read for '+costErrors+' bookings, so recorded cost totals are incomplete.' : '');
+  if(!rows.length) message.textContent='No bookings match these filters.';
+ } catch(error) {body.replaceChildren();document.getElementById('reportSummary').textContent='';message.textContent=error.message;}
+}
+document.getElementById('reportForm').addEventListener('submit',event=>{event.preventDefault();renderBookingReport();});
+const taskPrefix = 'baba_task_v1:' + SCRIPT_URL + ':';
+
+function readOfficeTasks() {
+    const tasks = [];
+    for (let index = 0; index < localStorage.length; index++) {
+        const key = localStorage.key(index);
+        if (!key.startsWith(taskPrefix)) continue;
+        const task = JSON.parse(localStorage.getItem(key));
+        if (!task || typeof task.id !== 'string' || typeof task.title !== 'string') throw Error('A saved task could not be read.');
+        tasks.push(task);
+    }
+    return tasks.sort((a, b) => String(a.due).localeCompare(String(b.due)));
+}
+
+function openOfficeHub() {
+    document.getElementById('officeTaskForm').reset();
+    document.getElementById('officeTaskForm').elements.namedItem('due').value = operationsDay();
+    document.getElementById('officeScheduleDate').value = operationsDay();
+    document.getElementById('officeMessage').textContent = '';
+    renderOfficeHub();
+    document.getElementById('officeHubDialog').showModal();
+}
+
+function officeLine(container, text) {
+    const item = document.createElement('div');
+    item.textContent = text;
+    item.className = 'border rounded-lg p-3 my-2 text-sm';
+    container.appendChild(item);
+    return item;
+}
+
+function renderOfficeHub() {
+    const tasks = document.getElementById('officeTasks');
+    const schedule = document.getElementById('officeSchedule');
+    const vendors = document.getElementById('officeVendors');
+    tasks.replaceChildren(); schedule.replaceChildren(); vendors.replaceChildren();
+    try {
+        const taskList = readOfficeTasks();
+        for (const task of taskList) {
+            const label = task.done ? 'Completed' : task.due < operationsDay() ? 'Overdue' : 'Pending';
+            const row = officeLine(tasks, task.title + ' · ' + task.due + ' · ' + (task.staff || 'Unassigned') + ' · ' + label);
+            const button = document.createElement('button');
+            button.type = 'button'; button.className = 'ml-3 underline text-blue-700';
+            button.textContent = task.done ? 'Reopen' : 'Mark done';
+            button.addEventListener('click', () => {
+                try {
+                    const current = JSON.parse(localStorage.getItem(taskPrefix + task.id));
+                    current.done = !current.done;
+                    localStorage.setItem(taskPrefix + task.id, JSON.stringify(current));
+                    renderOfficeHub();
+                } catch (error) { document.getElementById('officeMessage').textContent = error.message; }
+            });
+            row.appendChild(button);
+        }
+        if (!taskList.length) officeLine(tasks, 'No tasks saved yet.');
+        if (!bookingsLoaded) {
+            officeLine(schedule, 'Load bookings, then reopen Operations.');
+            officeLine(vendors, 'Load bookings, then reopen Operations.');
+            return;
+        }
+        const day = document.getElementById('officeScheduleDate').value;
+        const vendorTotals = new Map();
+        let scheduleCount = 0;
+        for (const booking of allBookingsData) {
+            const start = operationsDay(booking.startDate || ''), end = operationsDay(booking.endDate || '');
+            if (day && start && end && start <= day && end >= day && ['Confirmed','Ongoing'].includes(getBookingStatus(booking))) {
+                scheduleCount++;
+                try {
+                    const assigned = readAssignment(booking);
+                    officeLine(schedule, String(booking.name || '') + ' · ' + String(booking.pickup || '') + ' → ' + String(booking.drop || '')
+                        + ' · ' + (assigned ? assigned.registration + ' · ' + assigned.driver + ' · ' + assigned.mobile + ' · Pickup ' + (assigned.time || 'Not set') : 'Vehicle / driver assignment pending'));
+                } catch { officeLine(schedule, String(booking.name || '') + ' · Assignment could not be read.'); }
+            }
+            try {
+                for (const expense of readExpenses(booking)) {
+                    const vendor = String(expense.vendor || 'Unknown').trim();
+                    const key = vendor.toLowerCase();
+                    const total = vendorTotals.get(key) || {name:vendor,cost:0,paid:0};
+                    total.cost += expense.cost; total.paid += expense.paid;
+                    vendorTotals.set(key, total);
+                }
+            } catch { officeLine(vendors, 'Expenses for ' + String(booking.name || '') + ' could not be read. Totals are incomplete.'); }
+        }
+        if (!scheduleCount) officeLine(schedule, 'No active trips on the selected date.');
+        for (const vendor of vendorTotals.values()) officeLine(vendors, vendor.name + ' · Cost ' + paymentMoney(vendor.cost) + ' · Paid ' + paymentMoney(vendor.paid) + ' · Due ' + paymentMoney(vendor.cost - vendor.paid));
+        if (!vendorTotals.size) officeLine(vendors, 'Add vendor costs through Expenses / Profit.');
+    } catch (error) { document.getElementById('officeMessage').textContent = error.message; }
+}
+
+document.getElementById('officeTaskForm').addEventListener('submit', event => {
+    event.preventDefault();
+    try {
+        const fields = event.target.elements;
+        const task = {id:crypto.randomUUID(),title:fields.namedItem('title').value.trim(),staff:fields.namedItem('staff').value.trim(),due:fields.namedItem('due').value,done:false};
+        if (!task.title || !task.due) throw Error('Enter a task and due date.');
+        localStorage.setItem(taskPrefix + task.id, JSON.stringify(task));
+        event.target.reset(); fields.namedItem('due').value = operationsDay();
+        document.getElementById('officeMessage').textContent = 'Task saved in this browser.';
+        renderOfficeHub();
+    } catch (error) { document.getElementById('officeMessage').textContent = 'Could not save task. ' + error.message; }
+});
+
+function downloadDraftBackup() {
+    try {
+        const prefixes = ['baba_booking_edit_v1:','baba_payment_drafts_v1:','baba_status_v1:','baba_lead_notes_v1:','baba_quote_v1:','baba_assignment_v1:','baba_expenses_v1:','baba_task_v1:'];
+        const entries = [];
+        for (let index = 0; index < localStorage.length; index++) {
+            const key = localStorage.key(index);
+            if (prefixes.some(prefix => key.startsWith(prefix)) || key === 'baba_completed_bookings_manual') entries.push({key,value:localStorage.getItem(key)});
+        }
+        const backup = {format:'baba-crm-drafts',version:1,createdAt:new Date().toISOString(),entries};
+        const url = URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}));
+        const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'Baba_CRM_Drafts_' + operationsDay() + '.json'; anchor.click();
+        setTimeout(() => URL.revokeObjectURL(url),1000);
+        document.getElementById('officeMessage').textContent = entries.length + ' browser draft records exported. Keep this file for the later Sheet migration.';
+    } catch (error) { document.getElementById('officeMessage').textContent = 'Backup failed. ' + error.message; }
+}
+
+function quoteToBookingForm() {
+    try {
+        const quote = quoteValues();
+        if (!confirm('Fill the new booking form from this quotation? Any unsaved new booking form details will be replaced.')) return;
+        document.getElementById('bookingForm').reset();
+        const mapping = {custName:quote.customer,custPhone:quote.phone,startDate:quote.start,endDate:quote.end,totalAmount:quote.amount,advanceAmount:'0',tourRoute:quote.itinerary};
+        for (const [id,value] of Object.entries(mapping)) document.getElementById(id).value = value;
+        const vehicle = document.getElementById('vehicleSelect');
+        const match = [...vehicle.options].find(option => option.value.toLowerCase() === quote.vehicle.toLowerCase());
+        if (match) vehicle.value = match.value;
+        updateDriverNight();
+        document.getElementById('quotesDialog').close();
+        openEntry('booking');
+        alert('Quotation details filled. Check vehicle, pickup, drop and all booking fields before Save Booking. Saving sends the booking to your existing Sheet.');
+    } catch (error) { document.getElementById('quoteMessage').textContent = error.message; }
+}
+
+function compactBookingActions(row) {
+    const cell = row.lastElementChild;
+    const menu = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.textContent = 'Booking actions';
+    summary.className = 'cursor-pointer rounded border px-3 py-2 font-semibold text-blue-900';
+    menu.appendChild(summary);
+    const actions = document.createElement('div'); actions.className = 'space-y-1 mt-2';
+    while (cell.firstChild) actions.appendChild(cell.firstChild);
+    menu.appendChild(actions); cell.appendChild(menu);
+}
+</script>
+</body>
+</html>
