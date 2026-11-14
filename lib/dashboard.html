@@ -1170,7 +1170,7 @@ function fetchBookings() {
                         <button onclick='sendWhatsApp(${JSON.stringify(b)})' class="block w-full text-center bg-green-600 text-white px-2 py-0.5 rounded font-semibold cursor-pointer">WhatsApp</button>
                         <button onclick='generatePDF(${JSON.stringify(b)})' class="block w-full text-center bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold hover:bg-blue-200 cursor-pointer">Receipt</button>
                         <button onclick='openVyaparGstModal(${JSON.stringify(b)})' class="block w-full text-center bg-purple-600 text-white px-2 py-0.5 rounded font-semibold hover:bg-purple-700 cursor-pointer">GST Invoice</button>
-                        <button onclick="deleteBooking('${b.phone}', '${b.timestamp}')" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold hover:bg-red-200 cursor-pointer">Delete</button>
+                        <button onclick="deleteCrmBooking(this, '${b.bookingId}')" class="block w-full text-center bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold hover:bg-red-200 cursor-pointer">Delete</button>
                     </td>
                 `;
                 addBookingEditButton(row, b);
@@ -2488,6 +2488,36 @@ function compactBookingActions(row) {
     const actions = document.createElement('div'); actions.className = 'space-y-1 mt-2';
     while (cell.firstChild) actions.appendChild(cell.firstChild);
     menu.appendChild(actions); cell.appendChild(menu);
+}
+</script>
+<script>
+async function deleteCrmBooking(button, bookingId) {
+    if (!confirm(`Booking ${bookingId} को नई CRM Sheet से हमेशा के लिए हटाएँ?`)) return;
+
+    button.disabled = true;
+    try {
+        const response = await fetch('/api/dashboard?action=delete', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ booking_id: bookingId })
+        });
+        const result = await response.json();
+
+        if (result.status === 'payments_exist') {
+            alert('इस बुकिंग में advance या payment दर्ज है। बुकिंग हटाई नहीं गई।');
+            return;
+        }
+        if (!response.ok || result.status !== 'deleted') {
+            alert(result.error || 'Delete की पुष्टि नहीं हुई। लिस्ट रीफ़्रेश करके देखें।');
+            return;
+        }
+        fetchBookings();
+    } catch {
+        alert('Delete की पुष्टि नहीं हुई। दोबारा Delete करने से पहले लिस्ट रीफ़्रेश करें।');
+    } finally {
+        button.disabled = false;
+    }
 }
 </script>
 </body>
