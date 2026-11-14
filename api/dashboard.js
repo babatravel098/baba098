@@ -5,7 +5,7 @@ const { GoogleAuth, OAuth2Client } = require('google-auth-library');
 const clientId = '679114631889-9r6mtbtm8el7t87s4e3m1aii2g0nj7gk.apps.googleusercontent.com';
 const allowedEmail = 'babatourandtravel098@gmail.com';
 const sheetId = '1I6cFI9mU3z8EPc5cRxNZy25cj3E4sO6xVnXHBFqUQsE';
-const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbzXu77bmooy2cXFh7vCPr5BuGZ0N25ZknBdyo20agSCM5JzmnlIfWGReP1HX4O9RUmTsA/exec';
+const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbw4OfLzT9WCE4eQXPblPO1pu1br4U716qqIID_IBn3nsGjfBaE4etem0coCpY1tWUl5/exec';
 
 const google = new OAuth2Client(clientId);
 
@@ -43,29 +43,30 @@ async function deleteBooking(req, res) {
     });
 
     if (!response.ok) {
-      return sendJson(res, 502, { error: 'Could not confirm deletion. Refresh the booking list before retrying.' });
+      return sendJson(res, 502, {
+        error: 'Could not confirm deletion. Refresh the booking list before retrying.'
+      });
     }
 
     const result = await response.json();
     switch (result.status) {
       case 'deleted':
         return sendJson(res, 200, { status: 'deleted', booking_id: bookingId });
-      case 'payments_exist':
-        return sendJson(res, 409, {
-          status: 'payments_exist',
-          error: 'This booking has a payment record and was not deleted.'
-        });
       case 'not_found':
         return sendJson(res, 404, { error: 'Booking not found. Refresh the booking list.' });
       case 'duplicate_id':
         return sendJson(res, 409, { error: 'This booking ID appears more than once in the Sheet.' });
       case 'busy':
         return sendJson(res, 503, { error: 'The Sheet is busy. Try again shortly.' });
+      case 'unauthorized':
+        return sendJson(res, 502, { error: 'Apps Script rejected the Delete credentials.' });
       default:
         return sendJson(res, 502, { error: 'Apps Script could not confirm the deletion.' });
     }
   } catch {
-    return sendJson(res, 502, { error: 'Could not confirm deletion. Refresh the booking list before retrying.' });
+    return sendJson(res, 502, {
+      error: 'Could not confirm deletion. Refresh the booking list before retrying.'
+    });
   }
 }
 
