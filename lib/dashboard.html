@@ -2672,7 +2672,7 @@ function refreshItineraryPhotos() {
         const img = new Image();
         img.src = photo.data;
         img.alt = '';
-        img.className = 'w-full h-20 object-cover rounded';
+        img.className = 'w-full h-20 object-contain rounded';
         const input = document.createElement('input');
         input.type = 'checkbox';
         input.value = photo.id;
@@ -2820,19 +2820,17 @@ async function downloadQuote() {
             }
             y += 2;
         };
-        const crop = async (id, x, top, width, height) => {
+        const fitPhoto = async (id, x, top, width, height) => {
             const photo = itineraryLibrary.photos.find(item => item.id === id);
-            if (!photo) return;
+            if (!photo) return 0;
             const image = new Image();
             image.src = photo.data;
             await image.decode();
-            const canvas = document.createElement('canvas');
-            canvas.width = Math.round(width * 6);
-            canvas.height = Math.round(height * 6);
-            const scale = Math.max(canvas.width / image.width, canvas.height / image.height);
-            const w = image.width * scale, h = image.height * scale;
-            canvas.getContext('2d').drawImage(image, (canvas.width-w)/2, (canvas.height-h)/2,w,h);
-            pdf.addImage(canvas.toDataURL('image/jpeg',.85), 'JPEG', x, top, width, height);
+            const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight);
+            const fittedWidth = image.naturalWidth * scale;
+            const fittedHeight = image.naturalHeight * scale;
+            pdf.addImage(photo.data, 'JPEG', x + (width - fittedWidth) / 2, top, fittedWidth, fittedHeight);
+            return fittedHeight;
         };
         const featuredPhotos = [...new Set([q.cover,...q.gallery].filter(Boolean))].filter(id =>
             itineraryLibrary.photos.some(photo => photo.id === id));
@@ -2847,8 +2845,7 @@ async function downloadQuote() {
         write('Prepared for ' + q.customer, 12);
         if (featuredPhotos.length) {
             if (y + 57 > 275) page();
-            await crop(featuredPhotos[0],18,y,174,52);
-            y += 57;
+            y += await fitPhoto(featuredPhotos[0],18,y,174,52) + 5;
         }
         section('Your Journey');
         write('Pickup: ' + q.pickupLocation + '   |   Drop: ' + q.dropLocation, 12, true);
@@ -2884,8 +2881,8 @@ async function downloadQuote() {
         for (const [i,day] of q.days.entries()) {
             const hasPhoto = itineraryLibrary.photos.some(photo => photo.id === day.photo);
             pdf.setFont('helvetica','normal'); pdf.setFontSize(11);
-            if (y + (hasPhoto ? 75 : 32) > 275) page();
-            if (hasPhoto) { await crop(day.photo,18,y,174,41); y += 46; }
+            if (y + (hasPhoto ? 96 : 32) > 275) page();
+            if (hasPhoto) { y += await fitPhoto(day.photo,18,y,174,62) + 9; }
             pdf.setFillColor(32,137,123); pdf.roundedRect(18,y-6,27,8,2,2,'F');
             pdf.setFont('helvetica','bold'); pdf.setFontSize(11); pdf.setTextColor(255,255,255);
             pdf.text('DAY ' + String(i+1).padStart(2,'0'),21,y-0.5);
@@ -2908,7 +2905,7 @@ async function downloadQuote() {
                 if (offset === 1) section('Trip Gallery', 68);
                 if (y + 49 > 275) page();
                 for (const [column,id] of featuredPhotos.slice(offset,offset+3).entries()) {
-                    await crop(id,18+59*column,y,55,43);
+                    await fitPhoto(id,18+59*column,y,55,43);
                 }
                 y += 49;
             }
