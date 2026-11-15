@@ -602,7 +602,8 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 
 <label class="block">Rooming and sharing<input name="rooming" class="block w-full border rounded p-2" placeholder="Room count, double, triple or quad sharing"></label>
 <label class="block">Regional transport<input name="specialTransport" class="block w-full border rounded p-2" placeholder="Separate vehicle for Mustang, if quoted"></label>
-<label class="block">Cancellation policy<textarea name="cancellation" rows="5" class="block w-full border rounded p-2"></textarea></label>
+<label class="block">Cancellation schedule<select class="block w-full rounded border p-2" onchange="if(this.value) this.form.elements.namedItem('cancellation').value=quoteCancellationPolicies[this.value]"><option value="">Choose a schedule</option><option value="departure">Departure-based schedule</option><option value="arrival">Arrival-based schedule</option></select></label>
+<label class="block">Payment schedule<select class="block w-full rounded border p-2" onchange="if(this.value) this.form.elements.namedItem('terms').value=quotePaymentPolicies[this.value]"><option value="">Choose a schedule</option><option value="reservation">Reservation instalments (20/30/30/20)</option><option value="pickup">Advance plus pickup and mid-tour balance</option></select></label><label class="block">Cancellation policy<textarea name="cancellation" rows="5" class="block w-full border rounded p-2"></textarea></label>
 <label class="block">Important travel notes<textarea name="travelNotes" rows="5" class="block w-full border rounded p-2"></textarea></label>
 <label class="block">Verified payment instructions (optional)<textarea name="bankDetails" rows="4" class="block w-full border rounded p-2"></textarea></label>
 <label class="block text-sm">Payment terms<textarea rows="3" name="terms" class="block w-full border rounded p-2 mt-1"></textarea></label></details><div class="sm:col-span-2 flex gap-2 flex-wrap"><button class="bg-blue-700 text-white rounded p-2" type="submit">Save Draft</button><button class="border rounded p-2" type="button" onclick="downloadQuote()">Download PDF</button><button class="border rounded p-2" type="button" onclick="quoteToBookingForm()">Fill Booking Form</button><button class="border rounded p-2" type="button" onclick="document.getElementById('quotesDialog').close()">Close</button></div></form><p id="quoteMessage" role="status"></p></dialog>
@@ -2801,14 +2802,16 @@ async function downloadQuote() {
         let y;
         const page = title => {
             pdf.addPage();
+            pdf.setFillColor(247,250,249); pdf.rect(0,0,210,297,'F');
             pdf.setFillColor(19,42,60); pdf.rect(0,0,210,8,'F');
+            pdf.setFillColor(32,137,123); pdf.rect(0,8,210,1,'F');
             y = 22;
             if (title) write(title, 22, true);
         };
         const write = (value, size = 11, bold = false) => {
             pdf.setFont('helvetica', bold ? 'bold' : 'normal');
             pdf.setFontSize(size);
-            pdf.setTextColor(20,38,57);
+            pdf.setTextColor(...(bold ? [11,105,96] : [20,38,57]));
             for (const line of pdf.splitTextToSize(String(value).replaceAll('→','-').replaceAll('₹','INR '), 174)) {
                 if (y > 275) page();
                 pdf.text(line, 18, y);
@@ -2898,6 +2901,10 @@ async function downloadQuote() {
         ]) {
             if(value) { page(title); write(value); }
         }
+        page('Your Travel Team');
+        write('Shubham Kumar', 18, true);
+        write('Sales Executive | Baba Tour & Travels');
+        write('8726667104 / 9415966902\nbabatourandtravel098@gmail.com\nwww.babatourandtravel.com\nRailway Station Road, Gorakhpur 273001, Uttar Pradesh');
         for(let i=2;i<=pdf.getNumberOfPages();i++){
             pdf.setPage(i); pdf.setTextColor(80,101,112); pdf.setFontSize(9);
             pdf.text('Baba Tour & Travels | 8726667104',18,288);
@@ -2958,6 +2965,15 @@ const nepalPackages = [
         return {title, route, activities, stay};
     })
 }));
+const quoteCancellationCommon = 'Please submit cancellation requests in writing. Requests received on Sundays are processed on the next working day. Payments for the 20 December to 5 January holiday period are non-refundable. After departure, any refund depends on amounts recoverable from suppliers. Unused accommodation, chartered transport and missed meals are not refundable.';
+const quoteCancellationPolicies = {
+    departure: 'Minimum cancellation charge: 10% or INR 3,000 per person per tour, whichever is higher.\n45 to 31 days before departure: 25% of total tour cost.\n30 to 16 days: 50%.\n15 to 5 days: 75%.\n4 days or fewer, same-day cancellation or no-show: 100%.\n' + quoteCancellationCommon,
+    arrival: '45 days before arrival: 10% of tour cost.\n15 days before arrival: 25%.\n7 days before arrival: 50%.\nWithin 48 hours of arrival or no-show: no refund.\n' + quoteCancellationCommon
+};
+const quotePaymentPolicies = {
+    reservation: '20% at reservation.\n30% after vouchers are issued.\n30% 20 days before arrival.\n20% on arrival or 3 days before arrival, as agreed at booking.\nDebit or credit card payment is available through the confirmed payment link.',
+    pickup: 'Booking is confirmed after receipt of the agreed advance and confirmation of availability.\n70% of the remaining balance is due on pickup day. The final 30% is due midway through the tour.'
+};
 const nepalCustomKey = 'baba_nepal_packages_v1';
 const nepalFields = ['nepalKathmandu','nepalPokhara','nepalVehicle','nepalMeal','nepalJanakpur','nepalJomsom','nepalChitwan'];
 const nepalForm = quoteControl('quoteForm');
@@ -3018,11 +3034,13 @@ quoteControl('loadNepalPackage').addEventListener('click', () => {
     if (!pack) return nepalStatus('Choose a package first.');
     if (quoteControl('tripDays').childElementCount && !confirm('Replace the current trip days and package details?')) return;
     for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms','pricing','amount']) nepalValue(key).value = key === 'amount' || key === 'pricing' ? '' : (pack[key] || '');
-    nepalValue('cancellation').value = pack.cancellation || 'Send cancellation requests in writing. Applicable charges will be stated in the confirmed booking terms. Any refund after travel starts is subject to amounts recoverable from suppliers. Unused rooms, chartered transport and missed meals are subject to supplier terms.';
-    nepalValue('travelNotes').value = pack.travelNotes || 'Verify current border ID and currency requirements before departure.\nVehicle is provided for the agreed itinerary. Confirm air-conditioning and regional vehicle arrangements before booking.\nIf a named hotel is unavailable, a similar category may be offered for approval.\nSightseeing order may change with weather, road conditions and opening times.';
+    nepalValue('terms').value = pack.termsOverride || quotePaymentPolicies.reservation;
+    nepalValue('cancellation').value = pack.cancellation || quoteCancellationPolicies.departure;
+    nepalValue('travelNotes').value = pack.travelNotes || 'Carry a valid passport or voter ID where accepted. Check current document rules for each traveller before departure.\nConfirm permitted Indian currency denominations with official authorities before travel.\nVehicle service is non-AC and limited to the agreed itinerary.\nIf the requested hotel is unavailable, accommodation of a similar category may be offered.\nSightseeing order may change with road conditions, weather or opening times.';
     nepalValue('rooming').value = pack.rooming || '';
     nepalValue('specialTransport').value = pack.specialTransport || '';
     nepalValue('bankDetails').value = '';
+    for (const key of ['pickupLocation','dropLocation']) nepalValue(key).value = pack[key] || 'Gorakhpur';
     resetItinerary(pack);
     resetNepalOptions(pack.nepalOptions);
     quoteControl('nepalPackage').value = pack.id;
@@ -3035,7 +3053,8 @@ quoteControl('saveNepalPackage').addEventListener('click', () => {
     try {
         const saved = nepalCustomPackages();
         const packageDetails = {id:crypto.randomUUID(), ...fields, nepalOptions:getNepalOptions()};
-        for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms']) packageDetails[key] = nepalValue(key).value.trim();
+        for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms','rooming','specialTransport','cancellation','travelNotes','pickupLocation','dropLocation']) packageDetails[key] = nepalValue(key).value.trim();
+        packageDetails.termsOverride = packageDetails.terms;
         localStorage.setItem(nepalCustomKey,JSON.stringify([...saved,packageDetails]));
         refreshNepalPackages();
         quoteControl('nepalPackage').value = packageDetails.id;
