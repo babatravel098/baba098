@@ -550,14 +550,35 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <label class="block">Discussion notes<textarea name="notes" rows="5" maxlength="5000" class="block w-full border rounded p-2"></textarea></label>
 <button class="bg-blue-700 text-white rounded px-4 py-2" type="submit">Save Lead Draft</button><button class="border rounded px-4 py-2" type="button" onclick="document.getElementById('leadNotesDialog').close()">Close</button>
 </form><p id="leadNotesMessage" role="status" class="text-sm my-3"></p></dialog>
-<dialog id="quotesDialog" aria-labelledby="quotesTitle" style="width:min(900px,96vw);max-height:90vh;border:0;border-radius:16px;padding:24px"><h2 id="quotesTitle" class="font-bold text-xl">Tour Quotation &amp; Itinerary</h2><p class="text-sm my-2">Drafts are saved in this browser. Use English text for PDF export and review all details before sharing.</p><label>Saved quotations<select id="quoteSaved" class="border rounded p-2 m-2" onchange="loadQuote(this.value)"></select></label><button type="button" onclick="newQuote()" class="border p-2 rounded">New quotation</button><form id="quoteForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3"><label class="block text-sm">Customer name<input type="text" name="customer" required class="block w-full border rounded p-2 mt-1"></label>
+<dialog id="quotesDialog" aria-labelledby="quotesTitle" style="width:min(900px,96vw);max-height:90vh;border:0;border-radius:16px;padding:24px"><h2 id="quotesTitle" class="font-bold text-xl">Tour Quotation &amp; Itinerary</h2><p class="text-sm my-2">Build a customer proposal from saved trip days, hotels, vehicles and photos. Drafts and libraries are stored in this browser.</p><label>Saved quotations<select id="quoteSaved" class="border rounded p-2 m-2" onchange="loadQuote(this.value)"></select></label><button type="button" onclick="newQuote()" class="border p-2 rounded">New quotation</button><form id="quoteForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3"><label class="block text-sm">Customer name<input type="text" name="customer" required class="block w-full border rounded p-2 mt-1"></label>
 <label class="block text-sm">Mobile<input type="tel" name="phone" class="block w-full border rounded p-2 mt-1"></label>
 <label class="block text-sm">Travel start<input type="date" name="start" required class="block w-full border rounded p-2 mt-1"></label>
 <label class="block text-sm">Travel end<input type="date" name="end" required class="block w-full border rounded p-2 mt-1"></label>
 <label class="block text-sm">Passengers<input type="number" name="pax" required min="1" step="1" class="block w-full border rounded p-2 mt-1"></label>
-<label class="block text-sm">Vehicle<input type="text" name="vehicle" class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Vehicle<input type="text" name="vehicle" list="tripVehicles" class="block w-full border rounded p-2 mt-1"></label>
 <label class="block text-sm">Hotels / rooms / meals<textarea rows="3" name="hotel" class="block w-full border rounded p-2 mt-1"></textarea></label>
-<label class="block text-sm">Day-wise itinerary<textarea rows="3" name="itinerary" class="block w-full border rounded p-2 mt-1"></textarea></label>
+<div class="sm:col-span-2 grid gap-3 rounded-xl border bg-slate-50 p-4">
+  <h3 class="font-bold">Trip details and reusable options</h3>
+  <label>Package title<input name="title" class="block w-full rounded border p-2" placeholder="Complete Meghalaya"></label>
+  <label>Trip highlights<textarea name="highlights" class="block w-full rounded border p-2" placeholder="Tour type, pickup, drop, best season and key experiences"></textarea></label>
+  <label>Pricing options and extras<textarea name="pricing" class="block w-full rounded border p-2" placeholder="Room sharing, per-person prices, offers and extras"></textarea></label>
+  <div class="flex flex-wrap gap-2">
+    <button type="button" class="border rounded p-2" onclick="saveItineraryOption('hotel')">Save hotel option</button>
+    <button type="button" class="border rounded p-2" onclick="saveItineraryOption('vehicle')">Save vehicle option</button>
+    <button type="button" class="border rounded p-2" onclick="addItineraryDay()">Add trip day</button>
+    <select id="tripTemplates" aria-label="Day templates" class="border rounded p-2"></select>
+    <button type="button" class="border rounded p-2" onclick="useItineraryTemplate()">Add saved day</button>
+  </div>
+  <label>Saved hotel <select id="tripHotelChoice" class="border rounded p-2" onchange="if(this.value) this.form.elements.namedItem('hotel').value=this.value"></select></label><datalist id="tripHotels"></datalist><datalist id="tripVehicles"></datalist>
+  <div id="tripDays" class="grid gap-3"></div>
+  <details class="border rounded-lg bg-white p-3">
+    <summary class="font-semibold cursor-pointer">Photo Library</summary>
+    <label class="block my-2">Add destination, hotel or vehicle photos<input id="tripPhotoUpload" type="file" accept="image/*" multiple class="block mt-2"></label>
+    <label>Cover photo <select id="tripCover" class="border rounded p-2"></select></label>
+    <div id="tripGallery" class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3"></div>
+  </details>
+</div>
+<label class="block text-sm">Additional itinerary notes<textarea rows="3" name="itinerary" class="block w-full border rounded p-2 mt-1"></textarea></label>
 <label class="block text-sm">Inclusions<textarea rows="3" name="inclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
 <label class="block text-sm">Exclusions<textarea rows="3" name="exclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
 <label class="block text-sm">Total package amount (INR)<input type="number" name="amount" required min="0" step="0.01" class="block w-full border rounded p-2 mt-1"></label>
@@ -2159,11 +2180,12 @@ document.getElementById('leadNotesForm').addEventListener('submit', event => {
     } catch(error) { document.getElementById('leadNotesMessage').textContent = 'Could not save draft. ' + error.message; }
 });
 
-const quoteFieldNames = ["customer","phone","start","end","pax","vehicle","hotel","itinerary","inclusions","exclusions","amount","terms"];
+const quoteFieldNames = ["customer","phone","start","end","pax","vehicle","hotel","itinerary","inclusions","exclusions","amount","terms","title","highlights","pricing"];
 let activeQuoteId = '';
 const quotePrefix = 'baba_quote_v1:' + SCRIPT_URL + ':';
 function newQuote() {
  document.getElementById('quoteForm').reset();
+ resetItinerary();
  activeQuoteId = crypto.randomUUID();
  document.getElementById('quoteSaved').value = '';
  document.getElementById('quoteMessage').textContent = 'New quotation draft';
@@ -2187,6 +2209,7 @@ function loadQuote(id) {
   const q=JSON.parse(localStorage.getItem(quotePrefix+id));
   if(!q || q.id!==id) throw Error('Draft unavailable');
   for(const key of quoteFieldNames) document.getElementById('quoteForm').elements.namedItem(key).value=q[key] || '';
+  resetItinerary(q);
   activeQuoteId=id;
   document.getElementById('quoteMessage').textContent='Saved draft loaded';
  } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
@@ -2198,7 +2221,7 @@ function quoteValues() {
  for(const key of quoteFieldNames) q[key]=form.elements.namedItem(key).value.trim();
  if(!q.customer || q.end<q.start) throw Error('Check customer name and travel dates.');
  if(!Number.isInteger(Number(q.pax)) || Number(q.pax)<1 || !Number.isFinite(Number(q.amount)) || Number(q.amount)<0) throw Error('Check passengers and amount.');
- return q;
+ return { ...q, ...itineraryValues() };
 }
 document.getElementById('quoteForm').addEventListener('submit',event=>{
  event.preventDefault();
@@ -2209,32 +2232,7 @@ document.getElementById('quoteForm').addEventListener('submit',event=>{
   document.getElementById('quoteMessage').textContent='Quotation draft saved in this browser.';
  } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
 });
-function downloadQuote() {
- try {
-  const q=quoteValues();
-  if(!window.jspdf) throw Error('PDF library is still loading. Try again.');
-  const doc=new window.jspdf.jsPDF(); let y=20;
-  function write(text,size) {
-   doc.setFontSize(size);
-   const lines=doc.splitTextToSize(String(text),175);
-   for(const line of lines) { if(y>277){doc.addPage();y=20;} doc.text(line,17,y);y+=6; }
-   y+=4;
-  }
-  write('BABA TOUR & TRAVELS, GORAKHPUR',16);
-  write('TOUR QUOTATION',13);
-  write('Customer: '+q.customer+' | Mobile: '+q.phone,11);
-  write('Travel: '+q.start+' to '+q.end+' | Passengers: '+q.pax,11);
-  write('Vehicle: '+q.vehicle,11);
-  write('Package amount: INR '+Number(q.amount).toLocaleString('en-IN',{minimumFractionDigits:2}),13);
-  for(const [key,title] of [['hotel','HOTELS / ROOMS / MEALS'],['itinerary','DAY-WISE ITINERARY'],['inclusions','INCLUSIONS'],['exclusions','EXCLUSIONS'],['terms','TERMS']]) {
-   if(q[key]) { write(title,12);write(q[key],11); }
-  }
-  doc.save('Tour_Quotation_'+q.customer.replace(/[^a-z0-9]/gi,'_')+'.pdf');
- } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
-}
 
-let assignmentBooking = null;
-const assignmentFields = ['registration','driver','mobile','time','notes'];
 function assignmentKey(booking) {
  return 'baba_assignment_v1:' + JSON.stringify([SCRIPT_URL, String(booking.phone || ''), String(booking.timestamp || '')]);
 }
@@ -2576,6 +2574,237 @@ async function deleteCrmBooking(button, bookingId) {
     } finally {
         button.disabled = false;
     }
+}
+</script>
+<script>
+const itineraryLibraryKey = 'baba_itinerary_library_v1';
+const quoteControl = id => document.getElementById(id);
+const itineraryLibrary = JSON.parse(localStorage.getItem(itineraryLibraryKey) || 'null') ||
+    {hotel: [], vehicle: [], templates: [], photos: []};
+
+function storeItineraryLibrary() {
+    localStorage.setItem(itineraryLibraryKey, JSON.stringify(itineraryLibrary));
+}
+function itineraryMessage(message) {
+    quoteControl('quoteMessage').textContent = message;
+}
+function saveItineraryOption(kind) {
+    const value = quoteControl('quoteForm').elements.namedItem(kind).value.trim();
+    if (!value) return itineraryMessage('Enter the ' + kind + ' details first.');
+    if (itineraryLibrary[kind].includes(value)) return itineraryMessage('Already saved.');
+    itineraryLibrary[kind].push(value);
+    try { storeItineraryLibrary(); refreshItineraryLibrary(); itineraryMessage('Option saved.'); }
+    catch { itineraryLibrary[kind].pop(); itineraryMessage('Browser storage is full or unavailable.'); }
+}
+function setItineraryOptions(select, items, placeholder) {
+    const current = select.value;
+    select.replaceChildren(new Option(placeholder, ''), ...items.map(([id, name]) => new Option(name, id)));
+    select.value = items.some(([id]) => id === current) ? current : '';
+}
+function refreshItineraryLibrary() {
+    for (const [kind, id] of [['hotel','tripHotels'], ['vehicle','tripVehicles']]) {
+        quoteControl(id).replaceChildren(...itineraryLibrary[kind].map(value => new Option(value, value)));
+    }
+    setItineraryOptions(quoteControl('tripHotelChoice'), itineraryLibrary.hotel.map(value => [value, value]), 'Choose a saved hotel');
+    setItineraryOptions(quoteControl('tripTemplates'), itineraryLibrary.templates.map(day => [day.id, day.title]), 'Choose a saved day');
+    refreshItineraryPhotos();
+}
+function refreshItineraryPhotos() {
+    const gallery = quoteControl('tripGallery');
+    const selected = new Set([...gallery.querySelectorAll('input:checked')].map(input => input.value));
+    gallery.replaceChildren();
+    for (const photo of itineraryLibrary.photos) {
+        const label = document.createElement('label');
+        label.className = 'rounded border overflow-hidden text-xs p-1 break-all';
+        const img = new Image();
+        img.src = photo.data;
+        img.alt = '';
+        img.className = 'w-full h-20 object-cover rounded';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.value = photo.id;
+        input.checked = selected.has(photo.id);
+        label.append(img, input, ' ' + photo.name);
+        gallery.append(label);
+    }
+    const choices = itineraryLibrary.photos.map(photo => [photo.id, photo.name]);
+    setItineraryOptions(quoteControl('tripCover'), choices, 'No cover photo');
+    quoteControl('tripDays').querySelectorAll('select').forEach(select => setItineraryOptions(select, choices, 'No day photo'));
+}
+quoteControl('tripPhotoUpload').addEventListener('change', async event => {
+    const input = event.currentTarget;
+    input.disabled = true;
+    let saved = 0;
+    try {
+        for (const file of input.files) {
+            const image = await createImageBitmap(file, {imageOrientation: 'from-image'});
+            const canvas = document.createElement('canvas');
+            const scale = Math.min(1, 1200 / Math.max(image.width, image.height));
+            canvas.width = Math.max(1, Math.round(image.width * scale));
+            canvas.height = Math.max(1, Math.round(image.height * scale));
+            canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+            image.close();
+            itineraryLibrary.photos.push({id: crypto.randomUUID(), name: file.name, data: canvas.toDataURL('image/jpeg', .8)});
+            try { storeItineraryLibrary(); } catch (error) { itineraryLibrary.photos.pop(); throw error; }
+            saved++;
+        }
+        itineraryMessage(saved + ' photos saved.');
+    } catch {
+        itineraryMessage(saved + ' photos saved. Check the image format and available browser storage.');
+    } finally {
+        refreshItineraryPhotos();
+        input.value = '';
+        input.disabled = false;
+    }
+});
+function resetItinerary(quote = {}) {
+    quoteControl('tripDays').replaceChildren();
+    quoteControl('tripGallery').replaceChildren();
+    refreshItineraryLibrary();
+    quoteControl('tripCover').value = quote.cover || '';
+    for (const input of quoteControl('tripGallery').querySelectorAll('input')) {
+        input.checked = (quote.gallery || []).includes(input.value);
+    }
+    (quote.days || []).forEach(addItineraryDay);
+}
+function readItineraryDay(card) {
+    const field = key => card.querySelector('[data-day="' + key + '"]').value.trim();
+    return {title: field('title'), route: field('route'), activities: field('activities'), stay: field('stay'), meals: field('meals'), photo: field('photo')};
+}
+function itineraryValues() {
+    return {
+        days: [...quoteControl('tripDays').children].map(readItineraryDay),
+        cover: quoteControl('tripCover').value,
+        gallery: [...quoteControl('tripGallery').querySelectorAll('input:checked')].map(input => input.value)
+    };
+}
+function addItineraryDay(day = {}) {
+    const card = document.createElement('section');
+    card.className = 'grid gap-2 border rounded-lg bg-white p-3';
+    card.innerHTML = '<label>Day title<input data-day="title" required class="block w-full border rounded p-2"></label>' +
+        '<label>Route and stops<input data-day="route" class="block w-full border rounded p-2"></label>' +
+        '<label>Activities and timings<textarea data-day="activities" rows="4" class="block w-full border rounded p-2" placeholder="One activity per line"></textarea></label>' +
+        '<label>Hotel and room details<input data-day="stay" list="tripHotels" class="block w-full border rounded p-2"></label>' +
+        '<label>Meals<input data-day="meals" class="block w-full border rounded p-2"></label>' +
+        '<label>Day photo <select data-day="photo" class="border rounded p-2"></select></label>' +
+        '<div class="flex flex-wrap gap-2"></div>';
+    quoteControl('tripDays').append(card);
+    refreshItineraryPhotos();
+    for (const field of card.querySelectorAll('[data-day]')) field.value = day[field.dataset.day] || '';
+    for (const [label, action] of [
+        ['Move up', () => card.previousElementSibling?.before(card)],
+        ['Move down', () => card.nextElementSibling?.after(card)],
+        ['Remove day', () => card.remove()],
+        ['Save as template', () => {
+            const template = readItineraryDay(card);
+            if (!template.title) return itineraryMessage('Enter a day title first.');
+            itineraryLibrary.templates.push({...template, id: crypto.randomUUID()});
+            try { storeItineraryLibrary(); refreshItineraryLibrary(); itineraryMessage('Day template saved.'); }
+            catch { itineraryLibrary.templates.pop(); itineraryMessage('Browser storage is full or unavailable.'); }
+        }]
+    ]) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'border rounded p-2';
+        button.textContent = label;
+        button.addEventListener('click', action);
+        card.lastElementChild.append(button);
+    }
+}
+function useItineraryTemplate() {
+    const day = itineraryLibrary.templates.find(item => item.id === quoteControl('tripTemplates').value);
+    if (day) addItineraryDay(day);
+}
+async function downloadQuote() {
+    try {
+        const q = quoteValues();
+        if (!window.jspdf) throw Error('PDF library is still loading. Try again.');
+        const pdf = new window.jspdf.jsPDF();
+        let y;
+        const page = title => {
+            pdf.addPage();
+            pdf.setFillColor(19,42,60); pdf.rect(0,0,210,8,'F');
+            y = 22;
+            if (title) write(title, 22, true);
+        };
+        const write = (value, size = 11, bold = false) => {
+            pdf.setFont('helvetica', bold ? 'bold' : 'normal');
+            pdf.setFontSize(size);
+            pdf.setTextColor(20,38,57);
+            for (const line of pdf.splitTextToSize(String(value).replaceAll('→','-').replaceAll('₹','INR '), 174)) {
+                if (y > 275) page();
+                pdf.text(line, 18, y);
+                y += size * .48;
+            }
+            y += 4;
+        };
+        const crop = async (id, x, top, width, height) => {
+            const photo = itineraryLibrary.photos.find(item => item.id === id);
+            if (!photo) return;
+            const image = new Image();
+            image.src = photo.data;
+            await image.decode();
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(width * 6);
+            canvas.height = Math.round(height * 6);
+            const scale = Math.max(canvas.width / image.width, canvas.height / image.height);
+            const w = image.width * scale, h = image.height * scale;
+            canvas.getContext('2d').drawImage(image, (canvas.width-w)/2, (canvas.height-h)/2,w,h);
+            pdf.addImage(canvas.toDataURL('image/jpeg',.85), 'JPEG', x, top, width, height);
+        };
+        pdf.setFillColor(19,42,60); pdf.rect(0,0,210,297,'F');
+        await crop(q.cover, 0, 0, 210, 184);
+        pdf.setFillColor(32,137,123); pdf.rect(18,192,28,2,'F');
+        pdf.setTextColor(255,255,255); pdf.setFontSize(13);
+        pdf.text('BABA TOUR & TRAVELS',18,205);
+        pdf.setFontSize(27); pdf.setFont('helvetica','bold');
+        const title = pdf.splitTextToSize(q.title || 'Custom Tour Itinerary',174).slice(0,4);
+        pdf.text(title,18,223);
+        pdf.setFontSize(11);
+        pdf.text(pdf.splitTextToSize('Prepared for ' + q.customer + ' | ' + q.start + ' to ' + q.end,174).slice(0,2),18,272);
+        for (let offset=0; offset<q.gallery.length; offset+=9) {
+            page('Trip Gallery');
+            for (const [i,id] of q.gallery.slice(offset,offset+9).entries()) {
+                await crop(id,18+(i%3)*59,42+Math.floor(i/3)*67,55,62);
+            }
+        }
+        page('Trip Highlights');
+        const duration = Math.round((Date.parse(q.end)-Date.parse(q.start))/86400000);
+        write(q.start + ' to ' + q.end + ' | ' + (duration+1) + ' days / ' + duration + ' nights | ' + q.pax + ' travellers');
+        if(q.vehicle) write('Vehicle: ' + q.vehicle);
+        if(q.hotel) write('Accommodation: ' + q.hotel);
+        if(q.highlights) write(q.highlights);
+        if(q.days.length) write('Itinerary at a glance', 16, true);
+        q.days.forEach((day,i) => write('Day ' + (i+1) + '  |  ' + day.title + (day.route ? ' - ' + day.route : '')));
+        if (q.itinerary) write(q.itinerary);
+        for (const [i,day] of q.days.entries()) {
+            page();
+            if (day.photo) { await crop(day.photo,0,8,210,89); y=112; }
+            write('DAY ' + String(i+1).padStart(2,'0'), 12, true);
+            write(day.title, 23, true);
+            if(day.route) write(day.route, 12, true);
+            for(const activity of day.activities.split('\n').filter(line => line.trim())) write('- ' + activity.trim());
+            if(day.stay) write('Overnight stay: ' + day.stay);
+            if(day.meals) write('Meals: ' + day.meals);
+        }
+        for (const [title, value] of [
+            ['Inclusions and Exclusions', [q.inclusions && 'Included\n'+q.inclusions, q.exclusions && 'Excluded\n'+q.exclusions].filter(Boolean).join('\n\n')],
+            ['Package Pricing', 'Total package: INR ' + Number(q.amount).toLocaleString('en-IN') + (q.pricing ? '\n\n'+q.pricing : '')],
+            ['Payment, Cancellation and Terms', q.terms]
+        ]) {
+            if(value) { page(title); write(value); }
+        }
+        for(let i=2;i<=pdf.getNumberOfPages();i++){
+            pdf.setPage(i); pdf.setTextColor(80,101,112); pdf.setFontSize(9);
+            pdf.text('Baba Tour & Travels | 8726667104',18,288);
+            pdf.text(String(i),192,288,{align:'right'});
+        }
+        localStorage.setItem(quotePrefix + q.id, JSON.stringify(q));
+        refreshQuotes();
+        quoteControl('quoteSaved').value = q.id;
+        pdf.save((q.title || 'Tour Itinerary').replace(/[^a-z0-9 -]/gi,'').trim() + '.pdf');
+        itineraryMessage('Draft saved and PDF downloaded.');
+    } catch(error) { itineraryMessage(error.message); }
 }
 </script>
 </body>
