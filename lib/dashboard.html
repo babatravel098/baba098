@@ -558,7 +558,23 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <label class="block text-sm">Vehicle<input type="text" name="vehicle" list="tripVehicles" class="block w-full border rounded p-2 mt-1"></label>
 <label class="block text-sm">Hotels / rooms / meals<textarea rows="3" name="hotel" class="block w-full border rounded p-2 mt-1"></textarea></label>
 <div class="sm:col-span-2 grid gap-3 rounded-xl border bg-slate-50 p-4">
-  <h3 class="font-bold">Trip details and reusable options</h3>
+  <fieldset class="sm:col-span-2 grid gap-3 rounded-xl border bg-white p-4">
+<legend class="font-bold">Nepal Package Library</legend>
+<div class="flex flex-wrap items-end gap-2">
+<label>Package <select id="nepalPackage" class="block rounded border p-2"></select></label>
+<button type="button" id="loadNepalPackage" class="rounded bg-teal-800 px-3 py-2 text-white">Load package</button>
+<button type="button" id="saveNepalPackage" class="rounded border px-3 py-2">Save as package</button>
+</div>
+<div class="flex flex-wrap gap-3">
+<label>Kathmandu hotel <select id="nepalKathmandu" class="block rounded border p-2"></select></label>
+<label>Pokhara hotel <select id="nepalPokhara" class="block rounded border p-2"></select></label>
+<label>Vehicle <select id="nepalVehicle" class="block rounded border p-2"></select></label>
+<label>Meal plan <select id="nepalMeal" class="block rounded border p-2"><option value="">Select meal plan</option><option>EP - Room only</option><option>BB - Breakfast</option><option>MAP - Breakfast and one main meal</option><option>AP - Breakfast, lunch and dinner</option></select></label>
+</div>
+<div id="nepalExtras" class="flex flex-wrap gap-3"></div>
+<button type="button" id="applyNepalOptions" class="justify-self-start rounded border px-3 py-2">Apply selected options</button>
+<p id="nepalMessage" role="status"></p>
+</fieldset>
   <label>Package title<input name="title" class="block w-full rounded border p-2" placeholder="Complete Meghalaya"></label>
   <label>Trip highlights<textarea name="highlights" class="block w-full rounded border p-2" placeholder="Tour type, pickup, drop, best season and key experiences"></textarea></label>
   <label>Pricing options and extras<textarea name="pricing" class="block w-full rounded border p-2" placeholder="Room sharing, per-person prices, offers and extras"></textarea></label>
@@ -2186,6 +2202,7 @@ const quotePrefix = 'baba_quote_v1:' + SCRIPT_URL + ':';
 function newQuote() {
  document.getElementById('quoteForm').reset();
  resetItinerary();
+ resetNepalOptions();
  activeQuoteId = crypto.randomUUID();
  document.getElementById('quoteSaved').value = '';
  document.getElementById('quoteMessage').textContent = 'New quotation draft';
@@ -2210,6 +2227,7 @@ function loadQuote(id) {
   if(!q || q.id!==id) throw Error('Draft unavailable');
   for(const key of quoteFieldNames) document.getElementById('quoteForm').elements.namedItem(key).value=q[key] || '';
   resetItinerary(q);
+  resetNepalOptions(q.nepalOptions);
   activeQuoteId=id;
   document.getElementById('quoteMessage').textContent='Saved draft loaded';
  } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
@@ -2221,7 +2239,7 @@ function quoteValues() {
  for(const key of quoteFieldNames) q[key]=form.elements.namedItem(key).value.trim();
  if(!q.customer || q.end<q.start) throw Error('Check customer name and travel dates.');
  if(!Number.isInteger(Number(q.pax)) || Number(q.pax)<1 || !Number.isFinite(Number(q.amount)) || Number(q.amount)<0) throw Error('Check passengers and amount.');
- return { ...q, ...itineraryValues() };
+ return { ...q, ...itineraryValues(), nepalOptions: getNepalOptions() };
 }
 document.getElementById('quoteForm').addEventListener('submit',event=>{
  event.preventDefault();
@@ -2703,10 +2721,24 @@ function addItineraryDay(day = {}, reveal = false) {
         ['Remove day', () => card.remove()],
         ['Save as template', () => {
             const template = readItineraryDay(card);
-            if (!template.title) return itineraryMessage('Enter a day title first.');
-            itineraryLibrary.templates.push({...template, id: crypto.randomUUID()});
-            try { storeItineraryLibrary(); refreshItineraryLibrary(); itineraryMessage('Day template saved.'); }
-            catch { itineraryLibrary.templates.pop(); itineraryMessage('Browser storage is full or unavailable.'); }
+            const feedback = card.querySelector('[role="status"]');
+            if (!template.title) {
+                feedback.textContent = 'Enter a day title first.';
+                card.querySelector('input').focus();
+                return;
+            }
+            const saved = {...template, id: crypto.randomUUID()};
+            itineraryLibrary.templates.push(saved);
+            try {
+                storeItineraryLibrary();
+            } catch {
+                itineraryLibrary.templates.pop();
+                feedback.textContent = 'Could not save. Browser storage may be full or unavailable.';
+                return;
+            }
+            refreshItineraryLibrary();
+            quoteControl('tripTemplates').value = saved.id;
+            feedback.textContent = 'Template saved and selected in the saved days list.';
         }]
     ]) {
         const button = document.createElement('button');
@@ -2716,6 +2748,9 @@ function addItineraryDay(day = {}, reveal = false) {
         button.addEventListener('click', () => { action(); numberItineraryDays(); });
         card.lastElementChild.append(button);
     }
+    const feedback = document.createElement('p');
+    feedback.setAttribute('role', 'status');
+    card.append(feedback);
     if (reveal) {
         card.scrollIntoView({block: 'nearest'});
         card.querySelector('input').focus({preventScroll: true});
@@ -2816,6 +2851,117 @@ async function downloadQuote() {
         itineraryMessage('Draft saved and PDF downloaded.');
     } catch(error) { itineraryMessage(error.message); }
 }
+</script>
+<script>
+const nepalDays = {
+    k: ['Gorakhpur to Kathmandu', 'Gorakhpur - Nepal border - Kathmandu', 'Pickup in Gorakhpur and proceed to the Nepal border.\nContinue to Kathmandu after border formalities.\nCheck in and rest after the drive.', 'Kathmandu'],
+    kt: ['Kathmandu sightseeing', 'Pashupatinath - Boudhanath - Swayambhunath', 'Visit Pashupatinath Temple.\nContinue to Boudhanath and Swayambhunath as time permits.', 'Kathmandu'],
+    kp: ['Kathmandu to Pokhara', 'Kathmandu - Manakamana area - Pokhara', 'Drive to Pokhara.\nOptional Manakamana cable car visit subject to timing.\nEvening at Lakeside if time permits.', 'Pokhara'],
+    gp: ['Gorakhpur to Pokhara', 'Gorakhpur - Nepal border - Pokhara', 'Pickup and complete border formalities.\nContinue to Pokhara and check in.', 'Pokhara'],
+    ps: ['Pokhara sightseeing', 'Sarangkot - Davis Falls - Gupteshwor Cave - Lakeside', 'Optional early sunrise visit to Sarangkot.\nVisit Davis Falls and Gupteshwor Cave.\nSpend time at Phewa Lake; boating is optional.', 'Pokhara'],
+    pl: ['Pokhara leisure and viewpoints', 'Peace Pagoda area - Phewa Lake', 'Visit a local viewpoint subject to road conditions.\nEnjoy free time around Lakeside.', 'Pokhara'],
+    j: ['Pokhara to Jomsom', 'Pokhara - Beni - Jomsom', 'Travel toward Jomsom.\nConfirm seasonal road conditions and suitable transport before quoting.', 'Jomsom'],
+    m: ['Muktinath darshan and return to Pokhara', 'Jomsom - Muktinath - Pokhara', 'Visit Muktinath subject to weather and road access.\nContinue toward Pokhara; allow flexibility for delays.', 'Pokhara'],
+    c: ['Pokhara to Chitwan', 'Pokhara - Sauraha', 'Transfer to Sauraha.\nCheck in and explore the riverside if time permits.', 'Chitwan'],
+    cs: ['Chitwan activities', 'Sauraha - Chitwan National Park area', 'Choose optional activities with the local operator.\nSafari, park permits and activities are quoted separately unless included.', 'Chitwan'],
+    jc: ['Chitwan to Janakpur', 'Sauraha - Janakpur', 'Transfer to Janakpur and check in.\nVisit the temple area if arrival time allows.', 'Janakpur'],
+    js: ['Janakpur temple visit', 'Janaki Mandir - local sightseeing', 'Visit Janaki Mandir and nearby sites as time permits.', 'Janakpur'],
+    pg: ['Pokhara to Gorakhpur', 'Pokhara - Butwal - Gorakhpur', 'Check out and return via the Nepal border.\nOptional Siddhababa stop subject to timing.\nDrop in Gorakhpur.', ''],
+    kg: ['Kathmandu to Gorakhpur', 'Kathmandu - Nepal border - Gorakhpur', 'Check out and drive toward the border.\nComplete border formalities and drop in Gorakhpur.', ''],
+    cg: ['Chitwan to Gorakhpur', 'Sauraha - Nepal border - Gorakhpur', 'Check out and transfer to Gorakhpur via the border.', ''],
+    jg: ['Janakpur to Gorakhpur', 'Janakpur - Nepal border - Gorakhpur', 'Depart early for Gorakhpur.\nConfirm the return route and border timing before travel.', '']
+};
+const nepalBase = ['Vehicle', 'Nepal road taxes', 'Driver night charges', 'Parking', 'Fuel'];
+const nepalOptional = ['Hotel accommodation', 'Selected hotel meal plan', 'Sightseeing transfers as per itinerary', 'Airport or railway station pickup and drop', 'Local guide', 'Safari and park permits'];
+const nepalExclusions = 'Temple and sightseeing entry fees\nVIP darshan\nE-rickshaw fares and cable-car tickets\nMeals and activities unless listed under inclusions\nPersonal expenses\nExtra travel days and sightseeing added during the trip are charged separately.';
+const nepalTerms = 'Booking is confirmed after receipt of the agreed advance and confirmation of availability.\n70% of the balance is payable on pickup day. The remaining 30% of the balance is payable midway through the tour.\nHotels, rooms and vehicles are subject to confirmation. Route and timing may vary with road, weather and local conditions.\nAny additional day or sightseeing stop requested during the trip will be quoted separately.';
+const nepalPackages = [
+    ['Nepal Highlights | 4 Days / 3 Nights','k kp ps pg'],
+    ['Kathmandu and Pokhara | 5 Days / 4 Nights','k kt kp ps pg'],
+    ['Kathmandu and Pokhara Leisure | 6 Days / 5 Nights','k kt kp ps pl pg'],
+    ['Pokhara Only | 3 Days / 2 Nights','gp ps pg'],
+    ['Kathmandu Only | 3 Days / 2 Nights','k kt kg'],
+    ['Nepal with Muktinath | 7 Days / 6 Nights','k kt kp j m ps pg'],
+    ['Nepal with Chitwan | 8 Days / 7 Nights','k kt kp ps pl c cs cg'],
+    ['Nepal with Janakpur | 9 Days / 8 Nights','k kt kp ps pl c jc js jg']
+].map(([title, route], i) => ({
+    id: 'nepal-' + i, title, inclusions: nepalBase.join('\n'), exclusions: nepalExclusions, terms: nepalTerms,
+    days: route.split(' ').map(key => {
+        const [title, route, activities, stay] = nepalDays[key];
+        return {title, route, activities, stay};
+    })
+}));
+const nepalCustomKey = 'baba_nepal_packages_v1';
+const nepalFields = ['nepalKathmandu','nepalPokhara','nepalVehicle','nepalMeal'];
+const nepalForm = quoteControl('quoteForm');
+const nepalValue = key => nepalForm.elements.namedItem(key);
+const nepalStatus = message => { quoteControl('nepalMessage').textContent = message; };
+const nepalCustomPackages = () => JSON.parse(localStorage.getItem(nepalCustomKey) || '[]');
+function refreshNepalPackages() {
+    setItineraryOptions(quoteControl('nepalPackage'), [...nepalPackages, ...nepalCustomPackages()].map(p => [p.id,p.title]), 'Choose a saved package');
+}
+function getNepalOptions() {
+    return {values: nepalFields.map(id => quoteControl(id).value), extras: [...quoteControl('nepalExtras').querySelectorAll('input:checked')].map(input => input.value)};
+}
+function resetNepalOptions(options = {}) {
+    for (const [i,id] of nepalFields.entries()) quoteControl(id).value = options.values?.[i] || '';
+    for (const input of quoteControl('nepalExtras').querySelectorAll('input')) input.checked = (options.extras || []).includes(input.value);
+    quoteControl('nepalPackage').value = '';
+    nepalStatus('');
+}
+for (const [id, values] of [
+    ['nepalKathmandu', ['Kathmandu Guest House (Heritage)','Aloft Kathmandu Thamel (Premium)','Hyatt Regency Kathmandu (Luxury)']],
+    ['nepalPokhara', ['Hotel Barahi Pokhara (Premium)','Temple Tree Resort & Spa (Resort)','Fish Tail Lodge (Lakeside lodge)','Atithi Resort & Spa (Resort)','Bar Peepal Resort (Resort)']],
+    ['nepalVehicle', ['Sedan','SUV','Innova','Innova Crysta','Scorpio','Bolero','Hiace','Tempo Traveller - 12 seats','Tempo Traveller - 17 seats','Tempo Traveller - 20 seats','Tempo Traveller - 26 seats','Mini bus','Coach']]
+]) setItineraryOptions(quoteControl(id),values.map(value => [value,value]),'Choose an option');
+for (const value of nepalOptional) {
+    const label = document.createElement('label');
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = value;
+    label.append(input, ' ' + value);
+    quoteControl('nepalExtras').append(label);
+}
+quoteControl('applyNepalOptions').addEventListener('click', () => {
+    const {values:[kathmandu,pokhara,vehicle,meal],extras} = getNepalOptions();
+    if (vehicle) nepalValue('vehicle').value = vehicle;
+    const hotels = [kathmandu && 'Kathmandu: ' + kathmandu, pokhara && 'Pokhara: ' + pokhara].filter(Boolean);
+    if (hotels.length) nepalValue('hotel').value = hotels.join('\n');
+    for (const card of quoteControl('tripDays').children) {
+        const stay = card.querySelector('[data-day="stay"]');
+        if (kathmandu && /^Kathmandu(?::|$)/.test(stay.value)) stay.value = hotels[0];
+        if (pokhara && /^Pokhara(?::|$)/.test(stay.value)) stay.value = 'Pokhara: ' + pokhara;
+        if (meal && stay.value) card.querySelector('[data-day="meals"]').value = meal;
+    }
+    nepalValue('inclusions').value = [...nepalBase,...extras.map(value => value === 'Selected hotel meal plan' && meal ? meal : value)].join('\n');
+    nepalStatus('Selected options applied to the quotation.');
+});
+quoteControl('loadNepalPackage').addEventListener('click', () => {
+    const selected = quoteControl('nepalPackage').value;
+    const pack = [...nepalPackages, ...nepalCustomPackages()].find(p => p.id === selected);
+    if (!pack) return nepalStatus('Choose a package first.');
+    if (quoteControl('tripDays').childElementCount && !confirm('Replace the current trip days and package details?')) return;
+    for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms','pricing','amount']) nepalValue(key).value = key === 'amount' || key === 'pricing' ? '' : (pack[key] || '');
+    resetItinerary(pack);
+    resetNepalOptions(pack.nepalOptions);
+    quoteControl('nepalPackage').value = pack.id;
+    nepalStatus('Package loaded. Enter the price for this customer.');
+});
+quoteControl('saveNepalPackage').addEventListener('click', () => {
+    const title = nepalValue('title').value.trim();
+    const fields = itineraryValues();
+    if (!title || !fields.days.length || fields.days.some(day => !day.title)) return nepalStatus('Enter a package title and name each trip day.');
+    try {
+        const saved = nepalCustomPackages();
+        const packageDetails = {id:crypto.randomUUID(), ...fields, nepalOptions:getNepalOptions()};
+        for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms']) packageDetails[key] = nepalValue(key).value.trim();
+        localStorage.setItem(nepalCustomKey,JSON.stringify([...saved,packageDetails]));
+        refreshNepalPackages();
+        quoteControl('nepalPackage').value = packageDetails.id;
+        nepalStatus('Reusable package saved.');
+    } catch { nepalStatus('Could not save the package in this browser.'); }
+});
+refreshNepalPackages();
 </script>
 </body>
 </html>
