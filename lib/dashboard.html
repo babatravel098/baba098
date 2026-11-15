@@ -600,7 +600,12 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <label class="block text-sm">Inclusions<textarea rows="3" name="inclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
 <label class="block text-sm">Exclusions<textarea rows="3" name="exclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
 
-<label class="block text-sm">Payment and cancellation terms<textarea rows="3" name="terms" class="block w-full border rounded p-2 mt-1"></textarea></label></details><div class="sm:col-span-2 flex gap-2 flex-wrap"><button class="bg-blue-700 text-white rounded p-2" type="submit">Save Draft</button><button class="border rounded p-2" type="button" onclick="downloadQuote()">Download PDF</button><button class="border rounded p-2" type="button" onclick="quoteToBookingForm()">Fill Booking Form</button><button class="border rounded p-2" type="button" onclick="document.getElementById('quotesDialog').close()">Close</button></div></form><p id="quoteMessage" role="status"></p></dialog>
+<label class="block">Rooming and sharing<input name="rooming" class="block w-full border rounded p-2" placeholder="Room count, double, triple or quad sharing"></label>
+<label class="block">Regional transport<input name="specialTransport" class="block w-full border rounded p-2" placeholder="Separate vehicle for Mustang, if quoted"></label>
+<label class="block">Cancellation policy<textarea name="cancellation" rows="5" class="block w-full border rounded p-2"></textarea></label>
+<label class="block">Important travel notes<textarea name="travelNotes" rows="5" class="block w-full border rounded p-2"></textarea></label>
+<label class="block">Verified payment instructions (optional)<textarea name="bankDetails" rows="4" class="block w-full border rounded p-2"></textarea></label>
+<label class="block text-sm">Payment terms<textarea rows="3" name="terms" class="block w-full border rounded p-2 mt-1"></textarea></label></details><div class="sm:col-span-2 flex gap-2 flex-wrap"><button class="bg-blue-700 text-white rounded p-2" type="submit">Save Draft</button><button class="border rounded p-2" type="button" onclick="downloadQuote()">Download PDF</button><button class="border rounded p-2" type="button" onclick="quoteToBookingForm()">Fill Booking Form</button><button class="border rounded p-2" type="button" onclick="document.getElementById('quotesDialog').close()">Close</button></div></form><p id="quoteMessage" role="status"></p></dialog>
 <dialog id="assignmentDialog" style="width:min(650px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px" aria-labelledby="assignmentTitle"><h2 id="assignmentTitle" class="text-xl font-bold">Vehicle &amp; Driver Assignment</h2><p id="assignmentCustomer" class="my-3"></p><p class="text-sm text-slate-600 mb-3">Assignments are saved in this browser. Conflict checks use loaded bookings and assignments saved here. Travel dates come from the Sheet.</p><form id="assignmentForm" class="space-y-3">
 <label class="block">Vehicle registration number<input name="registration" required maxlength="30" class="block w-full border rounded p-2"></label>
 <label class="block">Driver name<input name="driver" required maxlength="100" class="block w-full border rounded p-2"></label>
@@ -2198,7 +2203,7 @@ document.getElementById('leadNotesForm').addEventListener('submit', event => {
     } catch(error) { document.getElementById('leadNotesMessage').textContent = 'Could not save draft. ' + error.message; }
 });
 
-const quoteFieldNames = ["customer","phone","start","end","pax","vehicle","hotel","itinerary","inclusions","exclusions","amount","terms","title","highlights","pricing","address","pickupLocation","dropLocation"];
+const quoteFieldNames = ["customer","phone","start","end","pax","vehicle","hotel","itinerary","inclusions","exclusions","amount","terms","title","highlights","pricing","address","pickupLocation","dropLocation","rooming","specialTransport","cancellation","travelNotes","bankDetails"];
 let activeQuoteId = '';
 const quotePrefix = 'baba_quote_v1:' + SCRIPT_URL + ':';
 function newQuote() {
@@ -2251,6 +2256,10 @@ function quoteValues() {
  const itinerary = itineraryValues();
  const pickup = q.pickupLocation || 'Gorakhpur';
  const drop = q.dropLocation || 'Gorakhpur';
+ const quotedDays = Math.round((Date.parse(q.end) - Date.parse(q.start)) / 86400000) + 1;
+ if (itinerary.days.length && itinerary.days.length !== quotedDays) {
+    throw Error('The travel dates cover ' + quotedDays + ' days, but the itinerary has ' + itinerary.days.length + ' days. Adjust the dates or trip days.');
+ }
  const first = itinerary.days[0];
  const last = itinerary.days.at(-1);
  if (first) {
@@ -2842,9 +2851,29 @@ async function downloadQuote() {
         write('Pickup: ' + q.pickupLocation + '   |   Drop: ' + q.dropLocation, 12, true);
         if (q.address) write('Customer address: ' + q.address);
         const duration = Math.round((Date.parse(q.end)-Date.parse(q.start))/86400000);
-        write(q.start + ' to ' + q.end + ' | ' + (duration+1) + ' days / ' + duration + ' nights | ' + q.pax + ' travellers');
-        if(q.vehicle) write('Vehicle: ' + q.vehicle);
-        if(q.hotel) write('Accommodation: ' + q.hotel);
+        const summary = [
+            ['TRAVEL DATES', q.start + ' to ' + q.end],
+            ['TRIP LENGTH', (duration+1) + ' days / ' + duration + ' nights'],
+            ['TRAVELLERS', q.pax],
+            ['VEHICLE', q.vehicle],
+            ['ROOMING', q.rooming],
+            ['MEAL PLAN', q.nepalOptions?.values?.[3]],
+            ['REGIONAL TRANSPORT', q.specialTransport],
+            ['ACCOMMODATION', q.hotel]
+        ];
+        for (const [label, value] of summary.filter(([, value]) => value)) {
+            pdf.setFont('helvetica','normal'); pdf.setFontSize(10);
+            const lines = pdf.splitTextToSize(String(value), 113);
+            const height = 8 + lines.length * 5;
+            if (y + height > 275) page('Your Journey');
+            pdf.setFillColor(238,245,245); pdf.roundedRect(18,y,174,height,2,2,'F');
+            pdf.setFont('helvetica','bold'); pdf.setTextColor(11,105,96); pdf.setFontSize(9);
+            pdf.text(label,22,y+7);
+            pdf.setFont('helvetica','normal'); pdf.setFontSize(10); pdf.setTextColor(20,38,57);
+            lines.forEach((line,index) => pdf.text(line,74,y+7+index*5));
+            y += height + 3;
+        }
+        if(q.phone) write('Customer mobile: ' + q.phone);
         if(q.highlights) write(q.highlights);
         if(q.days.length) write('Itinerary at a glance', 16, true);
         q.days.forEach((day,i) => write('Day ' + (i+1) + '  |  ' + day.title + (day.route ? ' - ' + day.route : '')));
@@ -2864,8 +2893,8 @@ async function downloadQuote() {
         }
         for (const [title, value] of [
             ['Inclusions and Exclusions', [q.inclusions && 'Included\n'+q.inclusions, q.exclusions && 'Excluded\n'+q.exclusions].filter(Boolean).join('\n\n')],
-            ['Package Pricing', 'Total package: INR ' + Number(q.amount).toLocaleString('en-IN') + (q.pricing ? '\n\n'+q.pricing : '')],
-            ['Payment, Cancellation and Terms', q.terms]
+            ['Package Pricing', 'Total package: INR ' + Number(q.amount).toLocaleString('en-IN') + '\nPer traveller: INR ' + (Number(q.amount)/Number(q.pax)).toLocaleString('en-IN',{maximumFractionDigits:2}) + (q.pricing ? '\n\n'+q.pricing : '')],
+            ['Payment Terms', q.terms], ['Payment Instructions', q.bankDetails], ['Cancellation Policy and Travel Notes', [q.cancellation,q.travelNotes].filter(Boolean).join('\n\n')]
         ]) {
             if(value) { page(title); write(value); }
         }
@@ -2884,15 +2913,18 @@ async function downloadQuote() {
 </script>
 <script>
 const nepalDays = {
+    gl: ['Gorakhpur to Pokhara via Lumbini','Gorakhpur - Sunauli - Lumbini - Pokhara','Meet your driver at the agreed pickup point early in the morning.\nComplete border formalities.\nStop at Lumbini for sightseeing if time permits; local e-rickshaw is optional.\nContinue to Pokhara, check in and stay overnight.','Pokhara'],
+    pk: ['Pokhara to Kathmandu via Manakamana','Pokhara - Manakamana - Kathmandu','Leave Pokhara in the morning.\nOptional visit to Manakamana Temple by cable car, subject to operating hours and queues.\nContinue to Kathmandu for hotel check-in and overnight stay.','Kathmandu'],
+    kj: ['Kathmandu to Janakpur','Kathmandu - Janakpur','Check out after breakfast and depart for Janakpur.\nCheck in on arrival and rest before the next morning’s temple visit.','Janakpur'],
     k: ['Gorakhpur to Kathmandu', 'Gorakhpur - Nepal border - Kathmandu', 'Pickup in Gorakhpur and proceed to the Nepal border.\nContinue to Kathmandu after border formalities.\nCheck in and rest after the drive.', 'Kathmandu'],
-    kt: ['Kathmandu sightseeing', 'Pashupatinath - Boudhanath - Swayambhunath', 'Visit Pashupatinath Temple.\nContinue to Boudhanath and Swayambhunath as time permits.', 'Kathmandu'],
+    kt: ['Kathmandu sightseeing', 'Pashupatinath - Boudhanath - Swayambhunath', 'Begin with Pashupatinath Temple on the Bagmati River.\nVisit Guhyeshwari and Budhanilkantha (Sleeping Vishnu).\nContinue to Swayambhunath for valley views and visit ISKCON Kathmandu if time permits.', 'Kathmandu'],
     kh: ['Kathmandu Valley heritage', 'Patan - Bhaktapur', 'Explore Patan Durbar Square and local craft lanes.\nContinue to Bhaktapur for a heritage walk.\nReturn to Kathmandu for the overnight stay.', 'Kathmandu'],
     kp: ['Kathmandu to Pokhara', 'Kathmandu - Manakamana area - Pokhara', 'Drive to Pokhara.\nOptional Manakamana cable car visit subject to timing.\nEvening at Lakeside if time permits.', 'Pokhara'],
     gp: ['Gorakhpur to Pokhara', 'Gorakhpur - Nepal border - Pokhara', 'Pickup and complete border formalities.\nContinue to Pokhara and check in.', 'Pokhara'],
-    ps: ['Pokhara sightseeing', 'Sarangkot - Davis Falls - Gupteshwor Cave - Lakeside', 'Optional early sunrise visit to Sarangkot.\nVisit Davis Falls and Gupteshwor Cave.\nSpend time at Phewa Lake; boating is optional.', 'Pokhara'],
+    ps: ['Pokhara sightseeing', 'Sarangkot - Davis Falls - Gupteshwor Cave - Lakeside', 'Optional early sunrise visit to Sarangkot.\nVisit Bindhyabasini Temple, Davis Falls and Gupteshwor Mahadev Cave.\nStop at Seti River Gorge as time permits.\nVisit Phewa Lake; optional boating to Tal Barahi Temple.', 'Pokhara'],
     pl: ['Pokhara leisure and viewpoints', 'Peace Pagoda area - Phewa Lake', 'Visit a local viewpoint subject to road conditions.\nEnjoy free time around Lakeside.', 'Pokhara'],
-    j: ['Pokhara to Jomsom', 'Pokhara - Beni - Jomsom', 'Travel toward Jomsom.\nConfirm seasonal road conditions and suitable transport before quoting.', 'Jomsom'],
-    m: ['Muktinath darshan and return to Pokhara', 'Jomsom - Muktinath - Pokhara', 'Visit Muktinath subject to weather and road access.\nContinue toward Pokhara; allow flexibility for delays.', 'Pokhara'],
+    j: ['Pokhara to Jomsom', 'Pokhara - Beni - Jomsom', 'Drive toward Jomsom with a possible stop in Marpha for its traditional lanes and orchards.\nLook for views of the Nilgiri and Dhaulagiri ranges in clear weather.\nConfirm seasonal road access and the vehicle for this sector before booking.', 'Jomsom'],
+    m: ['Muktinath darshan and return to Pokhara', 'Jomsom - Muktinath - Pokhara', 'Proceed early for Muktinath darshan and visit the sacred waterspouts if accessible.\nReturn toward Pokhara with an optional Kushma stop, subject to road conditions and time.', 'Pokhara'],
     c: ['Pokhara to Chitwan', 'Pokhara - Sauraha', 'Transfer to Sauraha.\nCheck in and explore the riverside if time permits.', 'Chitwan'],
     cs: ['Chitwan activities', 'Sauraha - Chitwan National Park area', 'Choose optional activities with the local operator.\nSafari, park permits and activities are quoted separately unless included.', 'Chitwan'],
     jc: ['Chitwan to Janakpur', 'Sauraha - Janakpur', 'Transfer to Janakpur and check in.\nVisit the temple area if arrival time allows.', 'Janakpur'],
@@ -2900,11 +2932,11 @@ const nepalDays = {
     pg: ['Pokhara to Gorakhpur', 'Pokhara - Butwal - Gorakhpur', 'Check out and return via the Nepal border.\nOptional Siddhababa stop subject to timing.\nDrop in Gorakhpur.', ''],
     kg: ['Kathmandu to Gorakhpur', 'Kathmandu - Nepal border - Gorakhpur', 'Check out and drive toward the border.\nComplete border formalities and drop in Gorakhpur.', ''],
     cg: ['Chitwan to Gorakhpur', 'Sauraha - Nepal border - Gorakhpur', 'Check out and transfer to Gorakhpur via the border.', ''],
-    jg: ['Janakpur to Gorakhpur', 'Janakpur - Nepal border - Gorakhpur', 'Depart early for Gorakhpur.\nConfirm the return route and border timing before travel.', '']
+    jg: ['Janakpur to Gorakhpur', 'Janakpur - Nepal border - Gorakhpur', 'Visit Janaki Mandir and Sita Vivah Mandap before departure if timing permits.\nTransfer to Gorakhpur after border formalities. Confirm the return route and timing before travel.', '']
 };
 const nepalBase = ['Vehicle', 'Nepal road taxes', 'Driver night charges', 'Parking', 'Fuel'];
 const nepalOptional = ['Hotel accommodation', 'Selected hotel meal plan', 'Sightseeing transfers as per itinerary', 'Airport or railway station pickup and drop', 'Local guide', 'Safari and park permits'];
-const nepalExclusions = 'Temple and sightseeing entry fees\nVIP darshan\nE-rickshaw fares and cable-car tickets\nMeals and activities unless listed under inclusions\nPersonal expenses\nExtra travel days and sightseeing added during the trip are charged separately.';
+const nepalExclusions = 'Temple and sightseeing entry fees\nVIP darshan\nE-rickshaw fares and cable-car tickets\nMeals and activities unless listed under inclusions\nPersonal travel insurance, medical expenses, laundry, bottled drinks and tips\nKitchen space and guide services unless quoted\nExtra travel days and sightseeing added during the trip are charged separately.';
 const nepalTerms = 'Booking is confirmed after receipt of the agreed advance and confirmation of availability.\n70% of the balance is payable on pickup day. The remaining 30% of the balance is payable midway through the tour.\nHotels, rooms and vehicles are subject to confirmation. Route and timing may vary with road, weather and local conditions.\nAny additional day or sightseeing stop requested during the trip will be quoted separately.';
 const nepalPackages = [
     ['Nepal Highlights | 4 Days / 3 Nights','k kp ps pg'],
@@ -2914,12 +2946,13 @@ const nepalPackages = [
     ['Kathmandu Only | 3 Days / 2 Nights','k kt kg'],
     ['Nepal with Muktinath | 7 Days / 6 Nights','k kt kp j m ps pg'],
     ['Nepal with Chitwan | 8 Days / 7 Nights','k kt kp ps pl c cs cg'],
+    ['Nepal Pilgrimage Circuit | 8 Days / 7 Nights','gl ps j m pk kt kj jg'],
     ['Nepal with Janakpur | 9 Days / 8 Nights','k kt kp ps pl c jc js jg'],
     ['Nepal Heritage and Wildlife | 10 Days / 9 Nights','k kt kh kp ps pl c cs jc jg'],
     ['Nepal Pilgrimage and Wildlife | 11 Days / 10 Nights','k kt kh kp ps j m c cs jc jg'],
     ['Grand Nepal Circuit | 12 Days / 11 Nights','k kt kh kp ps pl j m c cs jc jg']
 ].map(([title, route], i) => ({
-    id: 'nepal-' + i, title, inclusions: nepalBase.join('\n'), exclusions: nepalExclusions, terms: nepalTerms, highlights: 'Private Nepal road tour with doorstep routing, city sightseeing and overnight stays as detailed below.',
+    id: title.startsWith('Nepal Pilgrimage Circuit') ? 'nepal-pilgrimage-8' : 'nepal-' + (i > 7 ? i - 1 : i), title, inclusions: nepalBase.join('\n'), exclusions: nepalExclusions, terms: nepalTerms, highlights: 'Private Nepal road tour with doorstep routing, city sightseeing and overnight stays as detailed below.',
     days: route.split(' ').map(key => {
         const [title, route, activities, stay] = nepalDays[key];
         return {title, route, activities, stay};
@@ -2944,10 +2977,10 @@ function resetNepalOptions(options = {}) {
     nepalStatus('');
 }
 for (const [id, values] of [
-    ['nepalKathmandu', ['Kathmandu Guest House (Heritage)','Aloft Kathmandu Thamel (Premium)','Hyatt Regency Kathmandu (Luxury)','Airport Hotel','Akama Hotel','Amar Hotel','Apsara Boutique Hotel','Aryatara Kathmandu Hotel','Baber Mahal Vilas','Backyard Hotel','Basera Boutique Hotel','Radisson Hotel Kathmandu','The Dwarika’s Hotel','Hotel Barahi Kathmandu']],
-    ['nepalPokhara', ['Hotel Barahi Pokhara (Premium)','Temple Tree Resort & Spa (Resort)','Fish Tail Lodge (Lakeside lodge)','Atithi Resort & Spa (Resort)','Bar Peepal Resort (Resort)','Pokhara Grande','Sarangkot Mountain Lodge','Dahlia Boutique Hotel','Himalayan Front Resort','Dorje’s Resort & Spa']],
-    ['nepalJanakpur', ['Mithila Yatri Niwas','Hotel Mystic Mithila','Hotel Welcome','Anjani Suite']],
-    ['nepalJomsom', ['Hotel Grand Shambala (Muktinath)','Hotel Shri Muktinath','Hotel Dream Home (Muktinath)','Lo Mustang Himalayan Resort (Muktinath)','Hotel Om’s Home (Jomsom)']],
+    ['nepalKathmandu', ['Rameshwaram (or similar)','Kathmandu Guest House (Heritage)','Aloft Kathmandu Thamel (Premium)','Hyatt Regency Kathmandu (Luxury)','Airport Hotel','Akama Hotel','Amar Hotel','Apsara Boutique Hotel','Aryatara Kathmandu Hotel','Baber Mahal Vilas','Backyard Hotel','Basera Boutique Hotel','Radisson Hotel Kathmandu','The Dwarika’s Hotel','Hotel Barahi Kathmandu']],
+    ['nepalPokhara', ['Satkar (or similar)','Hotel Barahi Pokhara (Premium)','Temple Tree Resort & Spa (Resort)','Fish Tail Lodge (Lakeside lodge)','Atithi Resort & Spa (Resort)','Bar Peepal Resort (Resort)','Pokhara Grande','Sarangkot Mountain Lodge','Dahlia Boutique Hotel','Himalayan Front Resort','Dorje’s Resort & Spa']],
+    ['nepalJanakpur', ['Ram Janki (or similar)','Mithila Yatri Niwas','Hotel Mystic Mithila','Hotel Welcome','Anjani Suite']],
+    ['nepalJomsom', ['Trekkers Inn (Jomsom, or similar)','Hotel Grand Shambala (Muktinath)','Hotel Shri Muktinath','Hotel Dream Home (Muktinath)','Lo Mustang Himalayan Resort (Muktinath)','Hotel Om’s Home (Jomsom)']],
     ['nepalChitwan', ['Barahi Jungle Lodge','Hotel Parkside','Hotel Rhino Land','Hotel Star Chitwan']],
     ['nepalVehicle', ['Sedan','SUV','Innova','Innova Crysta','Scorpio','Bolero','Hiace','Tempo Traveller - 12 seats','Tempo Traveller - 17 seats','Tempo Traveller - 20 seats','Tempo Traveller - 26 seats','Mini bus','Coach']]
 ]) setItineraryOptions(quoteControl(id),values.map(value => [value,value]),'Choose an option');
@@ -2964,7 +2997,9 @@ quoteControl('applyNepalOptions').addEventListener('click', () => {
     if (vehicle) nepalValue('vehicle').value = vehicle;
     const hotels = {Kathmandu:kathmandu, Pokhara:pokhara, Janakpur:janakpur, Jomsom:jomsom, Chitwan:chitwan};
     const selectedHotels = Object.entries(hotels).filter(([,hotel]) => hotel && !hotel.startsWith('Enter a '));
-    if (selectedHotels.length) nepalValue('hotel').value = selectedHotels.map(([city,hotel]) => city + ': ' + hotel).join('\n');
+    const overnightCities = new Set([...quoteControl('tripDays').children].map(card => card.querySelector('[data-day="stay"]').value.split(':')[0]));
+    const routeHotels = selectedHotels.filter(([city]) => overnightCities.has(city));
+    nepalValue('hotel').value = routeHotels.map(([city,hotel]) => city + ': ' + hotel).join('\n');
     for (const card of quoteControl('tripDays').children) {
         const stay = card.querySelector('[data-day="stay"]');
         const city = stay.value.split(':')[0];
@@ -2983,6 +3018,11 @@ quoteControl('loadNepalPackage').addEventListener('click', () => {
     if (!pack) return nepalStatus('Choose a package first.');
     if (quoteControl('tripDays').childElementCount && !confirm('Replace the current trip days and package details?')) return;
     for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms','pricing','amount']) nepalValue(key).value = key === 'amount' || key === 'pricing' ? '' : (pack[key] || '');
+    nepalValue('cancellation').value = pack.cancellation || 'Send cancellation requests in writing. Applicable charges will be stated in the confirmed booking terms. Any refund after travel starts is subject to amounts recoverable from suppliers. Unused rooms, chartered transport and missed meals are subject to supplier terms.';
+    nepalValue('travelNotes').value = pack.travelNotes || 'Verify current border ID and currency requirements before departure.\nVehicle is provided for the agreed itinerary. Confirm air-conditioning and regional vehicle arrangements before booking.\nIf a named hotel is unavailable, a similar category may be offered for approval.\nSightseeing order may change with weather, road conditions and opening times.';
+    nepalValue('rooming').value = pack.rooming || '';
+    nepalValue('specialTransport').value = pack.specialTransport || '';
+    nepalValue('bankDetails').value = '';
     resetItinerary(pack);
     resetNepalOptions(pack.nepalOptions);
     quoteControl('nepalPackage').value = pack.id;
