@@ -550,31 +550,33 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <label class="block">Discussion notes<textarea name="notes" rows="5" maxlength="5000" class="block w-full border rounded p-2"></textarea></label>
 <button class="bg-blue-700 text-white rounded px-4 py-2" type="submit">Save Lead Draft</button><button class="border rounded px-4 py-2" type="button" onclick="document.getElementById('leadNotesDialog').close()">Close</button>
 </form><p id="leadNotesMessage" role="status" class="text-sm my-3"></p></dialog>
-<dialog id="quotesDialog" aria-labelledby="quotesTitle" style="width:min(900px,96vw);max-height:90vh;border:0;border-radius:16px;padding:24px"><h2 id="quotesTitle" class="font-bold text-xl">Tour Quotation &amp; Itinerary</h2><p class="text-sm my-2">Build a customer proposal from saved trip days, hotels, vehicles and photos. Drafts and libraries are stored in this browser.</p><label>Saved quotations<select id="quoteSaved" class="border rounded p-2 m-2" onchange="loadQuote(this.value)"></select></label><button type="button" onclick="newQuote()" class="border p-2 rounded">New quotation</button><form id="quoteForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3"><label class="block text-sm">Customer name<input type="text" name="customer" required class="block w-full border rounded p-2 mt-1"></label>
-<label class="block text-sm">Mobile<input type="tel" name="phone" class="block w-full border rounded p-2 mt-1"></label>
-<label class="block text-sm">Travel start<input type="date" name="start" required class="block w-full border rounded p-2 mt-1"></label>
-<label class="block text-sm">Travel end<input type="date" name="end" required class="block w-full border rounded p-2 mt-1"></label>
-<label class="block text-sm">Passengers<input type="number" name="pax" required min="1" step="1" class="block w-full border rounded p-2 mt-1"></label>
-<label class="block text-sm">Vehicle<input type="text" name="vehicle" list="tripVehicles" class="block w-full border rounded p-2 mt-1"></label>
-<label class="block text-sm">Hotels / rooms / meals<textarea rows="3" name="hotel" class="block w-full border rounded p-2 mt-1"></textarea></label>
-<div class="sm:col-span-2 grid gap-3 rounded-xl border bg-slate-50 p-4">
-  <fieldset class="sm:col-span-2 grid gap-3 rounded-xl border bg-white p-4">
+<dialog id="quotesDialog" aria-labelledby="quotesTitle" style="width:min(900px,96vw);max-height:90vh;border:0;border-radius:16px;padding:24px"><h2 id="quotesTitle" class="font-bold text-xl">Tour Quotation &amp; Itinerary</h2><p class="text-sm my-2">Build a customer proposal from saved trip days, hotels, vehicles and photos. Drafts and libraries are stored in this browser.</p><label>Saved quotations<select id="quoteSaved" class="border rounded p-2 m-2" onchange="loadQuote(this.value)"></select></label><button type="button" onclick="newQuote()" class="border p-2 rounded">New quotation</button><form id="quoteForm" novalidate class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3"><fieldset class="sm:col-span-2 grid gap-3 rounded-xl border bg-white p-4">
 <legend class="font-bold">Nepal Package Library</legend>
 <div class="flex flex-wrap items-end gap-2">
-<label>Package <select id="nepalPackage" class="block rounded border p-2"></select></label>
+<label>Package <select id="nepalPackage" onchange="document.getElementById('loadNepalPackage').click()" class="block rounded border p-2"></select></label>
 <button type="button" id="loadNepalPackage" class="rounded bg-teal-800 px-3 py-2 text-white">Load package</button>
 <button type="button" id="saveNepalPackage" class="rounded border px-3 py-2">Save as package</button>
 </div>
 <div class="flex flex-wrap gap-3">
 <label>Kathmandu hotel <select id="nepalKathmandu" class="block rounded border p-2"></select></label>
 <label>Pokhara hotel <select id="nepalPokhara" class="block rounded border p-2"></select></label>
-<label>Vehicle <select id="nepalVehicle" class="block rounded border p-2"></select></label>
+<label>Janakpur hotel <select id="nepalJanakpur" class="block rounded border p-2"></select></label><label>Muktinath / Jomsom hotel <select id="nepalJomsom" class="block rounded border p-2"></select></label><label>Chitwan hotel <select id="nepalChitwan" class="block rounded border p-2"></select></label><label>Vehicle <select id="nepalVehicle" class="block rounded border p-2"></select></label>
 <label>Meal plan <select id="nepalMeal" class="block rounded border p-2"><option value="">Select meal plan</option><option>EP - Room only</option><option>BB - Breakfast</option><option>MAP - Breakfast and one main meal</option><option>AP - Breakfast, lunch and dinner</option></select></label>
 </div>
-<div id="nepalExtras" class="flex flex-wrap gap-3"></div>
+<details><summary>Optional inclusions</summary><div id="nepalExtras" class="flex flex-wrap gap-3"></div></details>
 <button type="button" id="applyNepalOptions" class="justify-self-start rounded border px-3 py-2">Apply selected options</button>
 <p id="nepalMessage" role="status"></p>
-</fieldset>
+</fieldset><label class="block text-sm">Customer name<input type="text" name="customer" required class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Mobile<input type="tel" name="phone" class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Travel start<input type="date" name="start" required class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Travel end<input type="date" name="end" required class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Passengers<input type="number" name="pax" required min="1" step="1" class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Customer address<input name="address" class="block w-full border rounded p-2"></label>
+<label class="block text-sm">Pickup location<input name="pickupLocation" value="Gorakhpur" class="block w-full border rounded p-2"></label>
+<label class="block text-sm">Drop location<input name="dropLocation" value="Gorakhpur" class="block w-full border rounded p-2"></label><label class="block text-sm">Total package amount (INR)<input type="number" name="amount" required min="0" step="0.01" class="block w-full border rounded p-2 mt-1"></label><details class="sm:col-span-2 rounded-xl border p-4"><summary class="cursor-pointer font-bold">Customize itinerary, hotels, photos and terms</summary><label class="block text-sm">Vehicle<input type="text" name="vehicle" list="tripVehicles" class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Hotels / rooms / meals<textarea rows="3" name="hotel" class="block w-full border rounded p-2 mt-1"></textarea></label>
+<div class="sm:col-span-2 grid gap-3 rounded-xl border bg-slate-50 p-4">
+  
   <label>Package title<input name="title" class="block w-full rounded border p-2" placeholder="Complete Meghalaya"></label>
   <label>Trip highlights<textarea name="highlights" class="block w-full rounded border p-2" placeholder="Tour type, pickup, drop, best season and key experiences"></textarea></label>
   <label>Pricing options and extras<textarea name="pricing" class="block w-full rounded border p-2" placeholder="Room sharing, per-person prices, offers and extras"></textarea></label>
@@ -597,8 +599,8 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <label class="block text-sm">Additional itinerary notes<textarea rows="3" name="itinerary" class="block w-full border rounded p-2 mt-1"></textarea></label>
 <label class="block text-sm">Inclusions<textarea rows="3" name="inclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
 <label class="block text-sm">Exclusions<textarea rows="3" name="exclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
-<label class="block text-sm">Total package amount (INR)<input type="number" name="amount" required min="0" step="0.01" class="block w-full border rounded p-2 mt-1"></label>
-<label class="block text-sm">Payment and cancellation terms<textarea rows="3" name="terms" class="block w-full border rounded p-2 mt-1"></textarea></label><div class="sm:col-span-2 flex gap-2 flex-wrap"><button class="bg-blue-700 text-white rounded p-2" type="submit">Save Draft</button><button class="border rounded p-2" type="button" onclick="downloadQuote()">Download PDF</button><button class="border rounded p-2" type="button" onclick="quoteToBookingForm()">Fill Booking Form</button><button class="border rounded p-2" type="button" onclick="document.getElementById('quotesDialog').close()">Close</button></div></form><p id="quoteMessage" role="status"></p></dialog>
+
+<label class="block text-sm">Payment and cancellation terms<textarea rows="3" name="terms" class="block w-full border rounded p-2 mt-1"></textarea></label></details><div class="sm:col-span-2 flex gap-2 flex-wrap"><button class="bg-blue-700 text-white rounded p-2" type="submit">Save Draft</button><button class="border rounded p-2" type="button" onclick="downloadQuote()">Download PDF</button><button class="border rounded p-2" type="button" onclick="quoteToBookingForm()">Fill Booking Form</button><button class="border rounded p-2" type="button" onclick="document.getElementById('quotesDialog').close()">Close</button></div></form><p id="quoteMessage" role="status"></p></dialog>
 <dialog id="assignmentDialog" style="width:min(650px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px" aria-labelledby="assignmentTitle"><h2 id="assignmentTitle" class="text-xl font-bold">Vehicle &amp; Driver Assignment</h2><p id="assignmentCustomer" class="my-3"></p><p class="text-sm text-slate-600 mb-3">Assignments are saved in this browser. Conflict checks use loaded bookings and assignments saved here. Travel dates come from the Sheet.</p><form id="assignmentForm" class="space-y-3">
 <label class="block">Vehicle registration number<input name="registration" required maxlength="30" class="block w-full border rounded p-2"></label>
 <label class="block">Driver name<input name="driver" required maxlength="100" class="block w-full border rounded p-2"></label>
@@ -2196,7 +2198,7 @@ document.getElementById('leadNotesForm').addEventListener('submit', event => {
     } catch(error) { document.getElementById('leadNotesMessage').textContent = 'Could not save draft. ' + error.message; }
 });
 
-const quoteFieldNames = ["customer","phone","start","end","pax","vehicle","hotel","itinerary","inclusions","exclusions","amount","terms","title","highlights","pricing"];
+const quoteFieldNames = ["customer","phone","start","end","pax","vehicle","hotel","itinerary","inclusions","exclusions","amount","terms","title","highlights","pricing","address","pickupLocation","dropLocation"];
 let activeQuoteId = '';
 const quotePrefix = 'baba_quote_v1:' + SCRIPT_URL + ':';
 function newQuote() {
@@ -2226,6 +2228,7 @@ function loadQuote(id) {
   const q=JSON.parse(localStorage.getItem(quotePrefix+id));
   if(!q || q.id!==id) throw Error('Draft unavailable');
   for(const key of quoteFieldNames) document.getElementById('quoteForm').elements.namedItem(key).value=q[key] || '';
+  for (const key of ['pickupLocation','dropLocation']) if (!q[key]) document.getElementById('quoteForm').elements.namedItem(key).value = 'Gorakhpur';
   resetItinerary(q);
   resetNepalOptions(q.nepalOptions);
   activeQuoteId=id;
@@ -2234,12 +2237,33 @@ function loadQuote(id) {
 }
 function quoteValues() {
  const form=document.getElementById('quoteForm');
- if(!form.reportValidity()) throw Error('Complete required fields.');
+ const invalid = form.querySelector(':invalid');
+ if (invalid) {
+    const panel = invalid.closest('details');
+    if (panel) panel.open = true;
+    form.reportValidity();
+    throw Error('Complete required fields.');
+ }
  const q={id:activeQuoteId};
  for(const key of quoteFieldNames) q[key]=form.elements.namedItem(key).value.trim();
  if(!q.customer || q.end<q.start) throw Error('Check customer name and travel dates.');
  if(!Number.isInteger(Number(q.pax)) || Number(q.pax)<1 || !Number.isFinite(Number(q.amount)) || Number(q.amount)<0) throw Error('Check passengers and amount.');
- return { ...q, ...itineraryValues(), nepalOptions: getNepalOptions() };
+ const itinerary = itineraryValues();
+ const pickup = q.pickupLocation || 'Gorakhpur';
+ const drop = q.dropLocation || 'Gorakhpur';
+ const first = itinerary.days[0];
+ const last = itinerary.days.at(-1);
+ if (first) {
+    first.title = first.title.replace(/^Gorakhpur\b/i, () => pickup);
+    first.route = first.route.replace(/^Gorakhpur\b/i, () => pickup);
+    first.activities = first.activities.replace(/\bGorakhpur\b/gi, () => pickup);
+ }
+ if (last && last !== first) {
+    last.title = last.title.replace(/\bGorakhpur$/i, () => drop);
+    last.route = last.route.replace(/\bGorakhpur$/i, () => drop);
+    last.activities = last.activities.replace(/\bGorakhpur\b/gi, () => drop);
+ }
+ return { ...q, ...itinerary, pickupLocation: pickup, dropLocation: drop, nepalOptions: getNepalOptions() };
 }
 document.getElementById('quoteForm').addEventListener('submit',event=>{
  event.preventDefault();
@@ -2798,7 +2822,8 @@ async function downloadQuote() {
             pdf.addImage(canvas.toDataURL('image/jpeg',.85), 'JPEG', x, top, width, height);
         };
         pdf.setFillColor(19,42,60); pdf.rect(0,0,210,297,'F');
-        await crop(q.cover, 0, 0, 210, 184);
+        const featuredPhotos = [...new Set([...q.gallery, ...q.days.map(day => day.photo).filter(Boolean)])];
+        await crop(q.cover || featuredPhotos[0], 0, 0, 210, 184);
         pdf.setFillColor(32,137,123); pdf.rect(18,192,28,2,'F');
         pdf.setTextColor(255,255,255); pdf.setFontSize(13);
         pdf.text('BABA TOUR & TRAVELS',18,205);
@@ -2807,13 +2832,15 @@ async function downloadQuote() {
         pdf.text(title,18,223);
         pdf.setFontSize(11);
         pdf.text(pdf.splitTextToSize('Prepared for ' + q.customer + ' | ' + q.start + ' to ' + q.end,174).slice(0,2),18,272);
-        for (let offset=0; offset<q.gallery.length; offset+=9) {
+        for (let offset=0; offset<featuredPhotos.length; offset+=9) {
             page('Trip Gallery');
-            for (const [i,id] of q.gallery.slice(offset,offset+9).entries()) {
+            for (const [i,id] of featuredPhotos.slice(offset,offset+9).entries()) {
                 await crop(id,18+(i%3)*59,42+Math.floor(i/3)*67,55,62);
             }
         }
-        page('Trip Highlights');
+        page('Your Journey');
+        write('Pickup: ' + q.pickupLocation + '   |   Drop: ' + q.dropLocation, 12, true);
+        if (q.address) write('Customer address: ' + q.address);
         const duration = Math.round((Date.parse(q.end)-Date.parse(q.start))/86400000);
         write(q.start + ' to ' + q.end + ' | ' + (duration+1) + ' days / ' + duration + ' nights | ' + q.pax + ' travellers');
         if(q.vehicle) write('Vehicle: ' + q.vehicle);
@@ -2825,7 +2852,10 @@ async function downloadQuote() {
         for (const [i,day] of q.days.entries()) {
             page();
             if (day.photo) { await crop(day.photo,0,8,210,89); y=112; }
-            write('DAY ' + String(i+1).padStart(2,'0'), 12, true);
+            pdf.setFillColor(32,137,123); pdf.roundedRect(18,y-6,27,8,2,2,'F');
+            pdf.setFont('helvetica','bold'); pdf.setFontSize(11); pdf.setTextColor(255,255,255);
+            pdf.text('DAY ' + String(i+1).padStart(2,'0'),21,y-0.5);
+            y += 13;
             write(day.title, 23, true);
             if(day.route) write(day.route, 12, true);
             for(const activity of day.activities.split('\n').filter(line => line.trim())) write('- ' + activity.trim());
@@ -2856,6 +2886,7 @@ async function downloadQuote() {
 const nepalDays = {
     k: ['Gorakhpur to Kathmandu', 'Gorakhpur - Nepal border - Kathmandu', 'Pickup in Gorakhpur and proceed to the Nepal border.\nContinue to Kathmandu after border formalities.\nCheck in and rest after the drive.', 'Kathmandu'],
     kt: ['Kathmandu sightseeing', 'Pashupatinath - Boudhanath - Swayambhunath', 'Visit Pashupatinath Temple.\nContinue to Boudhanath and Swayambhunath as time permits.', 'Kathmandu'],
+    kh: ['Kathmandu Valley heritage', 'Patan - Bhaktapur', 'Explore Patan Durbar Square and local craft lanes.\nContinue to Bhaktapur for a heritage walk.\nReturn to Kathmandu for the overnight stay.', 'Kathmandu'],
     kp: ['Kathmandu to Pokhara', 'Kathmandu - Manakamana area - Pokhara', 'Drive to Pokhara.\nOptional Manakamana cable car visit subject to timing.\nEvening at Lakeside if time permits.', 'Pokhara'],
     gp: ['Gorakhpur to Pokhara', 'Gorakhpur - Nepal border - Pokhara', 'Pickup and complete border formalities.\nContinue to Pokhara and check in.', 'Pokhara'],
     ps: ['Pokhara sightseeing', 'Sarangkot - Davis Falls - Gupteshwor Cave - Lakeside', 'Optional early sunrise visit to Sarangkot.\nVisit Davis Falls and Gupteshwor Cave.\nSpend time at Phewa Lake; boating is optional.', 'Pokhara'],
@@ -2883,16 +2914,19 @@ const nepalPackages = [
     ['Kathmandu Only | 3 Days / 2 Nights','k kt kg'],
     ['Nepal with Muktinath | 7 Days / 6 Nights','k kt kp j m ps pg'],
     ['Nepal with Chitwan | 8 Days / 7 Nights','k kt kp ps pl c cs cg'],
-    ['Nepal with Janakpur | 9 Days / 8 Nights','k kt kp ps pl c jc js jg']
+    ['Nepal with Janakpur | 9 Days / 8 Nights','k kt kp ps pl c jc js jg'],
+    ['Nepal Heritage and Wildlife | 10 Days / 9 Nights','k kt kh kp ps pl c cs jc jg'],
+    ['Nepal Pilgrimage and Wildlife | 11 Days / 10 Nights','k kt kh kp ps j m c cs jc jg'],
+    ['Grand Nepal Circuit | 12 Days / 11 Nights','k kt kh kp ps pl j m c cs jc jg']
 ].map(([title, route], i) => ({
-    id: 'nepal-' + i, title, inclusions: nepalBase.join('\n'), exclusions: nepalExclusions, terms: nepalTerms,
+    id: 'nepal-' + i, title, inclusions: nepalBase.join('\n'), exclusions: nepalExclusions, terms: nepalTerms, highlights: 'Private Nepal road tour with doorstep routing, city sightseeing and overnight stays as detailed below.',
     days: route.split(' ').map(key => {
         const [title, route, activities, stay] = nepalDays[key];
         return {title, route, activities, stay};
     })
 }));
 const nepalCustomKey = 'baba_nepal_packages_v1';
-const nepalFields = ['nepalKathmandu','nepalPokhara','nepalVehicle','nepalMeal'];
+const nepalFields = ['nepalKathmandu','nepalPokhara','nepalVehicle','nepalMeal','nepalJanakpur','nepalJomsom','nepalChitwan'];
 const nepalForm = quoteControl('quoteForm');
 const nepalValue = key => nepalForm.elements.namedItem(key);
 const nepalStatus = message => { quoteControl('nepalMessage').textContent = message; };
@@ -2910,8 +2944,11 @@ function resetNepalOptions(options = {}) {
     nepalStatus('');
 }
 for (const [id, values] of [
-    ['nepalKathmandu', ['Kathmandu Guest House (Heritage)','Aloft Kathmandu Thamel (Premium)','Hyatt Regency Kathmandu (Luxury)']],
-    ['nepalPokhara', ['Hotel Barahi Pokhara (Premium)','Temple Tree Resort & Spa (Resort)','Fish Tail Lodge (Lakeside lodge)','Atithi Resort & Spa (Resort)','Bar Peepal Resort (Resort)']],
+    ['nepalKathmandu', ['Kathmandu Guest House (Heritage)','Aloft Kathmandu Thamel (Premium)','Hyatt Regency Kathmandu (Luxury)','Airport Hotel','Akama Hotel','Amar Hotel','Apsara Boutique Hotel','Aryatara Kathmandu Hotel','Baber Mahal Vilas','Backyard Hotel','Basera Boutique Hotel','Radisson Hotel Kathmandu','The Dwarika’s Hotel','Hotel Barahi Kathmandu']],
+    ['nepalPokhara', ['Hotel Barahi Pokhara (Premium)','Temple Tree Resort & Spa (Resort)','Fish Tail Lodge (Lakeside lodge)','Atithi Resort & Spa (Resort)','Bar Peepal Resort (Resort)','Pokhara Grande','Sarangkot Mountain Lodge','Dahlia Boutique Hotel','Himalayan Front Resort','Dorje’s Resort & Spa']],
+    ['nepalJanakpur', ['Mithila Yatri Niwas','Hotel Mystic Mithila','Hotel Welcome','Anjani Suite']],
+    ['nepalJomsom', ['Hotel Grand Shambala (Muktinath)','Hotel Shri Muktinath','Hotel Dream Home (Muktinath)','Lo Mustang Himalayan Resort (Muktinath)','Hotel Om’s Home (Jomsom)']],
+    ['nepalChitwan', ['Barahi Jungle Lodge','Hotel Parkside','Hotel Rhino Land','Hotel Star Chitwan']],
     ['nepalVehicle', ['Sedan','SUV','Innova','Innova Crysta','Scorpio','Bolero','Hiace','Tempo Traveller - 12 seats','Tempo Traveller - 17 seats','Tempo Traveller - 20 seats','Tempo Traveller - 26 seats','Mini bus','Coach']]
 ]) setItineraryOptions(quoteControl(id),values.map(value => [value,value]),'Choose an option');
 for (const value of nepalOptional) {
@@ -2923,19 +2960,23 @@ for (const value of nepalOptional) {
     quoteControl('nepalExtras').append(label);
 }
 quoteControl('applyNepalOptions').addEventListener('click', () => {
-    const {values:[kathmandu,pokhara,vehicle,meal],extras} = getNepalOptions();
+    const {values:[kathmandu,pokhara,vehicle,meal,janakpur,jomsom,chitwan],extras} = getNepalOptions();
     if (vehicle) nepalValue('vehicle').value = vehicle;
-    const hotels = [kathmandu && 'Kathmandu: ' + kathmandu, pokhara && 'Pokhara: ' + pokhara].filter(Boolean);
-    if (hotels.length) nepalValue('hotel').value = hotels.join('\n');
+    const hotels = {Kathmandu:kathmandu, Pokhara:pokhara, Janakpur:janakpur, Jomsom:jomsom, Chitwan:chitwan};
+    const selectedHotels = Object.entries(hotels).filter(([,hotel]) => hotel && !hotel.startsWith('Enter a '));
+    if (selectedHotels.length) nepalValue('hotel').value = selectedHotels.map(([city,hotel]) => city + ': ' + hotel).join('\n');
     for (const card of quoteControl('tripDays').children) {
         const stay = card.querySelector('[data-day="stay"]');
-        if (kathmandu && /^Kathmandu(?::|$)/.test(stay.value)) stay.value = hotels[0];
-        if (pokhara && /^Pokhara(?::|$)/.test(stay.value)) stay.value = 'Pokhara: ' + pokhara;
+        const city = stay.value.split(':')[0];
+        const hotel = selectedHotels.find(([name]) => name === city)?.[1];
+        if (hotel) stay.value = city + ': ' + hotel;
         if (meal && stay.value) card.querySelector('[data-day="meals"]').value = meal;
     }
     nepalValue('inclusions').value = [...nepalBase,...extras.map(value => value === 'Selected hotel meal plan' && meal ? meal : value)].join('\n');
     nepalStatus('Selected options applied to the quotation.');
 });
+for (const id of nepalFields) quoteControl(id).addEventListener('change', () => quoteControl('applyNepalOptions').click());
+quoteControl('nepalExtras').addEventListener('change', () => quoteControl('applyNepalOptions').click());
 quoteControl('loadNepalPackage').addEventListener('click', () => {
     const selected = quoteControl('nepalPackage').value;
     const pack = [...nepalPackages, ...nepalCustomPackages()].find(p => p.id === selected);
