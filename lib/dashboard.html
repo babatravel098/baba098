@@ -873,7 +873,7 @@ function openEntry(type) {
         phone: safe(row[3]), address: safe(row[4]), staff: safe(row[5]),
         pickup: safe(row[6]), drop: safe(row[7]), tourRoute: safe(row[8]),
         startDate: safe(row[9]), endDate: safe(row[10]), vehicle: safe(row[11]),
-        total: money(row[12]), advance: (paid.get(row[0]) || 0) / 100
+        total: money(row[12]), status: safe(row[13]), advance: (paid.get(row[0]) || 0) / 100
     }));
 }
 function fetchBookings() {
@@ -1874,13 +1874,43 @@ function readStatusRecord(booking) {
     return record;
 }
 
-function getBookingStatus(booking) {
-    try {
-        const record = readStatusRecord(booking);
-        if (record) return record.status;
-    } catch { return 'Review status'; }
-    return getCompletedSet().includes((booking.phone || '') + '_' + (booking.timestamp || '')) ? 'Completed' : 'Confirmed';
+function hasBookingEnded(booking, today = operationsDay()) {
+    const match = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:$|[T ])/.exec(String(booking.endDate ?? '').trim());
+    if (!match) return false;
+
+    const [, year, month, day] = match;
+    const endDay = [year, month.padStart(2, '0'), day.padStart(2, '0')].join('-');
+    const date = new Date(endDay + 'T00:00:00Z');
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === endDay && endDay < today;
 }
+
+function getBookingStatus(booking) {
+    let record;
+    try {
+        record = readStatusRecord(booking);
+    } catch {
+        return 'Review status';
+    }
+
+    const sheetStatus = bookingStatuses.find(status =>
+        status.toLowerCase() === String(booking.status ?? '').trim().toLowerCase());
+    const status = record?.status || sheetStatus || 'Confirmed';
+    if (status === 'Cancelled' || status === 'Completed') return status;
+    if (hasBookingEnded(booking)) return 'Completed';
+    if (record) return status;
+
+    const legacyKey = (booking.phone || '') + '_' + (booking.timestamp || '');
+    return getCompletedSet().includes(legacyKey) ? 'Completed' : status;
+}
+
+let displayedBookingDay = operationsDay();
+setInterval(() => {
+    const today = operationsDay();
+    if (today === displayedBookingDay) return;
+    displayedBookingDay = today;
+    if (currentTab === 'new' || currentTab === 'completed') renderTable();
+    else renderOperations();
+}, 30000);
 
 function addStatusButton(row, booking) {
     const button = document.createElement('button');
