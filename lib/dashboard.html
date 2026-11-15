@@ -573,9 +573,9 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <label class="block text-sm">Passengers<input type="number" name="pax" required min="1" step="1" class="block w-full border rounded p-2 mt-1"></label>
 <label class="block text-sm">Customer address<input name="address" class="block w-full border rounded p-2"></label>
 <label class="block text-sm">Pickup location<input name="pickupLocation" value="Gorakhpur" class="block w-full border rounded p-2"></label>
-<label class="block text-sm">Drop location<input name="dropLocation" value="Gorakhpur" class="block w-full border rounded p-2"></label><label class="block text-sm">Total package amount (INR)<input type="number" name="amount" required min="0" step="0.01" class="block w-full border rounded p-2 mt-1"></label><details class="sm:col-span-2 rounded-xl border p-4"><summary class="cursor-pointer font-bold">Customize itinerary, hotels, photos and terms</summary><label class="block text-sm">Vehicle<input type="text" name="vehicle" list="tripVehicles" class="block w-full border rounded p-2 mt-1"></label>
-<label class="block text-sm">Hotels / rooms / meals<textarea rows="3" name="hotel" class="block w-full border rounded p-2 mt-1"></textarea></label>
-<div class="sm:col-span-2 grid gap-3 rounded-xl border bg-slate-50 p-4">
+<label class="block text-sm">Drop location<input name="dropLocation" value="Gorakhpur" class="block w-full border rounded p-2"></label><label class="block text-sm">Total package amount (INR)<input type="number" name="amount" required min="0" step="0.01" class="block w-full border rounded p-2 mt-1"></label><details class="sm:col-span-2 rounded-xl border p-4"><summary class="cursor-pointer font-bold">Customize itinerary, photos and terms</summary><details class="my-3 rounded border p-3"><summary>Custom vehicle or hotel override</summary><label class="block text-sm">Vehicle override<input type="text" name="vehicle" list="tripVehicles" class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Accommodation override<textarea rows="3" name="hotel" class="block w-full border rounded p-2 mt-1"></textarea></label>
+</details><div class="sm:col-span-2 grid gap-3 rounded-xl border bg-slate-50 p-4">
   
   <label>Package title<input name="title" class="block w-full rounded border p-2" placeholder="Complete Meghalaya"></label>
   <label>Trip highlights<textarea name="highlights" class="block w-full rounded border p-2" placeholder="Tour type, pickup, drop, best season and key experiences"></textarea></label>
@@ -587,7 +587,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
     <select id="tripTemplates" aria-label="Day templates" class="border rounded p-2"></select>
     <button type="button" class="border rounded p-2" onclick="useItineraryTemplate()">Add saved day</button>
   </div>
-  <label>Saved hotel <select id="tripHotelChoice" class="border rounded p-2" onchange="if(this.value) this.form.elements.namedItem('hotel').value=this.value"></select></label><datalist id="tripHotels"></datalist><datalist id="tripVehicles"></datalist>
+  <datalist id="tripHotels"></datalist><datalist id="tripVehicles"></datalist>
   <div id="tripDays" class="grid gap-3"></div>
   <details class="border rounded-lg bg-white p-3">
     <summary class="font-semibold cursor-pointer">Photo Library</summary>
@@ -2657,7 +2657,6 @@ function refreshItineraryLibrary() {
     for (const [kind, id] of [['hotel','tripHotels'], ['vehicle','tripVehicles']]) {
         quoteControl(id).replaceChildren(...itineraryLibrary[kind].map(value => new Option(value, value)));
     }
-    setItineraryOptions(quoteControl('tripHotelChoice'), itineraryLibrary.hotel.map(value => [value, value]), 'Choose a saved hotel');
     setItineraryOptions(quoteControl('tripTemplates'), itineraryLibrary.templates.map(day => [day.id, day.title]), 'Choose a saved day');
     refreshItineraryPhotos();
 }
@@ -2741,8 +2740,8 @@ function addItineraryDay(day = {}, reveal = false) {
     card.innerHTML = '<h4 class="text-lg font-bold text-blue-900"></h4><label>Day title<input data-day="title" required class="block w-full border rounded p-2"></label>' +
         '<label>Route and stops<input data-day="route" class="block w-full border rounded p-2"></label>' +
         '<label>Activities and timings<textarea data-day="activities" rows="4" class="block w-full border rounded p-2" placeholder="One activity per line"></textarea></label>' +
-        '<label>Hotel and room details<input data-day="stay" list="tripHotels" class="block w-full border rounded p-2"></label>' +
-        '<label>Meals<input data-day="meals" class="block w-full border rounded p-2"></label>' +
+        '<details><summary>Override stay or meals for this day</summary><label>Overnight stay<input data-day="stay" list="tripHotels" class="block w-full border rounded p-2"></label>' +
+        '<label>Meals<input data-day="meals" class="block w-full border rounded p-2"></label></details>' +
         '<label>Day photo <select data-day="photo" class="border rounded p-2"></select></label>' +
         '<div class="flex flex-wrap gap-2"></div>';
     quoteControl('tripDays').append(card);
@@ -2800,8 +2799,8 @@ async function downloadQuote() {
         if (!window.jspdf) throw Error('PDF library is still loading. Try again.');
         const pdf = new window.jspdf.jsPDF();
         let y;
-        const page = title => {
-            pdf.addPage();
+        const page = (title, first = false) => {
+            if (!first) pdf.addPage();
             pdf.setFillColor(247,250,249); pdf.rect(0,0,210,297,'F');
             pdf.setFillColor(19,42,60); pdf.rect(0,0,210,8,'F');
             pdf.setFillColor(32,137,123); pdf.rect(0,8,210,1,'F');
@@ -2833,24 +2832,23 @@ async function downloadQuote() {
             canvas.getContext('2d').drawImage(image, (canvas.width-w)/2, (canvas.height-h)/2,w,h);
             pdf.addImage(canvas.toDataURL('image/jpeg',.85), 'JPEG', x, top, width, height);
         };
-        pdf.setFillColor(19,42,60); pdf.rect(0,0,210,297,'F');
-        const featuredPhotos = [...new Set([...q.gallery, ...q.days.map(day => day.photo).filter(Boolean)])];
-        await crop(q.cover || featuredPhotos[0], 0, 0, 210, 184);
-        pdf.setFillColor(32,137,123); pdf.rect(18,192,28,2,'F');
-        pdf.setTextColor(255,255,255); pdf.setFontSize(13);
-        pdf.text('BABA TOUR & TRAVELS',18,205);
-        pdf.setFontSize(27); pdf.setFont('helvetica','bold');
-        const title = pdf.splitTextToSize(q.title || 'Custom Tour Itinerary',174).slice(0,4);
-        pdf.text(title,18,223);
-        pdf.setFontSize(11);
-        pdf.text(pdf.splitTextToSize('Prepared for ' + q.customer + ' | ' + q.start + ' to ' + q.end,174).slice(0,2),18,272);
-        for (let offset=0; offset<featuredPhotos.length; offset+=9) {
-            page('Trip Gallery');
-            for (const [i,id] of featuredPhotos.slice(offset,offset+9).entries()) {
-                await crop(id,18+(i%3)*59,42+Math.floor(i/3)*67,55,62);
-            }
+        const featuredPhotos = [...new Set([q.cover,...q.gallery].filter(Boolean))].filter(id =>
+            itineraryLibrary.photos.some(photo => photo.id === id));
+        const section = (title, minimum = 30) => {
+            if (y + minimum > 275) page();
+            y += 4;
+            write(title, 16, true);
+        };
+        page('', true);
+        write('BABA TOUR & TRAVELS  /  CUSTOM TOUR PROPOSAL', 10, true);
+        write(q.title || 'Custom Tour Itinerary', 26, true);
+        write('Prepared for ' + q.customer, 12);
+        if (featuredPhotos.length) {
+            if (y + 57 > 275) page();
+            await crop(featuredPhotos[0],18,y,174,52);
+            y += 57;
         }
-        page('Your Journey');
+        section('Your Journey');
         write('Pickup: ' + q.pickupLocation + '   |   Drop: ' + q.dropLocation, 12, true);
         if (q.address) write('Customer address: ' + q.address);
         const duration = Math.round((Date.parse(q.end)-Date.parse(q.start))/86400000);
@@ -2882,8 +2880,12 @@ async function downloadQuote() {
         q.days.forEach((day,i) => write('Day ' + (i+1) + '  |  ' + day.title + (day.route ? ' - ' + day.route : '')));
         if (q.itinerary) write(q.itinerary);
         for (const [i,day] of q.days.entries()) {
-            page();
-            if (day.photo) { await crop(day.photo,0,8,210,89); y=112; }
+            const hasPhoto = itineraryLibrary.photos.some(photo => photo.id === day.photo);
+            pdf.setFont('helvetica','normal'); pdf.setFontSize(11);
+            const text = [day.title,day.route,day.activities,day.stay,day.meals].filter(Boolean).join('\n');
+            const lines = pdf.splitTextToSize(text,174).length;
+            if (y + Math.min(180, 33 + lines * 8 + (hasPhoto ? 46 : 0)) > 275) page();
+            if (hasPhoto) { await crop(day.photo,18,y,174,41); y += 46; }
             pdf.setFillColor(32,137,123); pdf.roundedRect(18,y-6,27,8,2,2,'F');
             pdf.setFont('helvetica','bold'); pdf.setFontSize(11); pdf.setTextColor(255,255,255);
             pdf.text('DAY ' + String(i+1).padStart(2,'0'),21,y-0.5);
@@ -2899,13 +2901,23 @@ async function downloadQuote() {
             ['Package Pricing', 'Total package: INR ' + Number(q.amount).toLocaleString('en-IN') + '\nPer traveller: INR ' + (Number(q.amount)/Number(q.pax)).toLocaleString('en-IN',{maximumFractionDigits:2}) + (q.pricing ? '\n\n'+q.pricing : '')],
             ['Payment Terms', q.terms], ['Payment Instructions', q.bankDetails], ['Cancellation Policy and Travel Notes', [q.cancellation,q.travelNotes].filter(Boolean).join('\n\n')]
         ]) {
-            if(value) { page(title); write(value); }
+            if(value) { section(title); write(value); }
         }
-        page('Your Travel Team');
+        if (featuredPhotos.length > 1) {
+            for (let offset = 1; offset < featuredPhotos.length; offset += 3) {
+                if (offset === 1) section('Trip Gallery', 68);
+                if (y + 49 > 275) page();
+                for (const [column,id] of featuredPhotos.slice(offset,offset+3).entries()) {
+                    await crop(id,18+59*column,y,55,43);
+                }
+                y += 49;
+            }
+        }
+        section('Your Travel Team', 65);
         write('Shubham Kumar', 18, true);
         write('Sales Executive | Baba Tour & Travels');
         write('8726667104 / 9415966902\nbabatourandtravel098@gmail.com\nwww.babatourandtravel.com\nRailway Station Road, Gorakhpur 273001, Uttar Pradesh');
-        for(let i=2;i<=pdf.getNumberOfPages();i++){
+        for(let i=1;i<=pdf.getNumberOfPages();i++){
             pdf.setPage(i); pdf.setTextColor(80,101,112); pdf.setFontSize(9);
             pdf.text('Baba Tour & Travels | 8726667104',18,288);
             pdf.text(String(i),192,288,{align:'right'});
