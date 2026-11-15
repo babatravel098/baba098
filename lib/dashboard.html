@@ -8,7 +8,43 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="manifest" href="manifest.json">
-<script src="https://accounts.google.com/gsi/client" async defer></script></head>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{--ink:#142639;--teal:#0b736b;--line:#dce5eb;--canvas:#edf3f6}
+body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var(--canvas);color:var(--ink)}
+.crm-header{background:#132a3c;color:white;padding:14px clamp(16px,3vw,36px);border-bottom:3px solid #30b3a2;gap:12px;flex-wrap:wrap}
+.crm-layout{display:grid;grid-template-columns:216px minmax(0,1fr);max-width:1700px;margin:auto;min-height:calc(100vh - 80px)}
+.crm-nav{background:#173346;padding:26px 14px;color:#dceaf2}
+.crm-nav h2{font-size:12px;color:#a6c2d1;margin:0 10px 12px;font-weight:600}
+.crm-nav button{width:100%;display:flex;align-items:center;gap:10px;text-align:left;background:transparent;color:inherit;border:1px solid transparent;padding:11px 9px;margin-bottom:4px;font-size:13px}
+.crm-nav button:hover{background:#23495c;border-color:#376375;color:white}
+.crm-nav i{width:18px;text-align:center;color:#7ee0cf}
+.crm-workspace{min-width:0;padding:clamp(14px,2.5vw,32px)}
+.crm-title{font-size:clamp(24px,3vw,34px);font-weight:700;letter-spacing:-.04em}
+.crm-workspace [aria-label="Daily operations"] button{border:1px solid var(--line);border-top:3px solid var(--teal);padding:16px 18px;box-shadow:0 3px 10px #14263908}
+.crm-workspace [aria-label="Daily operations"] strong{display:block;color:var(--ink);font-size:clamp(22px,2.5vw,30px);margin-top:4px;font-variant-numeric:tabular-nums}
+.crm-actions button,.crm-actions a{border-radius:8px}
+.crm-actions button[onclick*="booking"]{background:var(--teal)}
+.crm-bookings{border:1px solid var(--line);box-shadow:0 8px 24px #1426390a}
+.crm-bookings h2{color:var(--ink);letter-spacing:-.02em}
+.crm-bookings table{min-width:720px;font-size:13px;line-height:1.45}
+.crm-bookings thead th{background:#e8f1f4;color:#28495c;padding:11px 10px;font-weight:700}
+.crm-bookings tbody td{padding:10px;vertical-align:top;border-bottom:1px solid #e4ecef}
+.crm-bookings tbody tr:nth-child(even){background:#f7fafb}
+.crm-bookings tbody tr:hover{background:#eef8f7}
+.crm-bookings summary{font-weight:600;color:#174b5a}
+#crmSearch{border-color:var(--line);background:#f7fafc;padding:10px 12px;margin-top:4px}
+#crmSearch:focus-visible,#mainContent button:focus-visible,#mainContent a:focus-visible,#mainContent summary:focus-visible{outline:2px solid #0d9488;outline-offset:2px}
+@media(max-width:800px){
+  .crm-layout{grid-template-columns:minmax(0,1fr)}
+  .crm-nav{display:flex;gap:6px;overflow-x:auto;padding:8px 12px}
+  .crm-nav h2{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  .crm-nav button{width:auto;flex:none;margin:0;white-space:nowrap}
+  .crm-bookings{padding:12px}
+}
+</style>
+</head>
 <body class="bg-slate-100 font-sans">
 
     <!-- Advanced GST Invoice Generator Modal (Vyapar Style) -->
@@ -163,7 +199,7 @@
 
     <!-- Main Content (Hidden until login) -->
     <div id="mainContent" class="">
-        <header class="bg-blue-900 text-white p-4 shadow-md flex justify-between items-center">
+        <header class="crm-header flex justify-between items-center">
             <div class="flex items-center gap-3">
                 <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center text-blue-950 text-xl shadow-lg font-black border-2 border-white/20">
                     <i class="fa-solid fa-van-shuttle"></i>
@@ -181,14 +217,14 @@
             </div>
         </header>
 
-        <main class="max-w-7xl mx-auto p-4 space-y-4">
+        <div class="crm-layout"><nav class="crm-nav" aria-label="CRM navigation"><h2>Workspace</h2><button type="button" onclick="openOfficeHub()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-building" aria-hidden="true"></i> Office Operations</button><button type="button" onclick="openBookingReport()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-chart-column" aria-hidden="true"></i> Booking Reports</button><button type="button" onclick="openQuotes()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-route" aria-hidden="true"></i> Quotations / Itinerary</button>
+<button type="button" onclick="openCustomers()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-users" aria-hidden="true"></i> Customers / History</button></nav><main class="crm-workspace space-y-5"><h1 class="crm-title">Travel Operations</h1>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" aria-label="Daily operations">
                 <button type="button" onclick="openOperations('pickups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Today's pickups</span><strong id="opsPickups" class="text-2xl text-blue-900">—</strong></button>
                 <button type="button" onclick="openOperations('followups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Due follow-ups</span><strong id="opsFollowups" class="text-2xl text-blue-900">—</strong></button>
                 <button type="button" onclick="openOperations('collections')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Pending collections</span><strong id="opsCollections" class="text-2xl text-blue-900">—</strong></button>
             </div>
-            <div class="flex flex-wrap gap-2"><button type="button" onclick="openOfficeHub()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Office Operations</button><button type="button" onclick="openBookingReport()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Booking Reports</button><button type="button" onclick="openQuotes()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Quotations / Itinerary</button>
-<button type="button" onclick="openCustomers()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Customers / History</button>
+            <div class="crm-actions flex flex-wrap gap-2">
                 <button type="button" onclick="openEntry('booking')" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">+ New Booking</button><a href="https://script.google.com/macros/s/AKfycbzXu77bmooy2cXFh7vCPr5BuGZ0N25ZknBdyo20agSCM5JzmnlIfWGReP1HX4O9RUmTsA/exec" target="_blank" rel="noopener noreferrer" class="inline-block px-4 py-2 rounded-lg bg-emerald-700 text-white font-bold">New Sheet Bookings</a>
                 <button type="button" onclick="openEntry('lead')" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">+ Add Lead</button>
             </div>
@@ -385,7 +421,7 @@
             </section>
 
             <!-- Right: Live Bookings / Leads Table -->
-            <section class="bg-white p-5 rounded-xl shadow-md lg:col-span-2">
+            <section class="crm-bookings bg-white p-5 rounded-xl lg:col-span-2">
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-4 border-b pb-2 gap-2">
                     <h2 class="text-lg font-semibold text-blue-900">Operations Dashboard</h2>
                     <div class="flex gap-2 flex-wrap">
@@ -440,7 +476,7 @@
                     </table>
                 </div>
             </section>
-        </main>
+        </main></div>
     </div>
 
     <!-- Floating Quick Call & WhatsApp Buttons -->
@@ -514,18 +550,63 @@
 <label class="block">Discussion notes<textarea name="notes" rows="5" maxlength="5000" class="block w-full border rounded p-2"></textarea></label>
 <button class="bg-blue-700 text-white rounded px-4 py-2" type="submit">Save Lead Draft</button><button class="border rounded px-4 py-2" type="button" onclick="document.getElementById('leadNotesDialog').close()">Close</button>
 </form><p id="leadNotesMessage" role="status" class="text-sm my-3"></p></dialog>
-<dialog id="quotesDialog" aria-labelledby="quotesTitle" style="width:min(900px,96vw);max-height:90vh;border:0;border-radius:16px;padding:24px"><h2 id="quotesTitle" class="font-bold text-xl">Tour Quotation &amp; Itinerary</h2><p class="text-sm my-2">Drafts are saved in this browser. Use English text for PDF export and review all details before sharing.</p><label>Saved quotations<select id="quoteSaved" class="border rounded p-2 m-2" onchange="loadQuote(this.value)"></select></label><button type="button" onclick="newQuote()" class="border p-2 rounded">New quotation</button><form id="quoteForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3"><label class="block text-sm">Customer name<input type="text" name="customer" required class="block w-full border rounded p-2 mt-1"></label>
+<dialog id="quotesDialog" aria-labelledby="quotesTitle" style="width:min(900px,96vw);max-height:90vh;border:0;border-radius:16px;padding:24px"><h2 id="quotesTitle" class="font-bold text-xl">Tour Quotation &amp; Itinerary</h2><p class="text-sm my-2">Build a customer proposal from saved trip days, hotels, vehicles and photos. Drafts and libraries are stored in this browser.</p><label>Saved quotations<select id="quoteSaved" class="border rounded p-2 m-2" onchange="loadQuote(this.value)"></select></label><button type="button" onclick="newQuote()" class="border p-2 rounded">New quotation</button><form id="quoteForm" novalidate class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3"><fieldset class="sm:col-span-2 grid gap-3 rounded-xl border bg-white p-4">
+<legend class="font-bold">Nepal Package Library</legend>
+<div class="flex flex-wrap items-end gap-2">
+<label>Package <select id="nepalPackage" onchange="document.getElementById('loadNepalPackage').click()" class="block rounded border p-2"></select></label>
+<button type="button" id="loadNepalPackage" class="rounded bg-teal-800 px-3 py-2 text-white">Load package</button>
+<button type="button" id="saveNepalPackage" class="rounded border px-3 py-2">Save as package</button>
+</div>
+<div class="flex flex-wrap gap-3">
+<label>Kathmandu hotel <select id="nepalKathmandu" class="block rounded border p-2"></select></label>
+<label>Pokhara hotel <select id="nepalPokhara" class="block rounded border p-2"></select></label>
+<label>Janakpur hotel <select id="nepalJanakpur" class="block rounded border p-2"></select></label><label>Muktinath / Jomsom hotel <select id="nepalJomsom" class="block rounded border p-2"></select></label><label>Chitwan hotel <select id="nepalChitwan" class="block rounded border p-2"></select></label><label>Vehicle <select id="nepalVehicle" class="block rounded border p-2"></select></label>
+<label>Meal plan <select id="nepalMeal" class="block rounded border p-2"><option value="">Select meal plan</option><option>EP - Room only</option><option>BB - Breakfast</option><option>MAP - Breakfast and one main meal</option><option>AP - Breakfast, lunch and dinner</option></select></label>
+</div>
+<details><summary>Optional inclusions</summary><div id="nepalExtras" class="flex flex-wrap gap-3"></div></details>
+<button type="button" id="applyNepalOptions" class="justify-self-start rounded border px-3 py-2">Apply selected options</button>
+<p id="nepalMessage" role="status"></p>
+</fieldset><label class="block text-sm">Customer name<input type="text" name="customer" required class="block w-full border rounded p-2 mt-1"></label>
 <label class="block text-sm">Mobile<input type="tel" name="phone" class="block w-full border rounded p-2 mt-1"></label>
-<label class="block text-sm">Travel start<input type="date" name="start" required class="block w-full border rounded p-2 mt-1"></label>
-<label class="block text-sm">Travel end<input type="date" name="end" required class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Prepared by<input name="staffName" class="block w-full border rounded p-2 mt-1" placeholder="Staff name"></label><label class="block text-sm">Travel start<input type="date" name="start" required class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Travel end<input type="date" name="end" required aria-describedby="quoteDateHint" class="block w-full border rounded p-2 mt-1"></label><p id="quoteDateHint" class="sm:col-span-2 text-sm" role="status"></p>
 <label class="block text-sm">Passengers<input type="number" name="pax" required min="1" step="1" class="block w-full border rounded p-2 mt-1"></label>
-<label class="block text-sm">Vehicle<input type="text" name="vehicle" class="block w-full border rounded p-2 mt-1"></label>
-<label class="block text-sm">Hotels / rooms / meals<textarea rows="3" name="hotel" class="block w-full border rounded p-2 mt-1"></textarea></label>
-<label class="block text-sm">Day-wise itinerary<textarea rows="3" name="itinerary" class="block w-full border rounded p-2 mt-1"></textarea></label>
+<label class="block text-sm">Customer address<input name="address" class="block w-full border rounded p-2"></label>
+<label class="block text-sm">Pickup location<input name="pickupLocation" value="Gorakhpur" class="block w-full border rounded p-2"></label>
+<label class="block text-sm">Drop location<input name="dropLocation" value="Gorakhpur" class="block w-full border rounded p-2"></label><label class="block text-sm">Total package amount (INR)<input type="number" name="amount" required min="0" step="0.01" class="block w-full border rounded p-2 mt-1"></label><details class="sm:col-span-2 rounded-xl border p-4"><summary class="cursor-pointer font-bold">Customize itinerary, photos and terms</summary><details class="my-3 rounded border p-3"><summary>Custom vehicle or hotel override</summary><label class="block text-sm">Vehicle override<input type="text" name="vehicle" list="tripVehicles" class="block w-full border rounded p-2 mt-1"></label>
+<label class="block text-sm">Accommodation override<textarea rows="3" name="hotel" class="block w-full border rounded p-2 mt-1"></textarea></label>
+</details><div class="sm:col-span-2 grid gap-3 rounded-xl border bg-slate-50 p-4">
+  
+  <label>Package title<input name="title" class="block w-full rounded border p-2" placeholder="Complete Meghalaya"></label>
+  <label>Trip highlights<textarea name="highlights" class="block w-full rounded border p-2" placeholder="Tour type, pickup, drop, best season and key experiences"></textarea></label>
+  <label>Pricing options and extras<textarea name="pricing" class="block w-full rounded border p-2" placeholder="Room sharing, per-person prices, offers and extras"></textarea></label>
+  <div class="flex flex-wrap gap-2">
+    <button type="button" class="border rounded p-2" onclick="saveItineraryOption('hotel')">Save hotel option</button>
+    <button type="button" class="border rounded p-2" onclick="saveItineraryOption('vehicle')">Save vehicle option</button>
+    <button type="button" class="border rounded p-2" onclick="addItineraryDay({}, true)">Add trip day</button>
+    <select id="tripTemplates" aria-label="Day templates" class="border rounded p-2"></select>
+    <button type="button" class="border rounded p-2" onclick="useItineraryTemplate()">Add saved day</button>
+  </div>
+  <datalist id="tripHotels"></datalist><datalist id="tripVehicles"></datalist>
+  <div id="tripDays" class="grid gap-3"></div>
+  <details class="border rounded-lg bg-white p-3">
+    <summary class="font-semibold cursor-pointer">Photo Library</summary>
+    <label class="block my-2">Add destination, hotel or vehicle photos<input id="tripPhotoUpload" type="file" accept="image/*" multiple class="block mt-2"></label>
+    <label>Cover photo <select id="tripCover" class="border rounded p-2"></select></label>
+    <div id="tripGallery" class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3"></div>
+  </details>
+</div>
+<label class="block text-sm">Additional itinerary notes<textarea rows="3" name="itinerary" class="block w-full border rounded p-2 mt-1"></textarea></label>
 <label class="block text-sm">Inclusions<textarea rows="3" name="inclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
 <label class="block text-sm">Exclusions<textarea rows="3" name="exclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
-<label class="block text-sm">Total package amount (INR)<input type="number" name="amount" required min="0" step="0.01" class="block w-full border rounded p-2 mt-1"></label>
-<label class="block text-sm">Payment and cancellation terms<textarea rows="3" name="terms" class="block w-full border rounded p-2 mt-1"></textarea></label><div class="sm:col-span-2 flex gap-2 flex-wrap"><button class="bg-blue-700 text-white rounded p-2" type="submit">Save Draft</button><button class="border rounded p-2" type="button" onclick="downloadQuote()">Download PDF</button><button class="border rounded p-2" type="button" onclick="quoteToBookingForm()">Fill Booking Form</button><button class="border rounded p-2" type="button" onclick="document.getElementById('quotesDialog').close()">Close</button></div></form><p id="quoteMessage" role="status"></p></dialog>
+
+<label class="block">Rooming and sharing<input name="rooming" class="block w-full border rounded p-2" placeholder="Room count, double, triple or quad sharing"></label>
+<label class="block">Regional transport<input name="specialTransport" class="block w-full border rounded p-2" placeholder="Separate vehicle for Mustang, if quoted"></label>
+<label class="block">Cancellation schedule<select class="block w-full rounded border p-2" onchange="if(this.value) this.form.elements.namedItem('cancellation').value=quoteCancellationPolicies[this.value]"><option value="">Choose a schedule</option><option value="departure">Departure-based schedule</option><option value="arrival">Arrival-based schedule</option></select></label>
+<label class="block">Payment schedule<select class="block w-full rounded border p-2" onchange="if(this.value) this.form.elements.namedItem('terms').value=quotePaymentPolicies[this.value]"><option value="">Choose a schedule</option><option value="reservation">Reservation instalments (20/30/30/20)</option><option value="pickup">Advance plus pickup and mid-tour balance</option></select></label><label class="block">Cancellation policy<textarea name="cancellation" rows="5" class="block w-full border rounded p-2"></textarea></label>
+<label class="block">Important travel notes<textarea name="travelNotes" rows="5" class="block w-full border rounded p-2"></textarea></label>
+<label class="block">Verified payment instructions (optional)<textarea name="bankDetails" rows="4" class="block w-full border rounded p-2"></textarea></label>
+<label class="block text-sm">Payment terms<textarea rows="3" name="terms" class="block w-full border rounded p-2 mt-1"></textarea></label></details><div class="sm:col-span-2 flex gap-2 flex-wrap"><button class="bg-blue-700 text-white rounded p-2" type="submit">Save Draft</button><button class="border rounded p-2" type="button" onclick="downloadQuote()">Download PDF</button><button class="border rounded p-2" type="button" onclick="quoteToBookingForm()">Fill Booking Form</button><button class="border rounded p-2" type="button" onclick="document.getElementById('quotesDialog').close()">Close</button></div></form><p id="quoteMessage" role="status"></p></dialog>
 <dialog id="assignmentDialog" style="width:min(650px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px" aria-labelledby="assignmentTitle"><h2 id="assignmentTitle" class="text-xl font-bold">Vehicle &amp; Driver Assignment</h2><p id="assignmentCustomer" class="my-3"></p><p class="text-sm text-slate-600 mb-3">Assignments are saved in this browser. Conflict checks use loaded bookings and assignments saved here. Travel dates come from the Sheet.</p><form id="assignmentForm" class="space-y-3">
 <label class="block">Vehicle registration number<input name="registration" required maxlength="30" class="block w-full border rounded p-2"></label>
 <label class="block">Driver name<input name="driver" required maxlength="100" class="block w-full border rounded p-2"></label>
@@ -639,10 +720,6 @@
             }
         }
 
-        function toggleCompleteBooking(phone, timestamp) {
-            const booking = allBookingsData.find(item => String(item.phone) === String(phone) && String(item.timestamp) === String(timestamp));
-            if (booking) openBookingStatus(booking, getBookingStatus(booking) === 'Completed' ? 'Confirmed' : 'Completed');
-        }
 
         window.onload = function() {
     document.getElementById('mainContent').classList.remove('hidden');
@@ -873,7 +950,7 @@ function openEntry(type) {
         phone: safe(row[3]), address: safe(row[4]), staff: safe(row[5]),
         pickup: safe(row[6]), drop: safe(row[7]), tourRoute: safe(row[8]),
         startDate: safe(row[9]), endDate: safe(row[10]), vehicle: safe(row[11]),
-        total: money(row[12]), advance: (paid.get(row[0]) || 0) / 100
+        total: money(row[12]), status: safe(row[13]), advance: (paid.get(row[0]) || 0) / 100
     }));
 }
 function fetchBookings() {
@@ -1130,7 +1207,6 @@ function fetchBookings() {
                 const displayStart = formatDisplayDate(b.startDate);
                 const displayEnd = formatDisplayDate(b.endDate);
                 let key = (b.phone || '') + "_" + (b.timestamp || '');
-                let isDone = getBookingStatus(b) === 'Completed';
 
                 const reviewLink = "https://g.page/r/CWQggXZxge_yEAE/review";
                 const waRemindText = `🚐 *BABA TOUR AND TRAVELS, GORAKHPUR* 🚐%0A%0AHello ${b.name || 'Sir/Ma\'am'},%0AThis is a friendly reminder for your upcoming tour starting on *${displayStart}* to *${displayEnd}* (Route: ${b.tourRoute || 'N/A'}).%0AWe are fully prepared for your comfortable journey! For any queries, call us at 8726667104.%0A%0AThank you for choosing us!`;
@@ -1162,9 +1238,6 @@ function fetchBookings() {
                     </td>
                     <td class="p-2 text-gray-600">${/^\d+(?:\.\d+)?$/.test(String(b.staff ?? '').trim()) ? 'Check Sheet mapping' : escapeHtml(b.staff || '—')}</td>
                     <td class="p-2 space-y-1">
-                        <button onclick="toggleCompleteBooking('${b.phone}', '${b.timestamp}')" class="block w-full text-center ${isDone ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white px-2 py-1 rounded font-semibold text-[11px] cursor-pointer shadow">
-                            ${isDone ? '🔄 Move to Active' : '✅ Mark Completed'}
-                        </button>
                         <a href="https://wa.me/91${b.phone}?text=${waRemindText}" target="_blank" class="block text-center bg-amber-500 text-white px-2 py-0.5 rounded font-semibold text-[10px]">🔔 2-Day Reminder</a>
                         <a href="https://wa.me/91${b.phone}?text=${waFeedbackText}" target="_blank" class="block text-center bg-teal-600 text-white px-2 py-0.5 rounded font-semibold text-[10px]">⭐ Send Review Link</a>
                         <button onclick='sendWhatsApp(${JSON.stringify(b)})' class="block w-full text-center bg-green-600 text-white px-2 py-0.5 rounded font-semibold cursor-pointer">WhatsApp</button>
@@ -1874,13 +1947,43 @@ function readStatusRecord(booking) {
     return record;
 }
 
-function getBookingStatus(booking) {
-    try {
-        const record = readStatusRecord(booking);
-        if (record) return record.status;
-    } catch { return 'Review status'; }
-    return getCompletedSet().includes((booking.phone || '') + '_' + (booking.timestamp || '')) ? 'Completed' : 'Confirmed';
+function hasBookingEnded(booking, today = operationsDay()) {
+    const match = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:$|[T ])/.exec(String(booking.endDate ?? '').trim());
+    if (!match) return false;
+
+    const [, year, month, day] = match;
+    const endDay = [year, month.padStart(2, '0'), day.padStart(2, '0')].join('-');
+    const date = new Date(endDay + 'T00:00:00Z');
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === endDay && endDay < today;
 }
+
+function getBookingStatus(booking) {
+    let record;
+    try {
+        record = readStatusRecord(booking);
+    } catch {
+        return 'Review status';
+    }
+
+    const sheetStatus = bookingStatuses.find(status =>
+        status.toLowerCase() === String(booking.status ?? '').trim().toLowerCase());
+    const status = record?.status || sheetStatus || 'Confirmed';
+    if (status === 'Cancelled' || status === 'Completed') return status;
+    if (hasBookingEnded(booking)) return 'Completed';
+    if (record) return status;
+
+    const legacyKey = (booking.phone || '') + '_' + (booking.timestamp || '');
+    return getCompletedSet().includes(legacyKey) ? 'Completed' : status;
+}
+
+let displayedBookingDay = operationsDay();
+setInterval(() => {
+    const today = operationsDay();
+    if (today === displayedBookingDay) return;
+    displayedBookingDay = today;
+    if (currentTab === 'new' || currentTab === 'completed') renderTable();
+    else renderOperations();
+}, 30000);
 
 function addStatusButton(row, booking) {
     const button = document.createElement('button');
@@ -2101,11 +2204,14 @@ document.getElementById('leadNotesForm').addEventListener('submit', event => {
     } catch(error) { document.getElementById('leadNotesMessage').textContent = 'Could not save draft. ' + error.message; }
 });
 
-const quoteFieldNames = ["customer","phone","start","end","pax","vehicle","hotel","itinerary","inclusions","exclusions","amount","terms"];
+const quoteFieldNames = ["customer","phone","start","end","pax","vehicle","hotel","itinerary","inclusions","exclusions","amount","terms","title","highlights","pricing","address","pickupLocation","dropLocation","rooming","specialTransport","cancellation","travelNotes","bankDetails","staffName"];
 let activeQuoteId = '';
 const quotePrefix = 'baba_quote_v1:' + SCRIPT_URL + ':';
 function newQuote() {
  document.getElementById('quoteForm').reset();
+ resetItinerary();
+ resetNepalOptions();
+ syncQuoteRoute();
  activeQuoteId = crypto.randomUUID();
  document.getElementById('quoteSaved').value = '';
  document.getElementById('quoteMessage').textContent = 'New quotation draft';
@@ -2129,18 +2235,47 @@ function loadQuote(id) {
   const q=JSON.parse(localStorage.getItem(quotePrefix+id));
   if(!q || q.id!==id) throw Error('Draft unavailable');
   for(const key of quoteFieldNames) document.getElementById('quoteForm').elements.namedItem(key).value=q[key] || '';
+  for (const key of ['pickupLocation','dropLocation']) if (!q[key]) document.getElementById('quoteForm').elements.namedItem(key).value = 'Gorakhpur';
+  resetItinerary(q);
+  resetNepalOptions(q.nepalOptions);
+  syncQuoteRoute();
   activeQuoteId=id;
   document.getElementById('quoteMessage').textContent='Saved draft loaded';
  } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
 }
 function quoteValues() {
  const form=document.getElementById('quoteForm');
- if(!form.reportValidity()) throw Error('Complete required fields.');
+ const invalid = form.querySelector(':invalid');
+ if (invalid) {
+    const panel = invalid.closest('details');
+    if (panel) panel.open = true;
+    form.reportValidity();
+    throw Error('Complete required fields.');
+ }
  const q={id:activeQuoteId};
  for(const key of quoteFieldNames) q[key]=form.elements.namedItem(key).value.trim();
  if(!q.customer || q.end<q.start) throw Error('Check customer name and travel dates.');
  if(!Number.isInteger(Number(q.pax)) || Number(q.pax)<1 || !Number.isFinite(Number(q.amount)) || Number(q.amount)<0) throw Error('Check passengers and amount.');
- return q;
+ const itinerary = itineraryValues();
+ const pickup = q.pickupLocation || 'Gorakhpur';
+ const drop = q.dropLocation || 'Gorakhpur';
+ const quotedDays = Math.round((Date.parse(q.end) - Date.parse(q.start)) / 86400000) + 1;
+ if (itinerary.days.length && itinerary.days.length !== quotedDays) {
+    throw Error('The travel dates cover ' + quotedDays + ' days, but the itinerary has ' + itinerary.days.length + ' days. Adjust the dates or trip days.');
+ }
+ const first = itinerary.days[0];
+ const last = itinerary.days.at(-1);
+ if (first) {
+    first.title = first.title.replace(/^Gorakhpur\b/i, () => pickup);
+    first.route = first.route.replace(/^Gorakhpur\b/i, () => pickup);
+    first.activities = first.activities.replace(/\bGorakhpur\b/gi, () => pickup);
+ }
+ if (last && last !== first) {
+    last.title = last.title.replace(/\bGorakhpur$/i, () => drop);
+    last.route = last.route.replace(/\bGorakhpur$/i, () => drop);
+    last.activities = last.activities.replace(/\bGorakhpur\b/gi, () => drop);
+ }
+ return { ...q, ...itinerary, pickupLocation: pickup, dropLocation: drop, nepalOptions: getNepalOptions() };
 }
 document.getElementById('quoteForm').addEventListener('submit',event=>{
  event.preventDefault();
@@ -2151,32 +2286,7 @@ document.getElementById('quoteForm').addEventListener('submit',event=>{
   document.getElementById('quoteMessage').textContent='Quotation draft saved in this browser.';
  } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
 });
-function downloadQuote() {
- try {
-  const q=quoteValues();
-  if(!window.jspdf) throw Error('PDF library is still loading. Try again.');
-  const doc=new window.jspdf.jsPDF(); let y=20;
-  function write(text,size) {
-   doc.setFontSize(size);
-   const lines=doc.splitTextToSize(String(text),175);
-   for(const line of lines) { if(y>277){doc.addPage();y=20;} doc.text(line,17,y);y+=6; }
-   y+=4;
-  }
-  write('BABA TOUR & TRAVELS, GORAKHPUR',16);
-  write('TOUR QUOTATION',13);
-  write('Customer: '+q.customer+' | Mobile: '+q.phone,11);
-  write('Travel: '+q.start+' to '+q.end+' | Passengers: '+q.pax,11);
-  write('Vehicle: '+q.vehicle,11);
-  write('Package amount: INR '+Number(q.amount).toLocaleString('en-IN',{minimumFractionDigits:2}),13);
-  for(const [key,title] of [['hotel','HOTELS / ROOMS / MEALS'],['itinerary','DAY-WISE ITINERARY'],['inclusions','INCLUSIONS'],['exclusions','EXCLUSIONS'],['terms','TERMS']]) {
-   if(q[key]) { write(title,12);write(q[key],11); }
-  }
-  doc.save('Tour_Quotation_'+q.customer.replace(/[^a-z0-9]/gi,'_')+'.pdf');
- } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
-}
 
-let assignmentBooking = null;
-const assignmentFields = ['registration','driver','mobile','time','notes'];
 function assignmentKey(booking) {
  return 'baba_assignment_v1:' + JSON.stringify([SCRIPT_URL, String(booking.phone || ''), String(booking.timestamp || '')]);
 }
@@ -2519,6 +2629,481 @@ async function deleteCrmBooking(button, bookingId) {
         button.disabled = false;
     }
 }
+</script>
+<script>
+const itineraryLibraryKey = 'baba_itinerary_library_v1';
+const quoteControl = id => document.getElementById(id);
+const itineraryLibrary = JSON.parse(localStorage.getItem(itineraryLibraryKey) || 'null') ||
+    {hotel: [], vehicle: [], templates: [], photos: []};
+
+function storeItineraryLibrary() {
+    localStorage.setItem(itineraryLibraryKey, JSON.stringify(itineraryLibrary));
+}
+function itineraryMessage(message) {
+    quoteControl('quoteMessage').textContent = message;
+}
+function saveItineraryOption(kind) {
+    const value = quoteControl('quoteForm').elements.namedItem(kind).value.trim();
+    if (!value) return itineraryMessage('Enter the ' + kind + ' details first.');
+    if (itineraryLibrary[kind].includes(value)) return itineraryMessage('Already saved.');
+    itineraryLibrary[kind].push(value);
+    try { storeItineraryLibrary(); refreshItineraryLibrary(); itineraryMessage('Option saved.'); }
+    catch { itineraryLibrary[kind].pop(); itineraryMessage('Browser storage is full or unavailable.'); }
+}
+function setItineraryOptions(select, items, placeholder) {
+    const current = select.value;
+    select.replaceChildren(new Option(placeholder, ''), ...items.map(([id, name]) => new Option(name, id)));
+    select.value = items.some(([id]) => id === current) ? current : '';
+}
+function refreshItineraryLibrary() {
+    for (const [kind, id] of [['hotel','tripHotels'], ['vehicle','tripVehicles']]) {
+        quoteControl(id).replaceChildren(...itineraryLibrary[kind].map(value => new Option(value, value)));
+    }
+    setItineraryOptions(quoteControl('tripTemplates'), itineraryLibrary.templates.map(day => [day.id, day.title]), 'Choose a saved day');
+    refreshItineraryPhotos();
+}
+function refreshItineraryPhotos() {
+    const gallery = quoteControl('tripGallery');
+    const selected = new Set([...gallery.querySelectorAll('input:checked')].map(input => input.value));
+    gallery.replaceChildren();
+    for (const photo of itineraryLibrary.photos) {
+        const label = document.createElement('label');
+        label.className = 'rounded border overflow-hidden text-xs p-1 break-all';
+        const img = new Image();
+        img.src = photo.data;
+        img.alt = '';
+        img.className = 'w-full h-20 object-contain rounded';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.value = photo.id;
+        input.checked = selected.has(photo.id);
+        label.append(img, input, ' ' + photo.name);
+        gallery.append(label);
+    }
+    const choices = itineraryLibrary.photos.map(photo => [photo.id, photo.name]);
+    setItineraryOptions(quoteControl('tripCover'), choices, 'No cover photo');
+    quoteControl('tripDays').querySelectorAll('select').forEach(select => setItineraryOptions(select, choices, 'No day photo'));
+}
+quoteControl('tripPhotoUpload').addEventListener('change', async event => {
+    const input = event.currentTarget;
+    input.disabled = true;
+    let saved = 0;
+    try {
+        for (const file of input.files) {
+            const image = await createImageBitmap(file, {imageOrientation: 'from-image'});
+            const canvas = document.createElement('canvas');
+            const scale = Math.min(1, 1200 / Math.max(image.width, image.height));
+            canvas.width = Math.max(1, Math.round(image.width * scale));
+            canvas.height = Math.max(1, Math.round(image.height * scale));
+            canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+            image.close();
+            itineraryLibrary.photos.push({id: crypto.randomUUID(), name: file.name, data: canvas.toDataURL('image/jpeg', .8)});
+            try { storeItineraryLibrary(); } catch (error) { itineraryLibrary.photos.pop(); throw error; }
+            saved++;
+        }
+        itineraryMessage(saved + ' photos saved.');
+    } catch {
+        itineraryMessage(saved + ' photos saved. Check the image format and available browser storage.');
+    } finally {
+        refreshItineraryPhotos();
+        input.value = '';
+        input.disabled = false;
+    }
+});
+function resetItinerary(quote = {}) {
+    quoteControl('tripDays').replaceChildren();
+    quoteControl('tripGallery').replaceChildren();
+    refreshItineraryLibrary();
+    quoteControl('tripCover').value = quote.cover || '';
+    for (const input of quoteControl('tripGallery').querySelectorAll('input')) {
+        input.checked = (quote.gallery || []).includes(input.value);
+    }
+    (quote.days || []).forEach(day => addItineraryDay(day));
+}
+function readItineraryDay(card) {
+    const field = key => card.querySelector('[data-day="' + key + '"]').value.trim();
+    return {title: field('title'), route: field('route'), activities: field('activities'), stay: field('stay'), meals: field('meals'), photo: field('photo')};
+}
+function itineraryValues() {
+    return {
+        days: [...quoteControl('tripDays').children].map(readItineraryDay),
+        cover: quoteControl('tripCover').value,
+        gallery: [...quoteControl('tripGallery').querySelectorAll('input:checked')].map(input => input.value)
+    };
+}
+function numberItineraryDays() {
+    [...quoteControl('tripDays').children].forEach((card, index) => {
+        card.firstElementChild.textContent = 'Day ' + (index + 1);
+    });
+}
+function addItineraryDay(day = {}, reveal = false) {
+    const card = document.createElement('section');
+    card.className = 'grid gap-2 border rounded-lg bg-white p-3';
+    card.innerHTML = '<h4 class="text-lg font-bold text-blue-900"></h4><label>Day title<input data-day="title" required class="block w-full border rounded p-2"></label>' +
+        '<label>Route and stops<input data-day="route" class="block w-full border rounded p-2"></label>' +
+        '<label>Activities and timings<textarea data-day="activities" rows="4" class="block w-full border rounded p-2" placeholder="One activity per line"></textarea></label>' +
+        '<details><summary>Override stay or meals for this day</summary><label>Overnight stay<input data-day="stay" list="tripHotels" class="block w-full border rounded p-2"></label>' +
+        '<label>Meals<input data-day="meals" class="block w-full border rounded p-2"></label></details>' +
+        '<label>Day photo <select data-day="photo" class="border rounded p-2"></select></label>' +
+        '<div class="flex flex-wrap gap-2"></div>';
+    quoteControl('tripDays').append(card);
+    numberItineraryDays();
+    refreshItineraryPhotos();
+    for (const field of card.querySelectorAll('[data-day]')) field.value = day[field.dataset.day] || '';
+    for (const [label, action] of [
+        ['Move up', () => card.previousElementSibling?.before(card)],
+        ['Move down', () => card.nextElementSibling?.after(card)],
+        ['Remove day', () => card.remove()],
+        ['Save as template', () => {
+            const template = readItineraryDay(card);
+            const feedback = card.querySelector('[role="status"]');
+            if (!template.title) {
+                feedback.textContent = 'Enter a day title first.';
+                card.querySelector('input').focus();
+                return;
+            }
+            const saved = {...template, id: crypto.randomUUID()};
+            itineraryLibrary.templates.push(saved);
+            try {
+                storeItineraryLibrary();
+            } catch {
+                itineraryLibrary.templates.pop();
+                feedback.textContent = 'Could not save. Browser storage may be full or unavailable.';
+                return;
+            }
+            refreshItineraryLibrary();
+            quoteControl('tripTemplates').value = saved.id;
+            feedback.textContent = 'Template saved and selected in the saved days list.';
+        }]
+    ]) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'border rounded p-2';
+        button.textContent = label;
+        button.addEventListener('click', () => { action(); numberItineraryDays(); });
+        card.lastElementChild.append(button);
+    }
+    const feedback = document.createElement('p');
+    feedback.setAttribute('role', 'status');
+    card.append(feedback);
+    if (reveal) {
+        card.scrollIntoView({block: 'nearest'});
+        card.querySelector('input').focus({preventScroll: true});
+    }
+}
+function useItineraryTemplate() {
+    const day = itineraryLibrary.templates.find(item => item.id === quoteControl('tripTemplates').value);
+    if (day) addItineraryDay(day, true);
+}
+async function downloadQuote() {
+    try {
+        const q = quoteValues();
+        if (!window.jspdf) throw Error('PDF library is still loading. Try again.');
+        const pdf = new window.jspdf.jsPDF();
+        let y;
+        const page = (title, first = false) => {
+            if (!first) pdf.addPage();
+            pdf.setFillColor(247,250,249); pdf.rect(0,0,210,297,'F');
+            pdf.setFillColor(19,42,60); pdf.rect(0,0,210,8,'F');
+            pdf.setFillColor(32,137,123); pdf.rect(0,8,210,1,'F');
+            y = 22;
+            if (title) write(title, 22, true);
+        };
+        const write = (value, size = 11, bold = false) => {
+            pdf.setFont('helvetica', bold ? 'bold' : 'normal');
+            pdf.setFontSize(size);
+            pdf.setTextColor(...(bold ? [11,105,96] : [20,38,57]));
+            for (const line of pdf.splitTextToSize(String(value).replaceAll('→','-').replaceAll('₹','INR '), 174)) {
+                if (y > 275) page();
+                pdf.text(line, 18, y);
+                y += size * .48;
+            }
+            y += 2;
+        };
+        const fitPhoto = async (id, x, top, width, height) => {
+            const photo = itineraryLibrary.photos.find(item => item.id === id);
+            if (!photo) return 0;
+            const image = new Image();
+            image.src = photo.data;
+            await image.decode();
+            const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight);
+            const fittedWidth = image.naturalWidth * scale;
+            const fittedHeight = image.naturalHeight * scale;
+            pdf.addImage(photo.data, 'JPEG', x + (width - fittedWidth) / 2, top, fittedWidth, fittedHeight);
+            return fittedHeight;
+        };
+        const featuredPhotos = [...new Set([q.cover,...q.gallery].filter(Boolean))].filter(id =>
+            itineraryLibrary.photos.some(photo => photo.id === id));
+        const section = (title, minimum = 30) => {
+            if (y + minimum > 275) page();
+            y += 2;
+            write(title, 16, true);
+        };
+        page('', true);
+        write('BABA TOUR & TRAVELS  /  CUSTOM TOUR PROPOSAL', 10, true);
+        write(q.title || 'Custom Tour Itinerary', 26, true);
+        write('Prepared for ' + q.customer, 12);
+        if (featuredPhotos.length) {
+            if (y + 57 > 275) page();
+            y += await fitPhoto(featuredPhotos[0],18,y,174,52) + 5;
+        }
+        section('Your Journey');
+        write('Pickup: ' + q.pickupLocation + '   |   Drop: ' + q.dropLocation, 12, true);
+        if (q.address) write('Customer address: ' + q.address);
+        const duration = Math.round((Date.parse(q.end)-Date.parse(q.start))/86400000);
+        const summary = [
+            ['TRAVEL DATES', q.start + ' to ' + q.end],
+            ['TRIP LENGTH', (duration+1) + ' days / ' + duration + ' nights'],
+            ['TRAVELLERS', q.pax],
+            ['VEHICLE', q.vehicle],
+            ['ROOMING', q.rooming],
+            ['MEAL PLAN', q.nepalOptions?.values?.[3]],
+            ['REGIONAL TRANSPORT', q.specialTransport],
+            ['ACCOMMODATION', q.hotel]
+        ];
+        for (const [label, value] of summary.filter(([, value]) => value)) {
+            pdf.setFont('helvetica','normal'); pdf.setFontSize(10);
+            const lines = pdf.splitTextToSize(String(value), 113);
+            const height = 8 + lines.length * 5;
+            if (y + height > 275) page('Your Journey');
+            pdf.setFillColor(238,245,245); pdf.roundedRect(18,y,174,height,2,2,'F');
+            pdf.setFont('helvetica','bold'); pdf.setTextColor(11,105,96); pdf.setFontSize(9);
+            pdf.text(label,22,y+7);
+            pdf.setFont('helvetica','normal'); pdf.setFontSize(10); pdf.setTextColor(20,38,57);
+            lines.forEach((line,index) => pdf.text(line,74,y+7+index*5));
+            y += height + 3;
+        }
+        if(q.phone) write('Customer mobile: ' + q.phone);
+        if(q.highlights) write(q.highlights);
+        if(q.days.length) write('Itinerary at a glance', 16, true);
+        q.days.forEach((day,i) => write('Day ' + (i+1) + '  |  ' + day.title + (day.route ? ' - ' + day.route : '')));
+        if (q.itinerary) write(q.itinerary);
+        for (const [i,day] of q.days.entries()) {
+            const hasPhoto = itineraryLibrary.photos.some(photo => photo.id === day.photo);
+            pdf.setFont('helvetica','normal'); pdf.setFontSize(11);
+            if (y + (hasPhoto ? 96 : 32) > 275) page();
+            if (hasPhoto) { y += await fitPhoto(day.photo,18,y,174,62) + 9; }
+            pdf.setFillColor(32,137,123); pdf.roundedRect(18,y-6,27,8,2,2,'F');
+            pdf.setFont('helvetica','bold'); pdf.setFontSize(11); pdf.setTextColor(255,255,255);
+            pdf.text('DAY ' + String(i+1).padStart(2,'0'),21,y-0.5);
+            y += 13;
+            write(day.title, 23, true);
+            if(day.route) write(day.route, 12, true);
+            for(const activity of day.activities.split('\n').filter(line => line.trim())) write('- ' + activity.trim());
+            if(day.stay) write('Overnight stay: ' + day.stay);
+            if(day.meals) write('Meals: ' + day.meals);
+        }
+        for (const [title, value] of [
+            ['Inclusions and Exclusions', [q.inclusions && 'Included\n'+q.inclusions, q.exclusions && 'Excluded\n'+q.exclusions].filter(Boolean).join('\n\n')],
+            ['Package Pricing', 'Total package: INR ' + Number(q.amount).toLocaleString('en-IN') + '\nPer traveller: INR ' + (Number(q.amount)/Number(q.pax)).toLocaleString('en-IN',{maximumFractionDigits:2}) + (q.pricing ? '\n\n'+q.pricing : '')],
+            ['Payment Terms', q.terms], ['Payment Instructions', q.bankDetails], ['Cancellation Policy and Travel Notes', [q.cancellation,q.travelNotes].filter(Boolean).join('\n\n')]
+        ]) {
+            if(value) { section(title); write(value); }
+        }
+        if (featuredPhotos.length > 1) {
+            for (let offset = 1; offset < featuredPhotos.length; offset += 3) {
+                if (offset === 1) section('Trip Gallery', 68);
+                if (y + 49 > 275) page();
+                for (const [column,id] of featuredPhotos.slice(offset,offset+3).entries()) {
+                    await fitPhoto(id,18+59*column,y,55,43);
+                }
+                y += 49;
+            }
+        }
+        section('Your Travel Team', 30);
+        if (q.staffName) write(q.staffName, 16, true);
+        write('Baba Tour & Travels | GSTIN: 09AARPU5006D1ZI');
+        write('8726667104 / 9415966902 / 9026060471\nbabatourandtravel098@gmail.com\nwww.babatourandtravel.com\nRailway Station Road, Gorakhpur 273001, Uttar Pradesh');
+        for(let i=1;i<=pdf.getNumberOfPages();i++){
+            pdf.setPage(i); pdf.setTextColor(80,101,112); pdf.setFontSize(9);
+            pdf.text('GSTIN 09AARPU5006D1ZI | 8726667104 / 9415966902 / 9026060471',18,288);
+            pdf.text(String(i),192,288,{align:'right'});
+        }
+        localStorage.setItem(quotePrefix + q.id, JSON.stringify(q));
+        refreshQuotes();
+        quoteControl('quoteSaved').value = q.id;
+        pdf.save((q.title || 'Tour Itinerary').replace(/[^a-z0-9 -]/gi,'').trim() + '.pdf');
+        itineraryMessage('Draft saved and PDF downloaded.');
+    } catch(error) { itineraryMessage(error.message); }
+}
+</script>
+<script>
+const nepalDays = {
+    gl: ['Gorakhpur to Pokhara via Lumbini','Gorakhpur - Sunauli - Lumbini - Pokhara','Meet your driver at the agreed pickup point early in the morning.\nComplete border formalities.\nStop at Lumbini for sightseeing if time permits; local e-rickshaw is optional.\nContinue to Pokhara, check in and stay overnight.','Pokhara'],
+    pk: ['Pokhara to Kathmandu via Manakamana','Pokhara - Manakamana - Kathmandu','Leave Pokhara in the morning.\nOptional visit to Manakamana Temple by cable car, subject to operating hours and queues.\nContinue to Kathmandu for hotel check-in and overnight stay.','Kathmandu'],
+    kj: ['Kathmandu to Janakpur','Kathmandu - Janakpur','Check out after breakfast and depart for Janakpur.\nCheck in on arrival and rest before the next morning’s temple visit.','Janakpur'],
+    k: ['Gorakhpur to Kathmandu', 'Gorakhpur - Nepal border - Kathmandu', 'Pickup in Gorakhpur and proceed to the Nepal border.\nContinue to Kathmandu after border formalities.\nCheck in and rest after the drive.', 'Kathmandu'],
+    kt: ['Kathmandu sightseeing', 'Pashupatinath - Boudhanath - Swayambhunath', 'Begin with Pashupatinath Temple on the Bagmati River.\nVisit Guhyeshwari and Budhanilkantha (Sleeping Vishnu).\nContinue to Swayambhunath for valley views and visit ISKCON Kathmandu if time permits.', 'Kathmandu'],
+    kh: ['Kathmandu Valley heritage', 'Patan - Bhaktapur', 'Explore Patan Durbar Square and local craft lanes.\nContinue to Bhaktapur for a heritage walk.\nReturn to Kathmandu for the overnight stay.', 'Kathmandu'],
+    kp: ['Kathmandu to Pokhara', 'Kathmandu - Manakamana area - Pokhara', 'Drive to Pokhara.\nOptional Manakamana cable car visit subject to timing.\nEvening at Lakeside if time permits.', 'Pokhara'],
+    gp: ['Gorakhpur to Pokhara', 'Gorakhpur - Nepal border - Pokhara', 'Pickup and complete border formalities.\nContinue to Pokhara and check in.', 'Pokhara'],
+    ps: ['Pokhara sightseeing', 'Sarangkot - Davis Falls - Gupteshwor Cave - Lakeside', 'Optional early sunrise visit to Sarangkot.\nVisit Bindhyabasini Temple, Davis Falls and Gupteshwor Mahadev Cave.\nStop at Seti River Gorge as time permits.\nVisit Phewa Lake; optional boating to Tal Barahi Temple.', 'Pokhara'],
+    pl: ['Pokhara leisure and viewpoints', 'Peace Pagoda area - Phewa Lake', 'Visit a local viewpoint subject to road conditions.\nEnjoy free time around Lakeside.', 'Pokhara'],
+    j: ['Pokhara to Jomsom', 'Pokhara - Beni - Jomsom', 'Drive toward Jomsom with a possible stop in Marpha for its traditional lanes and orchards.\nLook for views of the Nilgiri and Dhaulagiri ranges in clear weather.\nConfirm seasonal road access and the vehicle for this sector before booking.', 'Jomsom'],
+    m: ['Muktinath darshan and return to Pokhara', 'Jomsom - Muktinath - Pokhara', 'Proceed early for Muktinath darshan and visit the sacred waterspouts if accessible.\nReturn toward Pokhara with an optional Kushma stop, subject to road conditions and time.', 'Pokhara'],
+    c: ['Pokhara to Chitwan', 'Pokhara - Sauraha', 'Transfer to Sauraha.\nCheck in and explore the riverside if time permits.', 'Chitwan'],
+    cs: ['Chitwan activities', 'Sauraha - Chitwan National Park area', 'Choose optional activities with the local operator.\nSafari, park permits and activities are quoted separately unless included.', 'Chitwan'],
+    jc: ['Chitwan to Janakpur', 'Sauraha - Janakpur', 'Transfer to Janakpur and check in.\nVisit the temple area if arrival time allows.', 'Janakpur'],
+    js: ['Janakpur temple visit', 'Janaki Mandir - local sightseeing', 'Visit Janaki Mandir and nearby sites as time permits.', 'Janakpur'],
+    pg: ['Pokhara to Gorakhpur', 'Pokhara - Butwal - Gorakhpur', 'Check out and return via the Nepal border.\nOptional Siddhababa stop subject to timing.\nDrop in Gorakhpur.', ''],
+    kg: ['Kathmandu to Gorakhpur', 'Kathmandu - Nepal border - Gorakhpur', 'Check out and drive toward the border.\nComplete border formalities and drop in Gorakhpur.', ''],
+    cg: ['Chitwan to Gorakhpur', 'Sauraha - Nepal border - Gorakhpur', 'Check out and transfer to Gorakhpur via the border.', ''],
+    jg: ['Janakpur to Gorakhpur', 'Janakpur - Nepal border - Gorakhpur', 'Visit Janaki Mandir and Sita Vivah Mandap before departure if timing permits.\nTransfer to Gorakhpur after border formalities. Confirm the return route and timing before travel.', '']
+};
+const nepalBase = ['Vehicle', 'Nepal road taxes', 'Driver night charges', 'Parking', 'Fuel'];
+const nepalOptional = ['Hotel accommodation', 'Selected hotel meal plan', 'Sightseeing transfers as per itinerary', 'Airport or railway station pickup and drop', 'Local guide', 'Safari and park permits'];
+const nepalExclusions = 'Temple and sightseeing entry fees\nVIP darshan\nE-rickshaw fares and cable-car tickets\nMeals and activities unless listed under inclusions\nPersonal travel insurance, medical expenses, laundry, bottled drinks and tips\nKitchen space and guide services unless quoted\nExtra travel days and sightseeing added during the trip are charged separately.';
+const nepalTerms = 'Booking is confirmed after receipt of the agreed advance and confirmation of availability.\n70% of the balance is payable on pickup day. The remaining 30% of the balance is payable midway through the tour.\nHotels, rooms and vehicles are subject to confirmation. Route and timing may vary with road, weather and local conditions.\nAny additional day or sightseeing stop requested during the trip will be quoted separately.';
+const nepalPackages = [
+    ['Nepal Highlights | 4 Days / 3 Nights','k kp ps pg'],
+    ['Kathmandu and Pokhara | 5 Days / 4 Nights','k kt kp ps pg'],
+    ['Kathmandu and Pokhara Leisure | 6 Days / 5 Nights','k kt kp ps pl pg'],
+    ['Pokhara Only | 3 Days / 2 Nights','gp ps pg'],
+    ['Kathmandu Only | 3 Days / 2 Nights','k kt kg'],
+    ['Nepal with Muktinath | 7 Days / 6 Nights','k kt kp j m ps pg'],
+    ['Nepal with Chitwan | 8 Days / 7 Nights','k kt kp ps pl c cs cg'],
+    ['Nepal Pilgrimage Circuit | 8 Days / 7 Nights','gl ps j m pk kt kj jg'],
+    ['Nepal with Janakpur | 9 Days / 8 Nights','k kt kp ps pl c jc js jg'],
+    ['Nepal Heritage and Wildlife | 10 Days / 9 Nights','k kt kh kp ps pl c cs jc jg'],
+    ['Nepal Pilgrimage and Wildlife | 11 Days / 10 Nights','k kt kh kp ps j m c cs jc jg'],
+    ['Grand Nepal Circuit | 12 Days / 11 Nights','k kt kh kp ps pl j m c cs jc jg']
+].map(([title, route], i) => ({
+    id: title.startsWith('Nepal Pilgrimage Circuit') ? 'nepal-pilgrimage-8' : 'nepal-' + (i > 7 ? i - 1 : i), title, inclusions: nepalBase.join('\n'), exclusions: nepalExclusions, terms: nepalTerms, highlights: 'Private Nepal road tour with doorstep routing, city sightseeing and overnight stays as detailed below.',
+    days: route.split(' ').map(key => {
+        const [title, route, activities, stay] = nepalDays[key];
+        return {title, route, activities, stay};
+    })
+}));
+const quoteCancellationCommon = 'Please submit cancellation requests in writing. Requests received on Sundays are processed on the next working day. Payments for the 20 December to 5 January holiday period are non-refundable. After departure, any refund depends on amounts recoverable from suppliers. Unused accommodation, chartered transport and missed meals are not refundable.';
+const quoteCancellationPolicies = {
+    departure: 'Minimum cancellation charge: 10% or INR 3,000 per person per tour, whichever is higher.\n45 to 31 days before departure: 25% of total tour cost.\n30 to 16 days: 50%.\n15 to 5 days: 75%.\n4 days or fewer, same-day cancellation or no-show: 100%.\n' + quoteCancellationCommon,
+    arrival: '45 days before arrival: 10% of tour cost.\n15 days before arrival: 25%.\n7 days before arrival: 50%.\nWithin 48 hours of arrival or no-show: no refund.\n' + quoteCancellationCommon
+};
+const quotePaymentPolicies = {
+    reservation: '20% at reservation.\n30% after vouchers are issued.\n30% 20 days before arrival.\n20% on arrival or 3 days before arrival, as agreed at booking.\nDebit or credit card payment is available through the confirmed payment link.',
+    pickup: 'Booking is confirmed after receipt of the agreed advance and confirmation of availability.\n70% of the remaining balance is due on pickup day. The final 30% is due midway through the tour.'
+};
+const nepalCustomKey = 'baba_nepal_packages_v1';
+const nepalFields = ['nepalKathmandu','nepalPokhara','nepalVehicle','nepalMeal','nepalJanakpur','nepalJomsom','nepalChitwan'];
+const nepalForm = quoteControl('quoteForm');
+const nepalValue = key => nepalForm.elements.namedItem(key);
+const nepalStatus = message => { quoteControl('nepalMessage').textContent = message; };
+const nepalCustomPackages = () => JSON.parse(localStorage.getItem(nepalCustomKey) || '[]');
+function refreshNepalPackages() {
+    setItineraryOptions(quoteControl('nepalPackage'), [...nepalPackages, ...nepalCustomPackages()].map(p => [p.id,p.title]), 'Choose a saved package');
+}
+function getNepalOptions() {
+    return {values: nepalFields.map(id => quoteControl(id).value), extras: [...quoteControl('nepalExtras').querySelectorAll('input:checked')].map(input => input.value)};
+}
+function resetNepalOptions(options = {}) {
+    for (const [i,id] of nepalFields.entries()) quoteControl(id).value = options.values?.[i] || '';
+    for (const input of quoteControl('nepalExtras').querySelectorAll('input')) input.checked = (options.extras || []).includes(input.value);
+    quoteControl('nepalPackage').value = '';
+    nepalStatus('');
+}
+for (const [id, values] of [
+    ['nepalKathmandu', ['Rameshwaram (or similar)','Kathmandu Guest House (Heritage)','Aloft Kathmandu Thamel (Premium)','Hyatt Regency Kathmandu (Luxury)','Airport Hotel','Akama Hotel','Amar Hotel','Apsara Boutique Hotel','Aryatara Kathmandu Hotel','Baber Mahal Vilas','Backyard Hotel','Basera Boutique Hotel','Radisson Hotel Kathmandu','The Dwarika’s Hotel','Hotel Barahi Kathmandu']],
+    ['nepalPokhara', ['Satkar (or similar)','Hotel Barahi Pokhara (Premium)','Temple Tree Resort & Spa (Resort)','Fish Tail Lodge (Lakeside lodge)','Atithi Resort & Spa (Resort)','Bar Peepal Resort (Resort)','Pokhara Grande','Sarangkot Mountain Lodge','Dahlia Boutique Hotel','Himalayan Front Resort','Dorje’s Resort & Spa']],
+    ['nepalJanakpur', ['Ram Janki (or similar)','Mithila Yatri Niwas','Hotel Mystic Mithila','Hotel Welcome','Anjani Suite']],
+    ['nepalJomsom', ['Trekkers Inn (Jomsom, or similar)','Hotel Grand Shambala (Muktinath)','Hotel Shri Muktinath','Hotel Dream Home (Muktinath)','Lo Mustang Himalayan Resort (Muktinath)','Hotel Om’s Home (Jomsom)']],
+    ['nepalChitwan', ['Barahi Jungle Lodge','Hotel Parkside','Hotel Rhino Land','Hotel Star Chitwan']],
+    ['nepalVehicle', ['Sedan','SUV','Innova','Innova Crysta','Scorpio','Bolero','Hiace','Tempo Traveller - 12 seats','Tempo Traveller - 17 seats','Tempo Traveller - 20 seats','Tempo Traveller - 26 seats','Mini bus','Coach']]
+]) setItineraryOptions(quoteControl(id),values.map(value => [value,value]),'Choose an option');
+for (const value of nepalOptional) {
+    const label = document.createElement('label');
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = value;
+    label.append(input, ' ' + value);
+    quoteControl('nepalExtras').append(label);
+}
+quoteControl('applyNepalOptions').addEventListener('click', () => {
+    const {values:[kathmandu,pokhara,vehicle,meal,janakpur,jomsom,chitwan],extras} = getNepalOptions();
+    if (vehicle) nepalValue('vehicle').value = vehicle;
+    const hotels = {Kathmandu:kathmandu, Pokhara:pokhara, Janakpur:janakpur, Jomsom:jomsom, Chitwan:chitwan};
+    const selectedHotels = Object.entries(hotels).filter(([,hotel]) => hotel && !hotel.startsWith('Enter a '));
+    const overnightCities = new Set([...quoteControl('tripDays').children].map(card => card.querySelector('[data-day="stay"]').value.split(':')[0]));
+    const routeHotels = selectedHotels.filter(([city]) => overnightCities.has(city));
+    nepalValue('hotel').value = routeHotels.map(([city,hotel]) => city + ': ' + hotel).join('\n');
+    for (const card of quoteControl('tripDays').children) {
+        const stay = card.querySelector('[data-day="stay"]');
+        const city = stay.value.split(':')[0];
+        const hotel = selectedHotels.find(([name]) => name === city)?.[1];
+        if (hotel) stay.value = city + ': ' + hotel;
+        if (meal && stay.value) card.querySelector('[data-day="meals"]').value = meal;
+    }
+    nepalValue('inclusions').value = [...nepalBase,...extras.map(value => value === 'Selected hotel meal plan' && meal ? meal : value)].join('\n');
+    nepalStatus('Selected options applied to the quotation.');
+});
+for (const id of nepalFields) quoteControl(id).addEventListener('change', () => quoteControl('applyNepalOptions').click());
+quoteControl('nepalExtras').addEventListener('change', () => quoteControl('applyNepalOptions').click());
+quoteControl('loadNepalPackage').addEventListener('click', () => {
+    const selected = quoteControl('nepalPackage').value;
+    const pack = [...nepalPackages, ...nepalCustomPackages()].find(p => p.id === selected);
+    if (!pack) return nepalStatus('Choose a package first.');
+    if (quoteControl('tripDays').childElementCount && !confirm('Replace the current trip days and package details?')) return;
+    for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms','pricing','amount']) nepalValue(key).value = key === 'amount' || key === 'pricing' ? '' : (pack[key] || '');
+    nepalValue('terms').value = pack.termsOverride || quotePaymentPolicies.reservation;
+    nepalValue('cancellation').value = pack.cancellation || quoteCancellationPolicies.departure;
+    nepalValue('travelNotes').value = pack.travelNotes || 'Carry a valid passport or voter ID where accepted. Check current document rules for each traveller before departure.\nConfirm permitted Indian currency denominations with official authorities before travel.\nVehicle service is non-AC and limited to the agreed itinerary.\nIf the requested hotel is unavailable, accommodation of a similar category may be offered.\nSightseeing order may change with road conditions, weather or opening times.';
+    nepalValue('rooming').value = pack.rooming || '';
+    nepalValue('specialTransport').value = pack.specialTransport || '';
+    nepalValue('bankDetails').value = '';
+    for (const key of ['pickupLocation','dropLocation']) nepalValue(key).value = pack[key] || 'Gorakhpur';
+    resetItinerary(pack);
+    resetNepalOptions(pack.nepalOptions);
+    syncQuoteRoute(true);
+    quoteControl('nepalPackage').value = pack.id;
+    nepalStatus('Package loaded. Enter the price for this customer.');
+});
+quoteControl('saveNepalPackage').addEventListener('click', () => {
+    const title = nepalValue('title').value.trim();
+    const fields = itineraryValues();
+    if (!title || !fields.days.length || fields.days.some(day => !day.title)) return nepalStatus('Enter a package title and name each trip day.');
+    try {
+        const saved = nepalCustomPackages();
+        const packageDetails = {id:crypto.randomUUID(), ...fields, nepalOptions:getNepalOptions()};
+        for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms','rooming','specialTransport','cancellation','travelNotes','pickupLocation','dropLocation']) packageDetails[key] = nepalValue(key).value.trim();
+        packageDetails.termsOverride = packageDetails.terms;
+        localStorage.setItem(nepalCustomKey,JSON.stringify([...saved,packageDetails]));
+        refreshNepalPackages();
+        quoteControl('nepalPackage').value = packageDetails.id;
+        nepalStatus('Reusable package saved.');
+    } catch { nepalStatus('Could not save the package in this browser.'); }
+});
+function syncQuoteRoute(fillEnd = false) {
+    const cards = [...quoteControl('tripDays').children];
+    const cities = new Set(cards.map(card => card.querySelector('[data-day="stay"]').value.trim().split(':')[0].toLowerCase()));
+    for (const city of ['Kathmandu','Pokhara','Janakpur','Jomsom','Chitwan']) {
+        const control = quoteControl('nepal' + city);
+        control.closest('label').hidden = cards.length > 0 && !cities.has(city.toLowerCase());
+        if (control.closest('label').hidden) control.value = '';
+    }
+    const start = nepalValue('start'), end = nepalValue('end');
+    const hint = quoteControl('quoteDateHint');
+    end.setCustomValidity('');
+    end.removeAttribute('max');
+    end.min = start.value;
+    hint.textContent = '';
+    if (!start.value || !cards.length) return;
+    const lastDay = new Date(Date.parse(start.value) + (cards.length - 1) * 86400000)
+        .toISOString().slice(0, 10);
+    end.min = end.max = lastDay;
+    if (fillEnd || !end.value) end.value = lastDay;
+    if (end.value !== lastDay) {
+        end.setCustomValidity('For this itinerary, select ' + lastDay + ' as the end date.');
+        hint.textContent = 'End date must be ' + lastDay + ' for this ' + cards.length + '-day itinerary.';
+    } else {
+        hint.textContent = cards.length + ' days / ' + (cards.length - 1) + ' nights';
+    }
+}
+nepalValue('start').addEventListener('change', () => syncQuoteRoute(true));
+nepalValue('end').addEventListener('input', () => syncQuoteRoute());
+quoteControl('tripDays').addEventListener('input', event => {
+    if (event.target.matches('[data-day="stay"]')) syncQuoteRoute();
+});
+new MutationObserver(() => syncQuoteRoute()).observe(quoteControl('tripDays'), {childList:true});
+refreshNepalPackages();
 </script>
 </body>
 </html>
