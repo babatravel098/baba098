@@ -218,7 +218,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
         </header>
 
         <div class="crm-layout"><nav class="crm-nav" aria-label="CRM navigation"><h2>Workspace</h2><button type="button" onclick="openOfficeHub()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-building" aria-hidden="true"></i> Office Operations</button><button type="button" onclick="openBookingReport()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-chart-column" aria-hidden="true"></i> Booking Reports</button><button type="button" onclick="openQuotes()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-route" aria-hidden="true"></i> Quotations / Itinerary</button>
-<button type="button" onclick="openCustomers()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-users" aria-hidden="true"></i> Customers / History</button><button type="button" onclick="openNepalTours()">Nepal Tour Packages</button></nav><main class="crm-workspace space-y-5"><section id="upcomingPickups" role="status" aria-live="polite" hidden class="rounded-xl border border-teal-200 bg-teal-50 p-4"><h2 class="font-bold text-teal-900">Pickups in the next 7 days</h2><ul id="upcomingPickupList" class="mt-2 grid gap-2 text-sm"></ul></section><h1 class="crm-title">Travel Operations</h1>
+<button type="button" onclick="openCustomers()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-users" aria-hidden="true"></i> Customers / History</button></nav><main class="crm-workspace space-y-5"><section id="upcomingPickups" role="status" aria-live="polite" hidden class="rounded-xl border border-teal-200 bg-teal-50 p-4"><h2 class="font-bold text-teal-900">Pickups in the next 7 days</h2><ul id="upcomingPickupList" class="mt-2 grid gap-2 text-sm"></ul></section><h1 class="crm-title">Travel Operations</h1>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" aria-label="Daily operations">
                 <button type="button" onclick="openOperations('pickups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Today's pickups</span><strong id="opsPickups" class="text-2xl text-blue-900">—</strong></button>
                 <button type="button" onclick="openOperations('followups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Due follow-ups</span><strong id="opsFollowups" class="text-2xl text-blue-900">—</strong></button>
@@ -425,7 +425,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-4 border-b pb-2 gap-2">
                     <h2 class="text-lg font-semibold text-blue-900">Operations Dashboard</h2>
                     <div class="flex gap-2 flex-wrap">
-                        <button onclick="switchTab('new')" id="newTabBtn" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer">🆕 New Bookings</button>
+                        <button type="button" onclick="openNepalTours()" class="rounded bg-teal-800 px-3 py-2 text-xs font-semibold text-white">Nepal Tour Package Details</button><button onclick="switchTab('new')" id="newTabBtn" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold shadow cursor-pointer">🆕 New Bookings</button>
                         <button onclick="switchTab('completed')" id="completedTabBtn" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer">✅ Completed</button>
                         <button onclick="switchTab('gst')" id="gstTabBtn" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer">🧾 GST Invoices</button>
                         <button onclick="switchTab('leads')" id="leadsTabBtn" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer">📞 Leads & Follow-ups</button>
@@ -2838,7 +2838,7 @@ function useItineraryTemplate() {
     const day = itineraryLibrary.templates.find(item => item.id === quoteControl('tripTemplates').value);
     if (day) addItineraryDay(day, true);
 }
-async function downloadQuote() {
+async function downloadQuote(share = false) {
     try {
         const q = quoteValues();
         if (!window.jspdf) throw Error('PDF library is still loading. Try again.');
@@ -2965,7 +2965,25 @@ async function downloadQuote() {
         localStorage.setItem(quotePrefix + q.id, JSON.stringify(q));
         refreshQuotes();
         quoteControl('quoteSaved').value = q.id;
-        pdf.save((q.title || 'Tour Itinerary').replace(/[^a-z0-9 -]/gi,'').trim() + '.pdf');
+        const filename = ((q.title || 'Tour Itinerary').replace(/[^a-z0-9 -]/gi,'').trim() || 'Tour Itinerary') + '.pdf';
+        const file = new File([pdf.output('blob')], filename, {type:'application/pdf'});
+        if (share && navigator.canShare?.({files:[file]})) {
+            try {
+                await navigator.share({files:[file], title:q.title || 'Tour Itinerary'});
+                itineraryMessage('PDF shared through your device.');
+                return;
+            } catch (error) {
+                if (error.name === 'AbortError') return;
+            }
+        }
+        pdf.save(filename);
+        if (share) {
+            const phone = q.phone.replace(/\D/g,'');
+            const recipient = phone.length === 10 ? '91' + phone : phone;
+            if (recipient) window.open('https://wa.me/' + recipient, '_blank', 'noopener,noreferrer');
+            itineraryMessage('PDF downloaded. Attach it in the customer WhatsApp chat.');
+            return;
+        }
         itineraryMessage('Draft saved and PDF downloaded.');
     } catch(error) { itineraryMessage(error.message); }
 }
@@ -3247,11 +3265,13 @@ async function openNepalTours() {
         if (reference) linked.set(reference, booking);
     }
     count.textContent = 'Confirmed Nepal tours: ' + [...linked.values()].filter(b => getBookingStatus(b) !== 'Cancelled').length;
+    const displayed = new Set();
     for (const key of Object.keys(localStorage).filter(key => key.startsWith(quotePrefix))) {
         let quote;
         try { quote = JSON.parse(localStorage.getItem(key)); } catch { continue; }
         if (!quote?.id) continue;
         const booking = linked.get(quote.id);
+        if (booking) displayed.add(booking.bookingId);
         const row = document.createElement('article');
         row.className = 'rounded border p-3';
         const summary = document.createElement('p');
@@ -3285,8 +3305,42 @@ async function openNepalTours() {
         open.textContent = 'Open quotation';
         open.onclick = () => { dialog.close(); openQuotes(); loadQuote(quote.id); };
         row.append(summary,note,date,save,open);
+        for (const [label, action] of [
+            ['Download PDF', () => { dialog.close(); openQuotes(); loadQuote(quote.id); downloadQuote(); }],
+            ['Share PDF to WhatsApp', () => { dialog.close(); openQuotes(); loadQuote(quote.id); downloadQuote(true); }]
+        ]) row.append(nepalAction(label, action));
+        if (booking) addNepalBookingActions(row, booking, dialog);
         list.append(row);
     }
+    const destinations = /\b(nepal|kathmandu|pokhara|muktinath|jomsom|janakpur|chitwan|lumbini)\b/i;
+    const savedBookings = bookings.filter(booking => /\[Nepal quote /.test(booking.tourRoute) ||
+        destinations.test([booking.tourRoute,booking.pickup,booking.drop].join(' ')));
+    count.textContent = 'Confirmed Nepal tours: ' + savedBookings.filter(b =>
+        ['Confirmed','Ongoing','Completed'].includes(getBookingStatus(b))).length;
+    for (const booking of savedBookings.filter(b => !displayed.has(b.bookingId))) {
+        const row = document.createElement('article');
+        row.className = 'rounded border p-3';
+        const summary = document.createElement('p');
+        summary.textContent = [booking.name,booking.phone,booking.tourRoute,booking.startDate,booking.endDate,getBookingStatus(booking)].filter(Boolean).join(' | ');
+        row.append(summary);
+        addNepalBookingActions(row, booking, dialog);
+        list.append(row);
+    }
+    if (!list.children.length) list.textContent = 'No saved Nepal tours or quotations yet.';
+}
+function nepalAction(label, action) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'm-1 rounded border px-2 py-1';
+    button.textContent = label;
+    button.addEventListener('click', () => action(button));
+    return button;
+}
+function addNepalBookingActions(row, booking, dialog) {
+    row.append(
+        nepalAction('Edit booking', () => {dialog.close(); openBookingEdit(booking);}),
+        nepalAction('Delete booking', async button => {await deleteCrmBooking(button, booking.bookingId); if (dialog.open) openNepalTours();})
+    );
 }
 </script>
 </body>
