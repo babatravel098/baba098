@@ -218,7 +218,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
         </header>
 
         <div class="crm-layout"><nav class="crm-nav" aria-label="CRM navigation"><h2>Workspace</h2><button type="button" onclick="openOfficeHub()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-building" aria-hidden="true"></i> Office Operations</button><button type="button" onclick="openBookingReport()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-chart-column" aria-hidden="true"></i> Booking Reports</button><button type="button" onclick="openQuotes()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-route" aria-hidden="true"></i> Quotations / Itinerary</button>
-<button type="button" onclick="openCustomers()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-users" aria-hidden="true"></i> Customers / History</button></nav><main class="crm-workspace space-y-5"><h1 class="crm-title">Travel Operations</h1>
+<button type="button" onclick="openCustomers()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-users" aria-hidden="true"></i> Customers / History</button></nav><main class="crm-workspace space-y-5"><section id="upcomingPickups" role="status" aria-live="polite" hidden class="rounded-xl border border-teal-200 bg-teal-50 p-4"><h2 class="font-bold text-teal-900">Pickups in the next 7 days</h2><ul id="upcomingPickupList" class="mt-2 grid gap-2 text-sm"></ul></section><h1 class="crm-title">Travel Operations</h1>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" aria-label="Daily operations">
                 <button type="button" onclick="openOperations('pickups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Today's pickups</span><strong id="opsPickups" class="text-2xl text-blue-900">—</strong></button>
                 <button type="button" onclick="openOperations('followups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Due follow-ups</span><strong id="opsFollowups" class="text-2xl text-blue-900">—</strong></button>
@@ -963,6 +963,7 @@ function fetchBookings() {
             .then(data => {
                 if(!data) data = [];
                 allBookingsData = data.reverse();
+                renderUpcomingPickups();
                 bookingsLoaded = true;
                 renderOperations();
                 if(currentTab === 'new' || currentTab === 'completed') renderTable();
@@ -1581,7 +1582,7 @@ function fetchBookings() {
             });
         }
 
-        function saveBooking(e) {
+        async function saveBooking(e) {
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
             btn.innerText = "Saving..."; btn.disabled = true;
@@ -1610,6 +1611,36 @@ function fetchBookings() {
                 timestamp: new Date().toLocaleString()
             };
 
+            try {
+                const latest = await readPrivateCrmBookings();
+                const conflict = findFleetConflict(latest, formData.vehicle, formData.startDate, formData.endDate);
+                if (conflict && !document.getElementById('fleetVendor').checked) {
+                    showFleetNotice(conflict);
+                    if (!confirm('This vehicle is already booked for these dates. Continue with a vendor vehicle?')) return;
+                    document.getElementById('fleetVendor').checked = true;
+                    syncVendorFields();
+                }
+                if (document.getElementById('fleetVendor').checked) {
+                    const vehicle = document.getElementById('fleetVendorVehicle').value.trim();
+                    const vendor = document.getElementById('fleetVendorName').value.trim();
+                    if (!vehicle || !vendor) {
+                        showFleetNotice(conflict);
+                        document.getElementById(!vehicle ? 'fleetVendorVehicle' : 'fleetVendorName').focus();
+                        document.getElementById('fleetNotice').textContent = 'Enter both the vendor name and the vehicle name, then save again.';
+                        return;
+                    }
+                    formData.vehicle = 'Vendor: ' + vehicle + ' | Supplier: ' + vendor;
+                }
+            } catch {
+                alert('Vehicle availability could not be checked. Refresh the bookings and try again.');
+                return;
+            } finally {
+                btn.innerText = 'Save Booking';
+                btn.disabled = false;
+            }
+
+            btn.innerText = 'Saving...';
+            btn.disabled = true;
             const postForm = document.createElement('form');
             postForm.method = 'POST';
             postForm.action = 'https://script.google.com/macros/s/AKfycbzXu77bmooy2cXFh7vCPr5BuGZ0N25ZknBdyo20agSCM5JzmnlIfWGReP1HX4O9RUmTsA/exec';
@@ -3104,6 +3135,71 @@ quoteControl('tripDays').addEventListener('input', event => {
 });
 new MutationObserver(() => syncQuoteRoute()).observe(quoteControl('tripDays'), {childList:true});
 refreshNepalPackages();
+</script>
+<script>
+const agencyFleet = [
+    '26 Seater Traveler Full Pack Glass', '26 Seater Traveler AC', '17 Seater Traveler AC',
+    'Innova 8 Seater', 'Ertiga 7 Seater', 'Dzire CNG Petrol Sedan #1',
+    'Dzire CNG Petrol Sedan #2', 'Amaze Sedan Diesel'
+];
+const fleetSelect = document.getElementById('vehicleSelect');
+const fleetGroup = document.createElement('optgroup');
+fleetGroup.label = 'Agency fleet';
+for (const name of agencyFleet) fleetGroup.append(new Option(name, name));
+fleetSelect.insertBefore(fleetGroup, [...fleetSelect.children].find(child => child.value !== '') || null);
+const fleetBox = document.createElement('div');
+fleetBox.className = 'col-span-full grid gap-2';
+fleetBox.innerHTML = '<p id="fleetNotice" role="status" class="font-semibold text-red-700" hidden></p>' +
+    '<label><input type="checkbox" id="fleetVendor"> Use a vendor vehicle</label>' +
+    '<div id="fleetVendorFields" hidden><label>Vendor name<input id="fleetVendorName" class="block w-full rounded border p-2"></label>' +
+    '<label>Vendor vehicle name<input id="fleetVendorVehicle" class="block w-full rounded border p-2"></label></div>';
+fleetSelect.closest('label')?.after(fleetBox);
+if (!fleetBox.isConnected) fleetSelect.parentElement.after(fleetBox);
+function syncVendorFields() {
+    const active = document.getElementById('fleetVendor').checked;
+    document.getElementById('fleetVendorFields').hidden = !active;
+}
+function findFleetConflict(bookings, vehicle, start, end) {
+    if (!agencyFleet.includes(vehicle) || !start || !end || end < start) return null;
+    const match = value => {
+        const name = String(value || '').trim().replace(/travell?er/gi, 'traveler').toLowerCase();
+        if (name.startsWith('vendor:')) return false;
+        if (name === vehicle.toLowerCase()) return true;
+        if (vehicle.startsWith('26 Seater')) return /^26\s*seater\s*(?:tempo\s*)?traveler(?:\s*\(\d+\))?$/.test(name);
+        if (vehicle.startsWith('17 Seater')) return /^17\s*seater\s*(?:tempo\s*)?traveler/.test(name);
+        return name.startsWith(vehicle.split(' ')[0].toLowerCase()) && !/#\d+$/.test(name);
+    };
+    return bookings.find(booking => {
+        const first = operationsDay(booking.startDate || '');
+        const last = operationsDay(booking.endDate || '') || first;
+        return first && first <= end && last >= start && getBookingStatus(booking) !== 'Cancelled' && match(booking.vehicle);
+    }) || null;
+}
+function showFleetNotice(conflict) {
+    const notice = document.getElementById('fleetNotice');
+    notice.hidden = !conflict;
+    notice.textContent = conflict ? 'Vehicle unavailable: this agency vehicle is already booked on these dates. Use a vendor vehicle to continue.' : '';
+}
+for (const control of [fleetSelect, document.getElementById('startDate'), document.getElementById('endDate')]) {
+    control.addEventListener('change', () => showFleetNotice(findFleetConflict(allBookingsData, fleetSelect.value,
+        document.getElementById('startDate').value, document.getElementById('endDate').value)));
+}
+document.getElementById('fleetVendor').addEventListener('change', syncVendorFields);
+document.getElementById('bookingForm').addEventListener('reset', () => queueMicrotask(() => {syncVendorFields();showFleetNotice(null);}));
+function renderUpcomingPickups() {
+    const today = operationsDay();
+    const end = new Date(Date.parse(today) + 6 * 86400000).toISOString().slice(0,10);
+    const pickups = allBookingsData.map(booking => ({booking, date: operationsDay(booking.startDate || '')}))
+        .filter(({booking,date}) => date >= today && date <= end && ['Confirmed','Ongoing'].includes(getBookingStatus(booking)))
+        .sort((a,b) => a.date.localeCompare(b.date));
+    const list = document.getElementById('upcomingPickupList');
+    list.replaceChildren(...pickups.map(({booking,date}) => {
+        const item = document.createElement('li');
+        item.textContent = [formatDisplayDate(date),booking.name,booking.pickup,booking.vehicle].filter(Boolean).join(' | ');
+        return item;
+    }));
+    document.getElementById('upcomingPickups').hidden = !pickups.length;
+}
 </script>
 </body>
 </html>
