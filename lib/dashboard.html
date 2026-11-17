@@ -1612,6 +1612,7 @@ function fetchBookings() {
             };
 
             try {
+                syncVendorFields();
                 const latest = await readPrivateCrmBookings();
                 const conflict = findFleetConflict(latest, formData.vehicle, formData.startDate, formData.endDate);
                 if (conflict && !document.getElementById('fleetVendor').checked) {
@@ -1620,11 +1621,11 @@ function fetchBookings() {
                     document.getElementById('fleetVendor').checked = true;
                     syncVendorFields();
                 }
-                if (document.getElementById('fleetVendor').checked) {
+                if (requiresFleetVendor(formData.vehicle) || document.getElementById('fleetVendor').checked) {
                     const vehicle = document.getElementById('fleetVendorVehicle').value.trim();
                     const vendor = document.getElementById('fleetVendorName').value.trim();
                     if (!vehicle || !vendor) {
-                        showFleetNotice(conflict);
+                        showFleetNotice(conflict, formData.vehicle);
                         document.getElementById(!vehicle ? 'fleetVendorVehicle' : 'fleetVendorName').focus();
                         document.getElementById('fleetNotice').textContent = 'Enter both the vendor name and the vehicle name, then save again.';
                         return;
@@ -3155,8 +3156,14 @@ fleetBox.innerHTML = '<p id="fleetNotice" role="status" class="font-semibold tex
     '<label>Vendor vehicle name<input id="fleetVendorVehicle" class="block w-full rounded border p-2"></label></div>';
 fleetSelect.closest('label')?.after(fleetBox);
 if (!fleetBox.isConnected) fleetSelect.parentElement.after(fleetBox);
+function requiresFleetVendor(vehicle) {
+    return Boolean(vehicle) && !agencyFleet.includes(vehicle);
+}
 function syncVendorFields() {
-    const active = document.getElementById('fleetVendor').checked;
+    const toggle = document.getElementById('fleetVendor');
+    const outsideFleet = requiresFleetVendor(fleetSelect.value);
+    toggle.disabled = outsideFleet;
+    const active = outsideFleet || toggle.checked;
     document.getElementById('fleetVendorFields').hidden = !active;
 }
 function findFleetConflict(bookings, vehicle, start, end) {
@@ -3175,14 +3182,18 @@ function findFleetConflict(bookings, vehicle, start, end) {
         return first && first <= end && last >= start && getBookingStatus(booking) !== 'Cancelled' && match(booking.vehicle);
     }) || null;
 }
-function showFleetNotice(conflict) {
+function showFleetNotice(conflict, vehicle = fleetSelect.value) {
     const notice = document.getElementById('fleetNotice');
-    notice.hidden = !conflict;
-    notice.textContent = conflict ? 'Vehicle unavailable: this agency vehicle is already booked on these dates. Use a vendor vehicle to continue.' : '';
+    const outsideFleet = requiresFleetVendor(vehicle);
+    notice.hidden = !conflict && !outsideFleet;
+    notice.textContent = outsideFleet ? 'Outside agency fleet: enter the vendor name and vendor vehicle name before saving.' : conflict ? 'Vehicle unavailable: this agency vehicle is already booked on these dates. Use a vendor vehicle to continue.' : '';
 }
 for (const control of [fleetSelect, document.getElementById('startDate'), document.getElementById('endDate')]) {
-    control.addEventListener('change', () => showFleetNotice(findFleetConflict(allBookingsData, fleetSelect.value,
-        document.getElementById('startDate').value, document.getElementById('endDate').value)));
+    control.addEventListener('change', () => {
+        syncVendorFields();
+        showFleetNotice(findFleetConflict(allBookingsData, fleetSelect.value,
+            document.getElementById('startDate').value, document.getElementById('endDate').value));
+    });
 }
 document.getElementById('fleetVendor').addEventListener('change', syncVendorFields);
 document.getElementById('bookingForm').addEventListener('reset', () => queueMicrotask(() => {syncVendorFields();showFleetNotice(null);}));
