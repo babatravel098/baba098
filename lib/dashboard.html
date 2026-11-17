@@ -218,7 +218,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
         </header>
 
         <div class="crm-layout"><nav class="crm-nav" aria-label="CRM navigation"><h2>Workspace</h2><button type="button" onclick="openOfficeHub()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-building" aria-hidden="true"></i> Office Operations</button><button type="button" onclick="openBookingReport()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-chart-column" aria-hidden="true"></i> Booking Reports</button><button type="button" onclick="openQuotes()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-route" aria-hidden="true"></i> Quotations / Itinerary</button>
-<button type="button" onclick="openCustomers()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-users" aria-hidden="true"></i> Customers / History</button></nav><main class="crm-workspace space-y-5"><section id="upcomingPickups" role="status" aria-live="polite" hidden class="rounded-xl border border-teal-200 bg-teal-50 p-4"><h2 class="font-bold text-teal-900">Pickups in the next 7 days</h2><ul id="upcomingPickupList" class="mt-2 grid gap-2 text-sm"></ul></section><h1 class="crm-title">Travel Operations</h1>
+<button type="button" onclick="openCustomers()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-users" aria-hidden="true"></i> Customers / History</button><button type="button" onclick="openNepalTours()">Nepal Tour Packages</button></nav><main class="crm-workspace space-y-5"><section id="upcomingPickups" role="status" aria-live="polite" hidden class="rounded-xl border border-teal-200 bg-teal-50 p-4"><h2 class="font-bold text-teal-900">Pickups in the next 7 days</h2><ul id="upcomingPickupList" class="mt-2 grid gap-2 text-sm"></ul></section><h1 class="crm-title">Travel Operations</h1>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" aria-label="Daily operations">
                 <button type="button" onclick="openOperations('pickups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Today's pickups</span><strong id="opsPickups" class="text-2xl text-blue-900">—</strong></button>
                 <button type="button" onclick="openOperations('followups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Due follow-ups</span><strong id="opsFollowups" class="text-2xl text-blue-900">—</strong></button>
@@ -1614,6 +1614,14 @@ function fetchBookings() {
             try {
                 syncVendorFields();
                 const latest = await readPrivateCrmBookings();
+                if (pendingNepalQuote) {
+                    const marker = '[Nepal quote ' + pendingNepalQuote + ']';
+                    if (latest.some(booking => booking.tourRoute.includes(marker))) {
+                        alert('This quotation already has a confirmed booking.');
+                        return;
+                    }
+                    formData.tourRoute += ' ' + marker;
+                }
                 const conflict = findFleetConflict(latest, formData.vehicle, formData.startDate, formData.endDate);
                 if (conflict && !document.getElementById('fleetVendor').checked) {
                     showFleetNotice(conflict);
@@ -2237,6 +2245,7 @@ document.getElementById('leadNotesForm').addEventListener('submit', event => {
 });
 
 const quoteFieldNames = ["customer","phone","start","end","pax","vehicle","hotel","itinerary","inclusions","exclusions","amount","terms","title","highlights","pricing","address","pickupLocation","dropLocation","rooming","specialTransport","cancellation","travelNotes","bankDetails","staffName"];
+let pendingNepalQuote = null;
 let activeQuoteId = '';
 const quotePrefix = 'baba_quote_v1:' + SCRIPT_URL + ':';
 function newQuote() {
@@ -2608,8 +2617,10 @@ function quoteToBookingForm() {
         const quote = quoteValues();
         if (!confirm('Fill the new booking form from this quotation? Any unsaved new booking form details will be replaced.')) return;
         document.getElementById('bookingForm').reset();
-        const mapping = {custName:quote.customer,custPhone:quote.phone,startDate:quote.start,endDate:quote.end,totalAmount:quote.amount,advanceAmount:'0',tourRoute:quote.itinerary};
+        const mapping = {custName:quote.customer,custPhone:quote.phone,startDate:quote.start,endDate:quote.end,totalAmount:quote.amount,advanceAmount:'0',tourRoute:quote.itinerary || quote.days.map(day => day.route || day.title).join(" / "),custAddress:quote.address,pickup:quote.pickupLocation || "Gorakhpur",drop:quote.dropLocation || "Gorakhpur",staffName:quote.staffName};
         for (const [id,value] of Object.entries(mapping)) document.getElementById(id).value = value;
+        localStorage.setItem(quotePrefix + quote.id, JSON.stringify(quote));
+        pendingNepalQuote = quote.id;
         const vehicle = document.getElementById('vehicleSelect');
         const match = [...vehicle.options].find(option => option.value.toLowerCase() === quote.vehicle.toLowerCase());
         if (match) vehicle.value = match.value;
@@ -3196,7 +3207,7 @@ for (const control of [fleetSelect, document.getElementById('startDate'), docume
     });
 }
 document.getElementById('fleetVendor').addEventListener('change', syncVendorFields);
-document.getElementById('bookingForm').addEventListener('reset', () => queueMicrotask(() => {syncVendorFields();showFleetNotice(null);}));
+document.getElementById('bookingForm').addEventListener('reset', () => {pendingNepalQuote = null;queueMicrotask(() => {syncVendorFields();showFleetNotice(null);});});
 function renderUpcomingPickups() {
     const today = operationsDay();
     const end = new Date(Date.parse(today) + 6 * 86400000).toISOString().slice(0,10);
@@ -3210,6 +3221,72 @@ function renderUpcomingPickups() {
         return item;
     }));
     document.getElementById('upcomingPickups').hidden = !pickups.length;
+}
+</script>
+<dialog id="nepalToursDialog" class="w-full max-w-2xl rounded-xl p-5">
+<h2 class="text-xl font-bold">Nepal Tour Packages</h2>
+<p id="nepalToursCount" role="status" class="my-2"></p>
+<div id="nepalToursList" class="grid gap-3"></div>
+<button type="button" class="mt-3 rounded border p-2" onclick="this.closest('dialog').close()">Close</button>
+</dialog>
+<script>
+async function openNepalTours() {
+    const dialog = document.getElementById('nepalToursDialog');
+    const list = document.getElementById('nepalToursList');
+    const count = document.getElementById('nepalToursCount');
+    list.replaceChildren();
+    count.textContent = 'Checking confirmed bookings…';
+    if (!dialog.open) dialog.showModal();
+    let bookings;
+    try { bookings = await readPrivateCrmBookings(); }
+    catch { count.textContent = 'Could not check confirmed bookings. Reopen this list to retry.'; return; }
+    if (!dialog.open) return;
+    const linked = new Map();
+    for (const booking of bookings) {
+        const reference = /\[Nepal quote ([\w-]+)\]/.exec(booking.tourRoute)?.[1];
+        if (reference) linked.set(reference, booking);
+    }
+    count.textContent = 'Confirmed Nepal tours: ' + [...linked.values()].filter(b => getBookingStatus(b) !== 'Cancelled').length;
+    for (const key of Object.keys(localStorage).filter(key => key.startsWith(quotePrefix))) {
+        let quote;
+        try { quote = JSON.parse(localStorage.getItem(key)); } catch { continue; }
+        if (!quote?.id) continue;
+        const booking = linked.get(quote.id);
+        const row = document.createElement('article');
+        row.className = 'rounded border p-3';
+        const summary = document.createElement('p');
+        summary.textContent = [quote.customer,quote.phone,quote.title,quote.start,booking ? getBookingStatus(booking) : 'Enquiry'].filter(Boolean).join(' | ');
+        const note = document.createElement('textarea');
+        note.className = 'my-2 block w-full rounded border p-2';
+        note.setAttribute('aria-label','Follow-up notes');
+        note.placeholder = 'Follow-up notes';
+        const date = document.createElement('input');
+        date.type = 'date';
+        date.setAttribute('aria-label','Next follow-up date');
+        const followupKey = 'baba_nepal_followup:' + quote.id;
+        try {
+            const followup = JSON.parse(localStorage.getItem(followupKey) || '{}');
+            date.value = followup.date || '';
+            note.value = followup.note || '';
+        } catch {}
+        const save = document.createElement('button');
+        save.type = 'button';
+        save.className = 'mx-2 rounded border p-2';
+        save.textContent = 'Save follow-up';
+        save.onclick = () => {
+            try {
+                localStorage.setItem(followupKey, JSON.stringify({date:date.value,note:note.value}));
+                save.textContent = 'Follow-up saved';
+            } catch { save.textContent = 'Could not save follow-up'; }
+        };
+        const open = document.createElement('button');
+        open.type = 'button';
+        open.className = 'rounded border p-2';
+        open.textContent = 'Open quotation';
+        open.onclick = () => { dialog.close(); openQuotes(); loadQuote(quote.id); };
+        row.append(summary,note,date,save,open);
+        list.append(row);
+    }
 }
 </script>
 </body>
