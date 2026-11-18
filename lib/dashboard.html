@@ -2352,7 +2352,7 @@ function refreshQuotes() {
  }
 }
 function openQuotes() {
- try { refreshQuotes(); newQuote(); document.getElementById('quotesDialog').showModal(); }
+ try { refreshQuotes(); newQuote(); document.getElementById('quotesDialog').showModal(); void loadSharedTourPackages(); }
  catch(error) { alert('Could not open quotations. '+error.message); }
 }
 function loadQuote(id) {
@@ -3482,9 +3482,37 @@ let nepalOptionsDomestic = false;
 const nepalForm = quoteControl('quoteForm');
 const nepalValue = key => nepalForm.elements.namedItem(key);
 const nepalStatus = message => { quoteControl('nepalMessage').textContent = message; };
-const nepalCustomPackages = () => JSON.parse(localStorage.getItem(nepalCustomKey) || '[]');
+let sharedTourPackages = [];
+let sharedTourRevision = 0;
+let pendingPackageSave;
+
+async function tourPackageRequest(query, options) {
+    const response = await fetch('/api/dashboard?' + query, {
+        cache: 'no-store', credentials: 'same-origin', ...options
+    });
+    if (response.status === 401) throw new Error('Please sign in again.');
+    const result = await response.json();
+    if (!response.ok || result.ok !== true) {
+        throw new Error(result.error || 'Tour Sheet request failed.');
+    }
+    return result;
+}
+
+async function loadSharedTourPackages() {
+    const revision = ++sharedTourRevision;
+    try {
+        const result = await tourPackageRequest('data=tour-packages');
+        if (!Array.isArray(result.packages)) throw new Error('Invalid package list.');
+        if (revision !== sharedTourRevision) return;
+        sharedTourPackages = result.packages.filter(pack =>
+            pack && typeof pack.id === 'string' && typeof pack.title === 'string' && Array.isArray(pack.days));
+        refreshNepalPackages();
+    } catch (error) {
+        if (revision === sharedTourRevision) nepalStatus('Could not load shared packages. ' + error.message);
+    }
+}
 function refreshNepalPackages() {
-    setItineraryOptions(quoteControl('nepalPackage'), [...nepalPackages, ...nepalCustomPackages()].map(p => [p.id,p.title]), 'Choose a saved package');
+    setItineraryOptions(quoteControl('nepalPackage'), [...nepalPackages, ...sharedTourPackages].map(p => [p.id,p.title]), 'Choose a saved package');
 }
 function getNepalOptions() {
     return {domestic: nepalOptionsDomestic, values: nepalFields.map(id => quoteControl(id).value), extras: [...quoteControl('nepalExtras').querySelectorAll('input:checked')].map(input => input.value)};
@@ -3570,7 +3598,7 @@ for (const id of nepalFields) quoteControl(id).addEventListener('change', () => 
 quoteControl('nepalExtras').addEventListener('change', () => quoteControl('applyNepalOptions').click());
 quoteControl('loadNepalPackage').addEventListener('click', () => {
     const selected = quoteControl('nepalPackage').value;
-    const pack = [...nepalPackages, ...nepalCustomPackages()].find(p => p.id === selected);
+    const pack = [...nepalPackages, ...sharedTourPackages].find(p => p.id === selected);
     if (!pack) return nepalStatus('Choose a package first.');
     if (quoteControl('tripDays').childElementCount && !confirm('Replace the current trip days and package details?')) return;
     for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms','pricing','amount']) nepalValue(key).value = key === 'amount' || key === 'pricing' ? '' : (pack[key] || '');
@@ -3587,20 +3615,43 @@ quoteControl('loadNepalPackage').addEventListener('click', () => {
     quoteControl('nepalPackage').value = pack.id;
     nepalStatus('Package loaded. Enter the price for this customer.');
 });
-quoteControl('saveNepalPackage').addEventListener('click', () => {
+quoteControl('saveNepalPackage').addEventListener('click', async event => {
     const title = nepalValue('title').value.trim();
     const fields = itineraryValues();
-    if (!title || !fields.days.length || fields.days.some(day => !day.title)) return nepalStatus('Enter a package title and name each trip day.');
+    if (!title || !fields.days.length || fields.days.some(day => !day.title)) {
+        return nepalStatus('Enter a package title and name each trip day.');
+    }
+    const button = event.currentTarget;
+    const details = {...fields, domestic: nepalOptionsDomestic, nepalOptions: getNepalOptions()};
+    for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms','rooming','roomCount','roomSharing','specialTransport','cancellation','travelNotes','pickupLocation','dropLocation']) {
+        details[key] = nepalValue(key).value.trim();
+    }
+    details.termsOverride = details.terms;
+    const signature = JSON.stringify(details);
+    if (pendingPackageSave?.signature !== signature) {
+        pendingPackageSave = {signature, id: crypto.randomUUID()};
+    }
+    const pack = {...details, id: pendingPackageSave.id};
+    button.disabled = true;
+    nepalStatus('Saving package to the Tour Sheet...');
     try {
-        const saved = nepalCustomPackages();
-        const packageDetails = {id:crypto.randomUUID(), ...fields, domestic: nepalOptionsDomestic, nepalOptions:getNepalOptions()};
-        for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms','rooming','roomCount','roomSharing','specialTransport','cancellation','travelNotes','pickupLocation','dropLocation']) packageDetails[key] = nepalValue(key).value.trim();
-        packageDetails.termsOverride = packageDetails.terms;
-        localStorage.setItem(nepalCustomKey,JSON.stringify([...saved,packageDetails]));
+        const result = await tourPackageRequest('action=save-tour-package', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({package: pack})
+        });
+        if (result.id !== pack.id) throw new Error('The saved package could not be confirmed.');
+        ++sharedTourRevision;
+        sharedTourPackages = [...sharedTourPackages.filter(item => item.id !== pack.id), pack];
+        pendingPackageSave = undefined;
         refreshNepalPackages();
-        quoteControl('nepalPackage').value = packageDetails.id;
-        nepalStatus('Reusable package saved.');
-    } catch { nepalStatus('Could not save the package in this browser.'); }
+        quoteControl('nepalPackage').value = pack.id;
+        nepalStatus('Package saved to the Tour Sheet.');
+    } catch (error) {
+        nepalStatus('Package save could not be confirmed. ' + error.message);
+    } finally {
+        button.disabled = false;
+    }
 });
 function syncQuoteRoute(fillEnd = false) {
     const cards = [...quoteControl('tripDays').children];
