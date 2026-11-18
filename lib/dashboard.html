@@ -2342,23 +2342,55 @@ function newQuote() {
  document.getElementById('quoteSaved').value = '';
  document.getElementById('quoteMessage').textContent = 'New quotation draft';
 }
+let sharedQuotations = new Map();
+let quotationRevision = 0;
+let quotationSaving = false;
+
 function refreshQuotes() {
  const select = document.getElementById('quoteSaved');
+ const selection = select.value;
  select.replaceChildren(new Option('Choose saved quotation',''));
- for(let i=0;i<localStorage.length;i++) {
-  const key=localStorage.key(i);
-  if(!key.startsWith(quotePrefix)) continue;
-  try { const q=JSON.parse(localStorage.getItem(key)); select.add(new Option(q.customer+' · '+q.start,q.id)); } catch {}
+ for (const quote of sharedQuotations.values()) {
+    select.add(new Option([quote.customer, quote.start].filter(Boolean).join(' · '), quote.id));
  }
+ if (sharedQuotations.has(selection)) select.value = selection;
+}
+
+async function loadSharedQuotations() {
+ const revision = ++quotationRevision;
+ const result = await tourPackageRequest('data=tour-quotations');
+ if (!Array.isArray(result.quotations)) throw new Error('Invalid quotation list.');
+ if (revision !== quotationRevision) return;
+ sharedQuotations = new Map(result.quotations
+    .filter(quote => quote && typeof quote.id === 'string' && Array.isArray(quote.days))
+    .map(quote => [quote.id, quote]));
+ refreshQuotes();
+}
+
+async function saveSharedQuotation(quote) {
+ const result = await tourPackageRequest('action=save-tour-quotation', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({quotation: quote})
+ });
+ if (result.id !== quote.id) throw new Error('The quotation save could not be confirmed.');
+ ++quotationRevision;
+ sharedQuotations.set(quote.id, {...sharedQuotations.get(quote.id), ...quote});
+ refreshQuotes();
+}
+
+function showQuoteFeedback(message) {
+ document.getElementById('quoteMessage').textContent = message;
+ document.getElementById('quoteActionMessage').textContent = message;
 }
 function openQuotes() {
- try { refreshQuotes(); newQuote(); document.getElementById('quotesDialog').showModal(); void loadSharedTourPackages(); }
+ try { refreshQuotes(); newQuote(); document.getElementById('quotesDialog').showModal(); void loadSharedTourPackages(); void loadSharedQuotations().catch(error => showQuoteFeedback(error.message)); }
  catch(error) { alert('Could not open quotations. '+error.message); }
 }
 function loadQuote(id) {
  if(!id) return;
  try {
-  const q=JSON.parse(localStorage.getItem(quotePrefix+id));
+  const q = sharedQuotations.get(id);
   if(!q || q.id!==id) throw Error('Draft unavailable');
   for(const key of quoteFieldNames) document.getElementById('quoteForm').elements.namedItem(key).value=q[key] || '';
   for (const key of ['pickupLocation','dropLocation']) if (!q[key]) document.getElementById('quoteForm').elements.namedItem(key).value = 'Gorakhpur';
@@ -2366,7 +2398,7 @@ function loadQuote(id) {
   resetNepalOptions(q.nepalOptions);
   syncQuoteRoute();
   activeQuoteId=id;
-  document.getElementById('quoteMessage').textContent='Saved draft loaded';
+  document.getElementById('quoteMessage').textContent='Saved quotation loaded';
  } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
 }
 function quoteValues() {
@@ -2403,16 +2435,25 @@ function quoteValues() {
  }
  return { ...q, ...itinerary, pickupLocation: pickup, dropLocation: drop, nepalOptions: getNepalOptions() };
 }
-document.getElementById('quoteForm').addEventListener('submit',event=>{
+document.getElementById('quoteForm').addEventListener('submit', async event => {
  event.preventDefault();
+ if (quotationSaving) return;
+ const button = event.submitter;
+ quotationSaving = true;
+ if (button) button.disabled = true;
  try {
-  const q=quoteValues();
-  localStorage.setItem(quotePrefix+q.id,JSON.stringify(q)); refreshQuotes();
-  document.getElementById('quoteSaved').value=q.id;
-  document.getElementById('quoteMessage').textContent='Quotation draft saved in this browser.';
- } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
+    const quote = quoteValues();
+    showQuoteFeedback('Saving quotation to the Tour Sheet...');
+    await saveSharedQuotation(quote);
+    if (activeQuoteId === quote.id) document.getElementById('quoteSaved').value = quote.id;
+    showQuoteFeedback('Quotation saved to the Tour Sheet.');
+ } catch (error) {
+    showQuoteFeedback('Quotation could not be saved. ' + error.message);
+ } finally {
+    quotationSaving = false;
+    if (button) button.disabled = false;
+ }
 });
-
 function assignmentKey(booking) {
  return 'baba_assignment_v1:' + JSON.stringify([SCRIPT_URL, String(booking.phone || ''), String(booking.timestamp || '')]);
 }
@@ -2729,14 +2770,14 @@ async function saveQuoteFollowup() {
     }
 }
 
-function quoteToBookingForm() {
+async function quoteToBookingForm() {
     try {
         const quote = quoteValues();
         if (isNepalQuoteCancelled(quote.id)) throw Error('This quotation is cancelled.');
         document.getElementById('bookingForm').reset();
         const mapping = {custName:quote.customer,custPhone:quote.phone,startDate:quote.start,endDate:quote.end,totalAmount:quote.amount,advanceAmount:'0',tourRoute:quote.itinerary || quote.days.map(day => day.route || day.title).join(" / "),custAddress:quote.address,pickup:quote.pickupLocation || "Gorakhpur",drop:quote.dropLocation || "Gorakhpur",staffName:quote.staffName};
         for (const [id,value] of Object.entries(mapping)) document.getElementById(id).value = value;
-        localStorage.setItem(quotePrefix + quote.id, JSON.stringify(quote));
+        await saveSharedQuotation(quote);
         pendingNepalQuote = quote.id;
         const vehicle = document.getElementById('vehicleSelect');
         const match = [...vehicle.options].find(option => option.value.toLowerCase() === quote.vehicle.toLowerCase());
@@ -3316,7 +3357,7 @@ async function downloadQuote(share = false) {
             pdf.text('/ 9415966902 / 9026060471  |  GSTIN 09AARPU5006D1ZI',left+25,289);
             pdf.text('Page ' + i + ' / ' + pages,left+width,289,{align:'right'});
         }
-        localStorage.setItem(quotePrefix + q.id, JSON.stringify(q));
+        await saveSharedQuotation(q);
         refreshQuotes();
         quoteControl('quoteSaved').value = q.id;
         const filename = ((q.title || 'Tour Itinerary').replace(/[^a-z0-9 -]/gi,'').trim() || 'Tour Itinerary') + '.pdf';
@@ -3338,7 +3379,7 @@ async function downloadQuote(share = false) {
             itineraryMessage('PDF downloaded. Attach it in the customer WhatsApp chat.');
             return;
         }
-        itineraryMessage('Draft saved and PDF downloaded.');
+        itineraryMessage('Quotation saved and PDF downloaded.');
     } catch(error) { itineraryMessage(error.message); }
 }
 </script>
@@ -3777,8 +3818,8 @@ async function openNepalTours() {
     count.textContent = 'Checking confirmed bookings…';
     if (!dialog.open) dialog.showModal();
     let bookings;
-    try { bookings = await readPrivateCrmBookings(); }
-    catch { count.textContent = 'Could not check confirmed bookings. Reopen this list to retry.'; return; }
+    try { [bookings] = await Promise.all([readPrivateCrmBookings(), loadSharedQuotations()]); }
+    catch { count.textContent = 'Could not load bookings or shared quotations. Reopen this list to retry.'; return; }
     if (!dialog.open) return;
     const linked = new Map();
     for (const booking of bookings) {
@@ -3787,10 +3828,7 @@ async function openNepalTours() {
     }
     count.textContent = 'Confirmed Nepal tours: ' + [...linked.values()].filter(b => getBookingStatus(b) !== 'Cancelled').length;
     const displayed = new Set();
-    for (const key of Object.keys(localStorage).filter(key => key.startsWith(quotePrefix))) {
-        let quote;
-        try { quote = JSON.parse(localStorage.getItem(key)); } catch { continue; }
-        if (!quote?.id) continue;
+    for (const quote of sharedQuotations.values()) {
         const booking = linked.get(quote.id);
         const status = booking ? getBookingStatus(booking) : isNepalQuoteCancelled(quote.id) ? 'Cancelled' : 'Pending';
         if (booking) displayed.add(booking.bookingId);
