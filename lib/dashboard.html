@@ -608,7 +608,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <button class="bg-blue-700 text-white rounded px-4 py-2" type="submit">Save Lead Draft</button><button class="border rounded px-4 py-2" type="button" onclick="document.getElementById('leadNotesDialog').close()">Close</button>
 </form><p id="leadNotesMessage" role="status" class="text-sm my-3"></p></dialog>
 <dialog id="quotesDialog" aria-labelledby="quotesTitle"><header class="tour-dialog-header"><h2 id="quotesTitle">Tour Quotation &amp; Itinerary</h2><button type="button" onclick="this.closest('dialog').close()">Close</button></header><p class="text-sm my-2">Build a customer proposal from saved trip days, hotels, vehicles and photos. Drafts and libraries are stored in this browser.</p><div class="quote-toolbar"><label>Saved quotations<select id="quoteSaved" class="border rounded p-2 m-2" onchange="loadQuote(this.value)"></select></label><button type="button" onclick="newQuote()" class="border p-2 rounded">New quotation</button><button type="submit" form="quoteForm" class="bg-blue-700 text-white rounded p-2">Save quotation</button></div><button type="button" class="my-2 rounded border border-teal-700 px-3 py-2 font-semibold text-teal-800" onclick="openQuotePhotoLibrary()">Add photos</button><p id="quoteMessage" role="status" class="my-2"></p><form id="quoteForm" novalidate class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3"><fieldset class="sm:col-span-2 grid gap-3 rounded-xl border bg-white p-4">
-<legend class="font-bold">Nepal Package Library</legend>
+<legend class="font-bold">Tour Package Library</legend>
 <div class="flex flex-wrap items-end gap-2">
 <label>Package <select id="nepalPackage" onchange="document.getElementById('loadNepalPackage').click()" class="block rounded border p-2"></select></label>
 <button type="button" id="loadNepalPackage" class="rounded bg-teal-800 px-3 py-2 text-white">Load package</button>
@@ -3107,18 +3107,22 @@ async function downloadQuote(share = false) {
             y += height + 3;
         }
         if(q.phone) write('Customer mobile: ' + q.phone);
-        if (q.highlights || q.days.some(day => day.route)) {
+        if (q.highlights?.trim() || q.days.some(day => day.route)) {
             section('Trip Highlights');
-            if (q.highlights) write(q.highlights);
-            const routes = [...new Set(q.days.map(day => day.route).filter(Boolean))];
-            routes.slice(0, 4).forEach(route => write('- ' + route, 10));
+            const highlights = q.highlights?.trim() ? q.highlights.split('\n') :
+                [...new Set(q.days.map(day => day.route).filter(Boolean))].slice(0, 5);
+            for (const highlight of highlights.filter(line => line.trim())) write('- ' + highlight.trim(), 10);
         }
         if (q.itinerary) write(q.itinerary);
         for (const [i,day] of q.days.entries()) {
             const hasPhoto = itineraryLibrary.photos.some(photo => photo.id === day.photo);
             pdf.setFont('helvetica','normal'); pdf.setFontSize(11);
-            const activityRows = day.activities.split('\n').filter(line => line.trim()).map(line => ['- ' + line.trim(), 11]);
+            const notes = sightseeingNotes(day);
+            const activityRows = day.activities.split('\n').map(line => line.trim())
+                .filter(line => line && !notes.includes(line))
+                .map(line => ['- ' + line, 11]);
             const rows = [[day.title, 18, true], [day.route, 11, true], ...activityRows,
+                ...notes.map(note => [note, 10]),
                 [day.stay && 'Overnight stay: ' + day.stay, 11], [day.meals && 'Meals: ' + day.meals, 11]]
                 .filter(([value]) => value);
             const textHeight = rows.reduce((height, [value, size, bold]) => {
@@ -3243,26 +3247,104 @@ const nepalBase = ['Vehicle', 'Nepal road taxes', 'Driver night charges', 'Parki
 const nepalOptional = ['Hotel accommodation', 'Selected hotel meal plan', 'Sightseeing transfers as per itinerary', 'Airport or railway station pickup and drop', 'Local guide', 'Safari and park permits'];
 const nepalExclusions = 'Temple and sightseeing entry fees\nVIP darshan\nE-rickshaw fares and cable-car tickets\nMeals and activities unless listed under inclusions\nPersonal travel insurance, medical expenses, laundry, bottled drinks and tips\nKitchen space and guide services unless quoted\nExtra travel days and sightseeing added during the trip are charged separately.';
 const nepalTerms = 'Booking is confirmed after receipt of the agreed advance and confirmation of availability.\n70% of the balance is payable on pickup day. The remaining 30% of the balance is payable midway through the tour.\nHotels, rooms and vehicles are subject to confirmation. Route and timing may vary with road, weather and local conditions.\nAny additional day or sightseeing stop requested during the trip will be quoted separately.';
+const attractionNotes = [
+    [/Pashupatinath/i, 'Pashupatinath Temple is dedicated to Lord Shiva. Its setting on the Bagmati River is central to the pilgrimage experience in Kathmandu.'],
+    [/Boudhanath/i, 'Boudhanath Stupa is a Tibetan Buddhist pilgrimage centre. The walk around the white dome passes prayer wheels and monasteries.'],
+    [/Guhyeshwari/i, 'Guhyeshwari Temple near Pashupatinath is revered as a Shakti Peeth.'],
+    [/Budhanilkantha/i, 'Budhanilkantha is known for its reclining stone image of Vishnu in a temple pool.'],
+    [/Swayambhunath/i, 'Swayambhunath is a hilltop stupa with prayer flags and open views over Kathmandu Valley.'],
+    [/ISKCON/i, 'ISKCON Kathmandu is a Krishna devotional centre where visitors may spend time in prayer if the schedule permits.'],
+    [/Patan/i, 'Patan Durbar Square showcases carved Newar woodwork, temple courtyards and the old royal palace.'],
+    [/Bhaktapur/i, 'Bhaktapur is known for its brick streets, traditional squares and artisan neighbourhoods.'],
+    [/Manakamana/i, 'Manakamana Temple is a hilltop shrine dedicated to a form of Goddess Bhagwati. The cable-car journey is optional.'],
+    [/Sarangkot/i, 'Sarangkot looks out over Pokhara and the Annapurna range. Mountain views depend on visibility.'],
+    [/Bindhyabasini/i, 'Bindhyabasini is a prominent Pokhara temple dedicated to Goddess Durga.'],
+    [/Davis Falls/i, 'At Davis Falls, the stream drops into a narrow rock opening and continues underground.'],
+    [/Gupteshwor/i, 'Gupteshwor Mahadev Cave combines a Shiva shrine with a limestone passage near Davis Falls.'],
+    [/Seti River Gorge/i, 'The Seti River cuts through a deep, narrow gorge in Pokhara.'],
+    [/Phewa Lake|Tal Barahi/i, 'Phewa Lake is Pokhara’s main lakeside attraction. Tal Barahi Temple stands on an island and is reached by boat when available.'],
+    [/Peace Pagoda/i, 'The World Peace Pagoda sits above Phewa Lake and overlooks the city and surrounding hills.'],
+    [/Lumbini/i, 'Lumbini is revered as the birthplace of the Buddha. Its Sacred Garden includes the Maya Devi Temple and the Ashoka Pillar.'],
+    [/Marpha/i, 'Marpha is a Mustang village known for stone lanes and apple orchards.'],
+    [/Muktinath/i, 'Muktinath is sacred to Hindu and Buddhist pilgrims. The temple courtyard is known for its 108 waterspouts.'],
+    [/Chitwan National Park|Safari/i, 'Chitwan protects riverine forests and grasslands that provide habitat for the greater one-horned rhinoceros. Any wildlife sighting depends on conditions.'],
+    [/Janaki Mandir/i, 'Janaki Mandir in Janakpur honours Sita and is a focal point of Mithila’s Ramayana traditions.'],
+    [/Sita Vivah Mandap/i, 'Sita Vivah Mandap commemorates the wedding of Rama and Sita in the Ramayana tradition.'],
+    [/Siddhababa/i, 'Siddhababa is a Shiva shrine on the road near Butwal. A visit depends on traffic and stop timing.'],
+    [/Ram Mandir/i, 'Shri Ram Mandir is the main Ram Janmabhoomi pilgrimage stop in Ayodhya, dedicated to Lord Rama.'],
+    [/Hanuman Garhi/i, 'Hanuman Garhi is a hilltop shrine dedicated to Lord Hanuman and approached by steps.'],
+    [/Kanak Bhawan/i, 'Kanak Bhawan is known for its devotional images of Rama and Sita and its ornate courtyard.'],
+    [/Saryu/i, 'The Saryu ghats give visitors a view of Ayodhya’s riverfront and its evening worship when scheduled.'],
+    [/Kashi Vishwanath/i, 'Kashi Vishwanath is a Shiva Jyotirlinga and a central stop for pilgrims in Varanasi’s old city.'],
+    [/Dashashwamedh/i, 'Dashashwamedh Ghat is known for the evening Ganga Aarti with lamps and devotional chanting.'],
+    [/Assi Ghat/i, 'Assi Ghat is a riverfront stop for a quieter introduction to life along the Ganga.'],
+    [/Sarnath/i, 'Sarnath commemorates the Buddha’s first sermon. The Dhamek Stupa and surrounding archaeological area are its principal landmarks.'],
+    [/Triveni Sangam/i, 'Triveni Sangam is the meeting point of the Ganga and Yamuna and, in tradition, the Saraswati.'],
+    [/Bade Hanuman/i, 'Bade Hanuman Temple near the Sangam is known for its reclining Hanuman image.'],
+    [/Anand Bhavan/i, 'Anand Bhavan preserves the Nehru family’s former home and exhibits on the independence movement.'],
+    [/Vindhyavasini/i, 'Maa Vindhyavasini Temple is the principal goddess shrine of the Vindhyachal pilgrimage circuit.'],
+    [/Ashtabhuja/i, 'Ashtabhuja Temple is a hill shrine associated with the eight-armed form of the goddess.'],
+    [/Kali Khoh/i, 'Kali Khoh is a cave shrine dedicated to Goddess Kali.']
+];
+function sightseeingNotes(day) {
+    const text = [day.route, day.activities].join(' ');
+    return attractionNotes.filter(([pattern]) => pattern.test(text)).map(([, note]) => note);
+}
+Object.assign(nepalDays, {
+    ga: ['Gorakhpur to Ayodhya', 'Gorakhpur - Ayodhya', 'Start with pickup at the agreed point in Gorakhpur.\nVisit Shri Ram Mandir and Hanuman Garhi as queue timings permit.\nCheck in at the hotel. Visit the Saryu riverfront in the evening if time permits.', 'Ayodhya'],
+    aa: ['Ayodhya darshan and return', 'Ayodhya - Gorakhpur', 'Visit Kanak Bhawan and spend time at the Saryu ghats.\nAllow time for any temple visit missed on arrival.\nDrive back to Gorakhpur for the agreed drop.', ''],
+    av: ['Ayodhya to Varanasi', 'Ayodhya - Varanasi', 'Leave Ayodhya after checkout.\nOn arrival, visit Dashashwamedh Ghat for Ganga Aarti if arrival and ceremony timings align.', 'Varanasi'],
+    gv: ['Gorakhpur to Varanasi', 'Gorakhpur - Varanasi', 'Depart Gorakhpur in the morning.\nCheck in and walk to Dashashwamedh Ghat for evening Ganga Aarti if time permits.', 'Varanasi'],
+    vv: ['Kashi and Sarnath sightseeing', 'Kashi Vishwanath - Assi Ghat - Sarnath', 'Begin with Kashi Vishwanath darshan, allowing time for queues.\nContinue to Assi Ghat.\nVisit Sarnath and the Dhamek Stupa area before returning to the hotel.', 'Varanasi'],
+    vg: ['Varanasi to Gorakhpur', 'Varanasi - Gorakhpur', 'Use the morning for Kashi Vishwanath or Assi Ghat, according to the stops already covered.\nCheck out and return to Gorakhpur.', ''],
+    gb: ['Gorakhpur to Prayagraj', 'Gorakhpur - Prayagraj', 'Depart early for Prayagraj.\nVisit Triveni Sangam and Bade Hanuman Temple if time permits.\nCheck in for the night. Optional boat ride is subject to local availability.', 'Prayagraj'],
+    bg: ['Prayagraj sightseeing and return', 'Prayagraj - Gorakhpur', 'Visit Anand Bhavan if open and complete remaining sightseeing.\nDepart for the agreed Gorakhpur drop.', ''],
+    ab: ['Ayodhya to Prayagraj', 'Ayodhya - Prayagraj', 'Check out and drive to Prayagraj.\nVisit Triveni Sangam and Bade Hanuman Temple as timing permits.', 'Prayagraj'],
+    bv: ['Prayagraj to Varanasi', 'Prayagraj - Varanasi', 'Leave Prayagraj after checkout.\nArrive in Varanasi and visit Dashashwamedh Ghat if time permits.', 'Varanasi'],
+    gd: ['Gorakhpur to Vindhyachal', 'Gorakhpur - Vindhyachal', 'Depart Gorakhpur for Vindhyachal.\nVisit Maa Vindhyavasini Temple, allowing time for darshan queues.\nCheck in and rest.', 'Vindhyachal'],
+    dg: ['Vindhyachal darshan and return', 'Vindhyachal - Gorakhpur', 'Visit Ashtabhuja and Kali Khoh as access and time permit.\nReturn to Gorakhpur for drop.', ''],
+    vd: ['Varanasi to Vindhyachal', 'Varanasi - Vindhyachal', 'Leave Varanasi after checkout.\nVisit Maa Vindhyavasini Temple on arrival.\nCheck in for the night.', 'Vindhyachal']
+});
 const nepalPackages = [
-    ['Nepal Highlights | 4 Days / 3 Nights','k kp ps pg'],
-    ['Kathmandu and Pokhara | 5 Days / 4 Nights','k kt kp ps pg'],
-    ['Kathmandu and Pokhara Leisure | 6 Days / 5 Nights','k kt kp ps pl pg'],
-    ['Pokhara Only | 3 Days / 2 Nights','gp ps pg'],
-    ['Kathmandu Only | 3 Days / 2 Nights','k kt kg'],
-    ['Nepal with Muktinath | 7 Days / 6 Nights','k kt kp j m ps pg'],
-    ['Nepal with Chitwan | 8 Days / 7 Nights','k kt kp ps pl c cs cg'],
-    ['Nepal Pilgrimage Circuit | 8 Days / 7 Nights','gl ps j m pk kt kj jg'],
-    ['Nepal with Janakpur | 9 Days / 8 Nights','k kt kp ps pl c jc js jg'],
-    ['Nepal Heritage and Wildlife | 10 Days / 9 Nights','k kt kh kp ps pl c cs jc jg'],
-    ['Nepal Pilgrimage and Wildlife | 11 Days / 10 Nights','k kt kh kp ps j m c cs jc jg'],
-    ['Grand Nepal Circuit | 12 Days / 11 Nights','k kt kh kp ps pl j m c cs jc jg']
-].map(([title, route], i) => ({
-    id: title.startsWith('Nepal Pilgrimage Circuit') ? 'nepal-pilgrimage-8' : 'nepal-' + (i > 7 ? i - 1 : i), title, inclusions: nepalBase.join('\n'), exclusions: nepalExclusions, terms: nepalTerms, highlights: 'Private Nepal road tour with doorstep routing, city sightseeing and overnight stays as detailed below.',
-    days: route.split(' ').map(key => {
+    ['Nepal Tour Package','k kp ps pg','Kathmandu arrival by road|Optional Manakamana cable car|Pokhara Lakeside|Davis Falls and Gupteshwor Cave|Return via Butwal'],
+    ['Kathmandu and Pokhara','k kt kp ps pg','Pashupatinath Shiva darshan|Swayambhunath valley views|Optional Manakamana stop|Pokhara temples and waterfalls|Optional Phewa Lake boating'],
+    ['Kathmandu and Pokhara Leisure','k kt kp ps pl pg','Sacred Kathmandu shrines|Drive through the Manakamana area|Sarangkot sunrise option|Peace Pagoda area viewpoints|Leisure time at Pokhara Lakeside'],
+    ['Pokhara Only','gp ps pg','Overland pickup from Gorakhpur|Two nights based in Pokhara|Sarangkot sunrise option|Bindhyabasini and Gupteshwor|Phewa Lake and Tal Barahi boating option'],
+    ['Kathmandu Only','k kt kg','Private return transfers from Gorakhpur|Two nights based in Kathmandu|Pashupatinath and Guhyeshwari darshan|Sleeping Vishnu at Budhanilkantha|Swayambhunath hilltop visit'],
+    ['Nepal with Muktinath','k kt kp j m ps pg','Pashupatinath and Kathmandu shrines|Pokhara lake and cave sightseeing|Mustang road journey via Beni|Marpha village stop if time permits|Muktinath darshan from Jomsom'],
+    ['Nepal with Chitwan','k kt kp ps pl c cs cg','Kathmandu temple circuit|Pokhara waterfalls and Phewa Lake|Time to explore Pokhara viewpoints|Sauraha riverside stay|Optional Chitwan safari'],
+    ['Nepal Pilgrimage Circuit','gl ps j m pk kt kj jg','Lumbini stop if time permits|Muktinath and its sacred waterspouts|Optional Manakamana darshan|Pashupatinath and Guhyeshwari temples|Janaki Mandir and Sita Vivah Mandap'],
+    ['Nepal with Janakpur','k kt kp ps pl c jc js jg','Kathmandu Valley temples|Pokhara Lakeside and local viewpoints|Chitwan riverside stop|Dedicated Janakpur sightseeing day|Janaki Mandir and Mithila traditions'],
+    ['Nepal Heritage and Wildlife','k kt kh kp ps pl c cs jc jg','Patan and Bhaktapur heritage squares|Pashupatinath and Swayambhunath|Pokhara waterfalls and lakeside leisure|Optional wildlife activities in Chitwan|Janakpur pilgrimage before returning'],
+    ['Nepal Pilgrimage and Wildlife','k kt kh kp ps j m c cs jc jg','Kathmandu shrines and heritage towns|Pokhara temple and lakeside visits|Jomsom and Muktinath sector|Optional safari in Chitwan|Janaki Mandir visit if timing permits'],
+    ['Grand Nepal Circuit','k kt kh kp ps pl j m c cs jc jg','Pashupatinath and Kathmandu Valley heritage|Pokhara sightseeing and a leisure day|Mustang scenery and Muktinath darshan|Dedicated Chitwan activities day|Janakpur and Sita Vivah Mandap'],
+    ['Gorakhpur to Ayodhya','ga aa','Private road journey from Gorakhpur|Shri Ram Mandir darshan|Hanuman Garhi temple visit|Kanak Bhawan courtyard|Saryu riverfront'],
+    ['Gorakhpur to Varanasi','gv vv vg','Evening Ganga Aarti at Dashashwamedh|Kashi Vishwanath darshan|Time by the river at Assi Ghat|Sarnath and the Dhamek Stupa area|Direct drop in Gorakhpur'],
+    ['Gorakhpur to Prayagraj','gb bg','Triveni Sangam riverfront|Optional Sangam boat ride|Bade Hanuman Temple darshan|Anand Bhavan if open|Return to Gorakhpur by road'],
+    ['Gorakhpur to Vindhyachal','gd dg','Maa Vindhyavasini darshan|Overnight near the pilgrimage circuit|Ashtabhuja hill shrine|Kali Khoh cave temple|Direct return to Gorakhpur'],
+    ['Ayodhya and Varanasi Darshan','ga av vg','Shri Ram Mandir and Hanuman Garhi|Saryu riverfront if timing allows|Road transfer from Ayodhya to Kashi|Ganga Aarti at Dashashwamedh|Kashi Vishwanath or Assi Ghat before departure'],
+    ['Ayodhya and Prayagraj Pilgrimage','ga ab bg','Ram Janmabhoomi darshan|Hanuman Garhi shrine|Ayodhya to Prayagraj road transfer|Triveni Sangam and Bade Hanuman|Anand Bhavan if open'],
+    ['Varanasi and Vindhyachal Darshan','gv vv vd dg','Dashashwamedh Ghat evening Aarti|Kashi Vishwanath and Assi Ghat|Sarnath heritage visit|Maa Vindhyavasini temple|Ashtabhuja and Kali Khoh'],
+    ['Ayodhya, Prayagraj, Varanasi and Vindhyachal Circuit','ga ab bv vv vd dg','Ayodhya Ram Mandir and Hanuman Garhi|Prayagraj Sangam and Bade Hanuman|Varanasi Ganga Aarti and Kashi Vishwanath|Sarnath and the Dhamek Stupa area|Vindhyachal goddess pilgrimage circuit']
+].map(([name, route, highlights], i) => {
+    const domestic = i >= 12;
+    const days = route.split(' ').map(key => {
         const [title, route, activities, stay] = nepalDays[key];
-        return {title, route, activities, stay};
-    })
-}));
+        const day = {title, route, activities, stay};
+        const notes = sightseeingNotes(day);
+        return {...day, activities: [activities, ...notes].join('\n')};
+    });
+    return {
+        id: domestic ? 'india-' + (i - 11) : i === 7 ? 'nepal-pilgrimage-8' : 'nepal-' + (i > 7 ? i - 1 : i),
+        title: name + ' | ' + days.length + ' Days / ' + (days.length - 1) + ' Nights',
+        domestic, highlights: highlights.split('|').join('\n'), days,
+        inclusions: nepalBase.filter(item => !domestic || item !== 'Nepal road taxes').join('\n'),
+        exclusions: domestic
+            ? 'Temple and sightseeing entry fees\nVIP darshan, local boats and e-rickshaws\nMeals, hotel stays and guide services unless listed as included\nPersonal expenses, insurance and optional activities'
+            : nepalExclusions,
+        terms: nepalTerms
+    };
+});
 const quoteCancellationCommon = 'Please submit cancellation requests in writing. Requests received on Sundays are processed on the next working day. Payments for the 20 December to 5 January holiday period are non-refundable. After departure, any refund depends on amounts recoverable from suppliers. Unused accommodation, chartered transport and missed meals are not refundable.';
 const quoteCancellationPolicies = {
     departure: 'Minimum cancellation charge: 10% or INR 3,000 per person per tour, whichever is higher.\n45 to 31 days before departure: 25% of total tour cost.\n30 to 16 days: 50%.\n15 to 5 days: 75%.\n4 days or fewer, same-day cancellation or no-show: 100%.\n' + quoteCancellationCommon,
@@ -3274,6 +3356,7 @@ const quotePaymentPolicies = {
 };
 const nepalCustomKey = 'baba_nepal_packages_v1';
 const nepalFields = ['nepalKathmandu','nepalPokhara','nepalVehicle','nepalMeal','nepalJanakpur','nepalJomsom','nepalChitwan'];
+let nepalOptionsDomestic = false;
 const nepalForm = quoteControl('quoteForm');
 const nepalValue = key => nepalForm.elements.namedItem(key);
 const nepalStatus = message => { quoteControl('nepalMessage').textContent = message; };
@@ -3282,9 +3365,10 @@ function refreshNepalPackages() {
     setItineraryOptions(quoteControl('nepalPackage'), [...nepalPackages, ...nepalCustomPackages()].map(p => [p.id,p.title]), 'Choose a saved package');
 }
 function getNepalOptions() {
-    return {values: nepalFields.map(id => quoteControl(id).value), extras: [...quoteControl('nepalExtras').querySelectorAll('input:checked')].map(input => input.value)};
+    return {domestic: nepalOptionsDomestic, values: nepalFields.map(id => quoteControl(id).value), extras: [...quoteControl('nepalExtras').querySelectorAll('input:checked')].map(input => input.value)};
 }
 function resetNepalOptions(options = {}) {
+    nepalOptionsDomestic = Boolean(options.domestic);
     for (const [i,id] of nepalFields.entries()) quoteControl(id).value = options.values?.[i] || '';
     for (const input of quoteControl('nepalExtras').querySelectorAll('input')) input.checked = (options.extras || []).includes(input.value);
     quoteControl('nepalPackage').value = '';
@@ -3356,7 +3440,8 @@ quoteControl('applyNepalOptions').addEventListener('click', () => {
         if (hotel) stay.value = city + ': ' + hotel;
         if (meal && stay.value) card.querySelector('[data-day="meals"]').value = meal;
     }
-    nepalValue('inclusions').value = [...nepalBase,...extras.map(value => value === 'Selected hotel meal plan' && meal ? meal : value)].join('\n');
+    const base = nepalOptionsDomestic ? nepalBase.filter(item => item !== 'Nepal road taxes') : nepalBase;
+    nepalValue('inclusions').value = [...base,...extras.map(value => value === 'Selected hotel meal plan' && meal ? meal : value)].join('\n');
     nepalStatus('Selected options applied to the quotation.');
 });
 for (const id of nepalFields) quoteControl(id).addEventListener('change', () => quoteControl('applyNepalOptions').click());
@@ -3369,13 +3454,13 @@ quoteControl('loadNepalPackage').addEventListener('click', () => {
     for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms','pricing','amount']) nepalValue(key).value = key === 'amount' || key === 'pricing' ? '' : (pack[key] || '');
     nepalValue('terms').value = pack.termsOverride || quotePaymentPolicies.reservation;
     nepalValue('cancellation').value = pack.cancellation || quoteCancellationPolicies.departure;
-    nepalValue('travelNotes').value = pack.travelNotes || 'Carry a valid passport or voter ID where accepted. Check current document rules for each traveller before departure.\nConfirm permitted Indian currency denominations with official authorities before travel.\nVehicle service is non-AC and limited to the agreed itinerary.\nIf the requested hotel is unavailable, accommodation of a similar category may be offered.\nSightseeing order may change with road conditions, weather or opening times.';
+    nepalValue('travelNotes').value = pack.travelNotes || (pack.domestic ? 'Carry a valid photo ID. Darshan and sightseeing depend on opening hours, queues, weather and local access. Hotel and vehicle arrangements are subject to confirmation.' : 'Carry a valid passport or voter ID where accepted. Check current document rules for each traveller before departure.\nConfirm permitted Indian currency denominations with official authorities before travel.\nVehicle service is non-AC and limited to the agreed itinerary.\nIf the requested hotel is unavailable, accommodation of a similar category may be offered.\nSightseeing order may change with road conditions, weather or opening times.');
     for (const key of ['rooming','roomCount','roomSharing']) nepalValue(key).value = pack[key] || '';
     nepalValue('specialTransport').value = pack.specialTransport || '';
     nepalValue('bankDetails').value = '';
     for (const key of ['pickupLocation','dropLocation']) nepalValue(key).value = pack[key] || 'Gorakhpur';
     resetItinerary(pack);
-    resetNepalOptions(pack.nepalOptions);
+    resetNepalOptions({...pack.nepalOptions, domestic: pack.domestic ?? pack.nepalOptions?.domestic});
     syncQuoteRoute(true);
     quoteControl('nepalPackage').value = pack.id;
     nepalStatus('Package loaded. Enter the price for this customer.');
@@ -3386,7 +3471,7 @@ quoteControl('saveNepalPackage').addEventListener('click', () => {
     if (!title || !fields.days.length || fields.days.some(day => !day.title)) return nepalStatus('Enter a package title and name each trip day.');
     try {
         const saved = nepalCustomPackages();
-        const packageDetails = {id:crypto.randomUUID(), ...fields, nepalOptions:getNepalOptions()};
+        const packageDetails = {id:crypto.randomUUID(), ...fields, domestic: nepalOptionsDomestic, nepalOptions:getNepalOptions()};
         for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms','rooming','roomCount','roomSharing','specialTransport','cancellation','travelNotes','pickupLocation','dropLocation']) packageDetails[key] = nepalValue(key).value.trim();
         packageDetails.termsOverride = packageDetails.terms;
         localStorage.setItem(nepalCustomKey,JSON.stringify([...saved,packageDetails]));
