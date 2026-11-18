@@ -611,7 +611,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <legend class="font-bold">Tour Package Library</legend>
 <div class="flex flex-wrap items-end gap-2">
 <label>Package <select id="nepalPackage" onchange="document.getElementById('loadNepalPackage').click()" class="block rounded border p-2"></select></label>
-<button type="button" id="loadNepalPackage" class="rounded bg-teal-800 px-3 py-2 text-white">Load package</button>
+</div><label class="block">Package title<input name="title" maxlength="200" class="block w-full rounded border p-2" placeholder="Enter the name to save this package"></label><div class="flex flex-wrap gap-2"><button type="button" id="loadNepalPackage" class="rounded bg-teal-800 px-3 py-2 text-white">Load package</button>
 <button type="button" id="saveNepalPackage" class="rounded border px-3 py-2">Save as package</button>
 </div>
 <div class="flex flex-wrap gap-3">
@@ -642,7 +642,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <label class="block text-sm">Accommodation override<textarea rows="3" name="hotel" class="block w-full border rounded p-2 mt-1"></textarea></label>
 </details><div class="sm:col-span-2 grid gap-3 rounded-xl border bg-slate-50 p-4">
   
-  <label>Package title<input name="title" class="block w-full rounded border p-2" placeholder="Complete Meghalaya"></label>
+  
   <label>Trip highlights<textarea name="highlights" class="block w-full rounded border p-2" placeholder="Tour type, pickup, drop, best season and key experiences"></textarea></label>
   <label>Pricing options and extras<textarea name="pricing" class="block w-full rounded border p-2" placeholder="Room sharing, per-person prices, offers and extras"></textarea></label>
   <div class="flex flex-wrap gap-2">
