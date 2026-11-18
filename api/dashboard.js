@@ -12,7 +12,7 @@ const readActions = new Map([
 ]);
 const writeActions = new Map([
   ['save-tour-package', 'savePackage'], ['save-tour-quotation', 'saveQuotation'],
-  ['set-tour-quotation-status', 'setQuotationStatus'], ['save-tour-photo', 'savePhoto'], ['save-tour-hotel', 'saveHotel'], ['save-tour-vehicle', 'saveVehicle']
+  ['set-tour-quotation-status', 'setQuotationStatus'], ['save-tour-photo', 'savePhoto'], ['save-tour-hotel', 'saveHotel'], ['save-tour-vehicle', 'saveVehicle'], ['delete-tour-package', 'deletePackage'], ['delete-tour-photo', 'deletePhoto']
 ]);
 
 function sendJson(res, status, body) {
@@ -77,6 +77,14 @@ async function handleTourStorage(req, res, action) {
   }
 
   const payload = {action, secret};
+  const deleting = action === 'deletePackage' || action === 'deletePhoto';
+  if (deleting) {
+    const id = req.body?.id;
+    if (typeof id !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(id)) {
+      return sendJson(res, 400, {error: 'Invalid item ID.'});
+    }
+    payload.id = id;
+  }
   const recordKey = action === 'savePackage' ? 'package' : action === 'saveQuotation' ? 'quotation' : action === 'savePhoto' ? 'photo' : action === 'saveHotel' ? 'hotel' : action === 'saveVehicle' ? 'vehicle' : null;
   if (recordKey) {
     const record = req.body?.[recordKey];
@@ -129,7 +137,7 @@ async function handleTourStorage(req, res, action) {
     const result = response.ok ? await response.json() : null;
     if (result?.ok !== true) {
       const errors = new Map([
-        ['Invalid hotel', 400], ['Invalid vehicle', 400], ['Invalid photo', 400], ['Photo not found', 404], ['Invalid package', 400], ['Package is too large', 400],
+        ['Invalid item ID', 400], ['Photo is in use by a saved package or quotation', 409], ['Invalid hotel', 400], ['Invalid vehicle', 400], ['Invalid photo', 400], ['Photo not found', 404], ['Invalid package', 400], ['Package is too large', 400],
         ['Invalid quotation', 400], ['Quotation is too large', 400],
         ['Invalid quotation status', 400], ['Quotation not found', 404],
         ['Quotation is no longer pending', 409]
@@ -140,6 +148,10 @@ async function handleTourStorage(req, res, action) {
       return sendJson(res, 502, {error});
     }
 
+    if (deleting) {
+      if (result.id !== payload.id) return sendJson(res, 502, {error: 'Delete could not be confirmed.'});
+      return sendJson(res, 200, {ok: true, id: result.id});
+    }
     const listKey = action === 'listPackages' ? 'packages' : action === 'listQuotations' ? 'quotations' : action === 'listPhotos' ? 'photos' : action === 'listHotels' ? 'hotels' : action === 'listVehicles' ? 'vehicles' : null;
     if (action === 'getPhoto') {
       const photo = result.photo;
