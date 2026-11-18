@@ -609,7 +609,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <label class="block">Discussion notes<textarea name="notes" rows="5" maxlength="5000" class="block w-full border rounded p-2"></textarea></label>
 <button class="bg-blue-700 text-white rounded px-4 py-2" type="submit">Save Lead Draft</button><button class="border rounded px-4 py-2" type="button" onclick="document.getElementById('leadNotesDialog').close()">Close</button>
 </form><p id="leadNotesMessage" role="status" class="text-sm my-3"></p></dialog>
-<dialog id="quotesDialog" aria-labelledby="quotesTitle"><header class="tour-dialog-header"><h2 id="quotesTitle">Tour Quotation &amp; Itinerary</h2><button type="button" onclick="this.closest('dialog').close()">Close</button></header><p class="text-sm my-2">Build a customer proposal from saved trip days, hotels, vehicles and photos. Drafts and libraries are stored in this browser.</p><div class="quote-toolbar"><label>Saved quotations<select id="quoteSaved" class="border rounded p-2 m-2" onchange="loadQuote(this.value)"></select></label><button type="button" onclick="newQuote()" class="border p-2 rounded">New quotation</button><button type="submit" form="quoteForm" class="bg-blue-700 text-white rounded p-2">Save quotation</button></div><p id="quoteMessage" role="status" class="my-2"></p><form id="quoteForm" novalidate class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3"><fieldset class="sm:col-span-2 grid gap-3 rounded-xl border bg-white p-4">
+<dialog id="quotesDialog" aria-labelledby="quotesTitle"><header class="tour-dialog-header"><h2 id="quotesTitle">Tour Quotation &amp; Itinerary</h2><button type="button" onclick="this.closest('dialog').close()">Close</button></header><p class="text-sm my-2">Build a customer proposal from saved trip days, hotels, vehicles and photos. Drafts and libraries are stored in this browser.</p><div class="quote-toolbar"><label>Saved quotations<select id="quoteSaved" class="border rounded p-2 m-2" onchange="loadQuote(this.value)"></select></label><button type="button" onclick="newQuote()" class="border p-2 rounded">New quotation</button><button type="submit" form="quoteForm" class="bg-blue-700 text-white rounded p-2">Save quotation</button></div><button type="button" class="my-2 rounded border border-teal-700 px-3 py-2 font-semibold text-teal-800" onclick="openQuotePhotoLibrary()">Add photos</button><p id="quoteMessage" role="status" class="my-2"></p><form id="quoteForm" novalidate class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3"><fieldset class="sm:col-span-2 grid gap-3 rounded-xl border bg-white p-4">
 <legend class="font-bold">Nepal Package Library</legend>
 <div class="flex flex-wrap items-end gap-2">
 <label>Package <select id="nepalPackage" onchange="document.getElementById('loadNepalPackage').click()" class="block rounded border p-2"></select></label>
@@ -657,9 +657,13 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
   <datalist id="tripHotels"></datalist><datalist id="tripVehicles"></datalist>
   <div id="tripDays" class="grid gap-3"></div>
   <details class="border rounded-lg bg-white p-3">
-    <summary class="font-semibold cursor-pointer">Photo Library</summary>
-    <label class="block my-2">Add destination, hotel or vehicle photos<input id="tripPhotoUpload" type="file" accept="image/*" multiple class="block mt-2"></label>
-    <label>Cover photo <select id="tripCover" class="border rounded p-2"></select></label>
+    <summary id="quotePhotoLibrary" class="font-semibold cursor-pointer">Add photos / Photo Library</summary>
+    <div data-photo-editor class="my-3 grid gap-2"><div class="grid gap-2 sm:grid-cols-3">
+<label>Photo name<input data-photo-name maxlength="80" class="block w-full p-2" placeholder="Pashupatinath Temple"></label>
+<label>Place / city<input data-photo-place maxlength="80" class="block w-full p-2" placeholder="Kathmandu"></label>
+<label>Category<select data-photo-category class="block w-full p-2"><option value="">Choose category</option><option>Temple</option><option>Sightseeing</option><option>Hotel</option><option>Vehicle</option><option>Other</option></select></label>
+</div><label>Choose image<input id="tripPhotoUpload" type="file" accept="image/*" class="block mt-2"></label><button type="button" data-save-photo class="justify-self-start rounded bg-teal-700 px-3 py-2 text-white">Save photo</button><p data-photo-status role="status"></p></div>
+    <label>Cover photo (first page) <select id="tripCover" class="border rounded p-2"></select></label><div data-photo-preview hidden></div>
     <div id="tripGallery" class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3"></div>
   </details>
 </div>
@@ -2819,64 +2823,119 @@ function refreshItineraryLibrary() {
     setItineraryOptions(quoteControl('tripTemplates'), itineraryLibrary.templates.map(day => [day.id, day.title]), 'Choose a saved day');
     refreshItineraryPhotos();
 }
+function openQuotePhotoLibrary() {
+    const summary = quoteControl('quotePhotoLibrary');
+    let section = summary.closest('details');
+    while (section) {
+        section.open = true;
+        section = section.parentElement.closest('details');
+    }
+    summary.focus({preventScroll:true});
+    summary.scrollIntoView({block:'center'});
+}
+
+function photoLabel(photo) {
+    return [photo.name, photo.place, photo.category || 'Uncategorized'].filter(Boolean).join(' · ');
+}
+
+function renderPhotoSelection(select) {
+    const preview = select.parentElement.nextElementSibling;
+    const photo = itineraryLibrary.photos.find(item => item.id === select.value);
+    preview.replaceChildren();
+    preview.hidden = !photo;
+    if (!photo) return;
+    const image = new Image();
+    image.src = photo.data;
+    image.alt = photoLabel(photo);
+    image.className = 'h-24 max-w-full object-contain rounded border';
+    const caption = document.createElement('p');
+    caption.className = 'text-sm text-slate-600';
+    caption.textContent = photoLabel(photo);
+    preview.append(image, caption);
+}
+
 function refreshItineraryPhotos() {
     const gallery = quoteControl('tripGallery');
     const selected = new Set([...gallery.querySelectorAll('input:checked')].map(input => input.value));
     gallery.replaceChildren();
     for (const photo of itineraryLibrary.photos) {
         const label = document.createElement('label');
-        label.className = 'rounded border overflow-hidden text-xs p-1 break-all';
+        label.className = 'rounded border overflow-hidden text-xs p-2 break-words';
         const img = new Image();
         img.src = photo.data;
         img.alt = '';
+        img.loading = 'lazy';
         img.className = 'w-full h-20 object-contain rounded';
         const input = document.createElement('input');
         input.type = 'checkbox';
         input.value = photo.id;
         input.checked = selected.has(photo.id);
-        label.append(img, input, ' ' + photo.name);
+        label.append(img, input, ' ' + photoLabel(photo));
         gallery.append(label);
     }
-    const choices = itineraryLibrary.photos.map(photo => [photo.id, photo.name]);
-    setItineraryOptions(quoteControl('tripCover'), choices, 'No cover photo');
-    quoteControl('tripDays').querySelectorAll('select').forEach(select => setItineraryOptions(select, choices, 'No day photo'));
-}
-async function uploadItineraryPhotos(event) {
-    const input = event.currentTarget;
-    input.disabled = true;
-    let saved = 0;
-    let lastPhotoId = '';
-    try {
-        for (const file of input.files) {
-            const image = await createImageBitmap(file, {imageOrientation: 'from-image'});
-            const canvas = document.createElement('canvas');
-            const scale = Math.min(1, 1200 / Math.max(image.width, image.height));
-            canvas.width = Math.max(1, Math.round(image.width * scale));
-            canvas.height = Math.max(1, Math.round(image.height * scale));
-            canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
-            image.close();
-            itineraryLibrary.photos.push({id: crypto.randomUUID(), name: file.name, data: canvas.toDataURL('image/jpeg', .8)});
-            try { storeItineraryLibrary(); } catch (error) { itineraryLibrary.photos.pop(); throw error; }
-            lastPhotoId = itineraryLibrary.photos.at(-1).id;
-            saved++;
-        }
-        itineraryMessage(saved + ' photos saved.');
-    } catch {
-        itineraryMessage(saved + ' photos saved. Check the image format and available browser storage.');
-    } finally {
-        refreshItineraryPhotos();
-        const dayPhoto = input.closest('[data-photo-card]')?.querySelector('[data-day="photo"]');
-        if (dayPhoto && lastPhotoId) dayPhoto.value = lastPhotoId;
-        input.value = '';
-        input.disabled = false;
+    const choices = itineraryLibrary.photos.map(photo => [photo.id, photoLabel(photo)]);
+    const cover = quoteControl('tripCover');
+    setItineraryOptions(cover, choices, 'No cover photo');
+    renderPhotoSelection(cover);
+    for (const select of quoteControl('tripDays').querySelectorAll('[data-day="photo"]')) {
+        setItineraryOptions(select, choices, 'No day photo');
+        renderPhotoSelection(select);
     }
 }
-quoteControl('tripPhotoUpload').addEventListener('change', uploadItineraryPhotos);
+
+async function saveItineraryPhoto(button) {
+    const editor = button.closest('[data-photo-editor]');
+    const input = editor.querySelector('input[type="file"]');
+    const name = editor.querySelector('[data-photo-name]').value.trim();
+    const place = editor.querySelector('[data-photo-place]').value.trim();
+    const category = editor.querySelector('[data-photo-category]').value;
+    const status = editor.querySelector('[data-photo-status]');
+    if (!name || !place || !category || !input.files[0]) {
+        status.textContent = 'Enter the photo name, place and category, and choose an image.';
+        return;
+    }
+    button.disabled = true;
+    try {
+        const image = await createImageBitmap(input.files[0], {imageOrientation: 'from-image'});
+        const canvas = document.createElement('canvas');
+        const scale = Math.min(1, 1200 / Math.max(image.width, image.height));
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext('2d');
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        image.close();
+        const photo = {id: crypto.randomUUID(), name, place, category, data: canvas.toDataURL('image/jpeg', .8)};
+        itineraryLibrary.photos.push(photo);
+        try { storeItineraryLibrary(); } catch (error) { itineraryLibrary.photos.pop(); throw error; }
+        refreshItineraryPhotos();
+        const select = editor.closest('[data-photo-card]')?.querySelector('[data-day="photo"]');
+        if (select) {
+            select.value = photo.id;
+            renderPhotoSelection(select);
+        }
+        for (const field of editor.querySelectorAll('input, select')) field.value = '';
+        status.textContent = select ? 'Photo saved and selected for this day.' : 'Photo saved to the library.';
+    } catch {
+        status.textContent = 'Could not save the photo. Check image format and browser storage.';
+    } finally {
+        button.disabled = false;
+    }
+}
+quoteControl('quoteForm').addEventListener('click', event => {
+    const button = event.target.closest('[data-save-photo]');
+    if (button) saveItineraryPhoto(button);
+});
+quoteControl('quoteForm').addEventListener('change', event => {
+    if (event.target.matches('#tripCover, [data-day="photo"]')) renderPhotoSelection(event.target);
+});
 function resetItinerary(quote = {}) {
     quoteControl('tripDays').replaceChildren();
     quoteControl('tripGallery').replaceChildren();
     refreshItineraryLibrary();
     quoteControl('tripCover').value = quote.cover || '';
+    renderPhotoSelection(quoteControl('tripCover'));
     for (const input of quoteControl('tripGallery').querySelectorAll('input')) {
         input.checked = (quote.gallery || []).includes(input.value);
     }
@@ -2906,14 +2965,15 @@ function addItineraryDay(day = {}, reveal = false) {
         '<label>Activities and timings<textarea data-day="activities" rows="4" class="block w-full border rounded p-2" placeholder="One activity per line"></textarea></label>' +
         '<details><summary>Override stay or meals for this day</summary><label>Overnight stay<input data-day="stay" list="tripHotels" class="block w-full border rounded p-2"></label>' +
         '<label>Meals<input data-day="meals" class="block w-full border rounded p-2"></label></details>' +
-        '<label>Day photo <select data-day="photo" class="border rounded p-2"></select></label><label>Upload photo for this day<input data-day-upload type="file" accept="image/*" class="block mt-1"></label>' +
+        '<label>Photo for this itinerary day <select data-day="photo" class="border rounded p-2"></select></label><div data-photo-preview hidden></div><details data-photo-editor><summary>Add a photo for this day</summary><div class="grid gap-2 sm:grid-cols-3"> <label>Photo name<input data-photo-name maxlength="80" class="block w-full p-2" placeholder="Pashupatinath Temple"></label> <label>Place / city<input data-photo-place maxlength="80" class="block w-full p-2" placeholder="Kathmandu"></label> <label>Category<select data-photo-category class="block w-full p-2"><option value="">Choose category</option><option>Temple</option><option>Sightseeing</option><option>Hotel</option><option>Vehicle</option><option>Other</option></select></label> </div><label>Choose image<input data-day-upload type="file" accept="image/*" class="block mt-1"></label><button type="button" data-save-photo class="rounded border px-3 py-2">Save and use photo</button><p data-photo-status role="status"></p></details>' +
         '<div class="flex flex-wrap gap-2"></div>';
     card.dataset.photoCard = "";
-    card.querySelector("[data-day-upload]").addEventListener("change", uploadItineraryPhotos);
+
     quoteControl('tripDays').append(card);
     numberItineraryDays();
     refreshItineraryPhotos();
     for (const field of card.querySelectorAll('[data-day]')) field.value = day[field.dataset.day] || '';
+    renderPhotoSelection(card.querySelector('[data-day="photo"]'));
     for (const [label, action] of [
         ['Move up', () => card.previousElementSibling?.before(card)],
         ['Move down', () => card.nextElementSibling?.after(card)],
@@ -2963,7 +3023,7 @@ async function downloadQuote(share = false) {
     try {
         const q = quoteValues();
         if (!window.jspdf) throw Error('PDF library is still loading. Try again.');
-        const pdf = new window.jspdf.jsPDF();
+        const pdf = new window.jspdf.jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
         let y;
         const page = (title, first = false) => {
             if (!first) pdf.addPage();
@@ -2993,8 +3053,8 @@ async function downloadQuote(share = false) {
             const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight);
             const fittedWidth = image.naturalWidth * scale;
             const fittedHeight = image.naturalHeight * scale;
-            pdf.addImage(photo.data, 'JPEG', x + (width - fittedWidth) / 2, top, fittedWidth, fittedHeight);
-            return fittedHeight;
+            pdf.addImage(photo.data, 'JPEG', x + (width - fittedWidth) / 2, top + (height - fittedHeight) / 2, fittedWidth, fittedHeight);
+            return height;
         };
         const featuredPhotos = [...new Set([q.cover,...q.gallery].filter(Boolean))].filter(id =>
             itineraryLibrary.photos.some(photo => photo.id === id));
