@@ -70,6 +70,37 @@ async function deleteBooking(req, res) {
   }
 }
 
+async function checkTourSheet(res) {
+  const url = process.env.TOUR_API_URL;
+  const secret = process.env.TOUR_API_SECRET;
+
+  if (!url || !secret) {
+    return sendJson(res, 503, { error: 'Tour API variables are missing.' });
+  }
+
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url)) {
+    return sendJson(res, 503, { error: 'TOUR_API_URL must be an Apps Script /exec URL.' });
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'health', secret }),
+      signal: AbortSignal.timeout(15000)
+    });
+
+    const result = response.ok ? await response.json() : null;
+    if (result?.ok !== true) {
+      return sendJson(res, 502, { error: 'Tour Sheet connection check failed.' });
+    }
+
+    return sendJson(res, 200, { ok: true });
+  } catch {
+    return sendJson(res, 502, { error: 'Could not reach the Tour Sheet.' });
+  }
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
 
@@ -81,6 +112,7 @@ module.exports = async (req, res) => {
 
   const params = new URL(req.url, 'https://crm.invalid').searchParams;
   const wantsBookings = req.method === 'GET' && params.get('data') === 'bookings';
+  const wantsTourHealth = req.method === 'GET' && params.get('data') === 'tour-health';
   const wantsDelete = req.method === 'POST' && params.get('action') === 'delete';
   const isLogin = req.method === 'POST' && !wantsDelete;
 
@@ -104,7 +136,7 @@ module.exports = async (req, res) => {
       throw new Error('Account not allowed');
     }
   } catch {
-    if (wantsBookings || wantsDelete) {
+    if (wantsBookings || wantsDelete || wantsTourHealth) {
       return sendJson(res, 401, { error: 'Please sign in again.' });
     }
     return res.redirect(303, '/?login=denied');
@@ -121,6 +153,7 @@ module.exports = async (req, res) => {
   }
 
   if (wantsDelete) return deleteBooking(req, res);
+  if (wantsTourHealth) return checkTourSheet(res);
 
   if (wantsBookings) {
     try {
