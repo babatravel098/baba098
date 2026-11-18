@@ -15,8 +15,13 @@ function sendJson(res, status, body) {
   return res.end(JSON.stringify(body));
 }
 
+function isDashboardOrigin(req) {
+  return Boolean(req.headers.host) &&
+    req.headers.origin === `https://${req.headers.host}`;
+}
+
 async function deleteBooking(req, res) {
-  if (!req.headers.host || req.headers.origin !== `https://${req.headers.host}`) {
+  if (!isDashboardOrigin(req)) {
     return sendJson(res, 403, { error: 'Delete must be requested from the CRM dashboard.' });
   }
 
@@ -31,22 +36,18 @@ async function deleteBooking(req, res) {
     return sendJson(res, 503, { error: 'Booking deletion is not configured.' });
   }
 
+  const unconfirmed = {
+    error: 'Could not confirm deletion. Refresh the booking list before retrying.'
+  };
+
   try {
     const response = await fetch(appsScriptUrl, {
       method: 'POST',
-      body: new URLSearchParams({
-        action: 'delete',
-        booking_id: bookingId,
-        secret
-      }),
+      body: new URLSearchParams({ action: 'delete', booking_id: bookingId, secret }),
       signal: AbortSignal.timeout(15000)
     });
 
-    if (!response.ok) {
-      return sendJson(res, 502, {
-        error: 'Could not confirm deletion. Refresh the booking list before retrying.'
-      });
-    }
+    if (!response.ok) return sendJson(res, 502, unconfirmed);
 
     const result = await response.json();
     switch (result.status) {
@@ -64,9 +65,7 @@ async function deleteBooking(req, res) {
         return sendJson(res, 502, { error: 'Apps Script could not confirm the deletion.' });
     }
   } catch {
-    return sendJson(res, 502, {
-      error: 'Could not confirm deletion. Refresh the booking list before retrying.'
-    });
+    return sendJson(res, 502, unconfirmed);
   }
 }
 
@@ -83,18 +82,19 @@ async function handleTourStorage(req, res, action) {
   }
 
   const payload = { action, secret };
+  const recordKey = action === 'savePackage' ? 'package'
+    : action === 'saveQuotation' ? 'quotation' : null;
 
-  if (action === 'savePackage') {
-    if (!req.headers.host || req.headers.origin !== `https://${req.headers.host}`) {
-      return sendJson(res, 403, { error: 'Save packages from the CRM dashboard.' });
+  if (recordKey) {
+    if (!isDashboardOrigin(req)) {
+      return sendJson(res, 403, { error: 'Save must be requested from the CRM dashboard.' });
     }
 
-    const pack = req.body?.package;
-    if (!pack || typeof pack !== 'object' || Array.isArray(pack)) {
-      return sendJson(res, 400, { error: 'Package details are required.' });
+    const record = req.body?.[recordKey];
+    if (!record || typeof record !== 'object' || Array.isArray(record)) {
+      return sendJson(res, 400, { error: `The ${recordKey} details are required.` });
     }
-
-    payload.package = pack;
+    payload[recordKey] = record;
   }
 
   try {
@@ -106,10 +106,12 @@ async function handleTourStorage(req, res, action) {
     });
 
     const result = response.ok ? await response.json() : null;
-
     if (result?.ok !== true) {
-      if (action === 'savePackage' &&
-          ['Invalid package', 'Package is too large'].includes(result?.error)) {
+      const validationErrors = [
+        'Invalid package', 'Package is too large',
+        'Invalid quotation', 'Quotation is too large'
+      ];
+      if (recordKey && validationErrors.includes(result?.error)) {
         return sendJson(res, 400, { error: result.error });
       }
 
@@ -120,19 +122,20 @@ async function handleTourStorage(req, res, action) {
       });
     }
 
-    if (action === 'listPackages') {
-      if (!Array.isArray(result.packages)) {
-        return sendJson(res, 502, { error: 'Tour storage returned an invalid package list.' });
-      }
+    const listKey = action === 'listPackages' ? 'packages'
+      : action === 'listQuotations' ? 'quotations' : null;
 
-      return sendJson(res, 200, { ok: true, packages: result.packages });
+    if (listKey) {
+      if (!Array.isArray(result[listKey])) {
+        return sendJson(res, 502, { error: `Tour storage returned an invalid ${listKey} list.` });
+      }
+      return sendJson(res, 200, { ok: true, [listKey]: result[listKey] });
     }
 
-    if (action === 'savePackage') {
-      if (result.id !== payload.package.id) {
-        return sendJson(res, 502, { error: 'Tour storage could not confirm the saved package.' });
+    if (recordKey) {
+      if (typeof result.id !== 'string' || result.id !== payload[recordKey].id) {
+        return sendJson(res, 502, { error: `Tour storage could not confirm the saved ${recordKey}.` });
       }
-
       return sendJson(res, 200, { ok: true, id: result.id });
     }
 
@@ -152,13 +155,25 @@ module.exports = async (req, res) => {
   }
 
   const params = new URL(req.url, 'https://crm.invalid').searchParams;
-  const wantsBookings = req.method === 'GET' && params.get('data') === 'bookings';
-  const wantsTourHealth = req.method === 'GET' && params.get('data') === 'tour-health';
-  const wantsPackageList = req.method === 'GET' && params.get('data') === 'tour-packages';
-  const wantsPackageSave = req.method === 'POST' && params.get('action') === 'save-tour-package';
-  const wantsDelete = req.method === 'POST' && params.get('action') === 'delete';
-  const isLogin = req.method === 'POST' && !wantsDelete && !wantsPackageSave;
+  const data = params.get('data');
+  const action = params.get('action');
+  const wantsBookings = req.method === 'GET' && data === 'bookings';
+  const wantsDelete = req.method === 'POST' && action === 'delete';
 
+  const readActions = new Map([
+    ['tour-health', 'health'],
+    ['tour-packages', 'listPackages'],
+    ['tour-quotations', 'listQuotations']
+  ]);
+  const writeActions = new Map([
+    ['save-tour-package', 'savePackage'],
+    ['save-tour-quotation', 'saveQuotation']
+  ]);
+  const tourAction = req.method === 'GET'
+    ? readActions.get(data)
+    : writeActions.get(action);
+
+  const isLogin = req.method === 'POST' && !wantsDelete && !tourAction;
   const credential = isLogin
     ? req.body?.credential
     : /(?:^|;\s*)baba_google=([^;]+)/.exec(req.headers.cookie || '')?.[1];
@@ -169,20 +184,16 @@ module.exports = async (req, res) => {
       throw new Error('Invalid credential');
     }
 
-    const ticket = await google.verifyIdToken({
-      idToken: credential,
-      audience: clientId
-    });
+    const ticket = await google.verifyIdToken({ idToken: credential, audience: clientId });
     identity = ticket.getPayload();
 
     if (!identity?.email_verified || identity.email !== allowedEmail) {
       throw new Error('Account not allowed');
     }
   } catch {
-    if (wantsBookings || wantsDelete || wantsTourHealth || wantsPackageList || wantsPackageSave) {
+    if (wantsBookings || wantsDelete || tourAction) {
       return sendJson(res, 401, { error: 'Please sign in again.' });
     }
-
     return res.redirect(303, '/?login=denied');
   }
 
@@ -197,9 +208,7 @@ module.exports = async (req, res) => {
   }
 
   if (wantsDelete) return deleteBooking(req, res);
-  if (wantsTourHealth) return handleTourStorage(req, res, 'health');
-  if (wantsPackageList) return handleTourStorage(req, res, 'listPackages');
-  if (wantsPackageSave) return handleTourStorage(req, res, 'savePackage');
+  if (tourAction) return handleTourStorage(req, res, tourAction);
 
   if (wantsBookings) {
     try {
