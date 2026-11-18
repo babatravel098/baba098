@@ -44,6 +44,65 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
   .crm-bookings{padding:12px}
 }
 </style>
+<style>
+#quotesDialog, #nepalToursDialog {
+    box-sizing: border-box;
+    width: min(920px, 96vw);
+    max-height: 88dvh;
+    margin: auto;
+    padding: 0 20px 20px;
+    overflow: auto;
+    color: #173449;
+    background: #f1f7f7;
+    border: 1px solid #ccdfe3;
+    border-radius: 20px;
+    box-shadow: 0 24px 72px #112b4d45;
+}
+#quotesDialog::backdrop, #nepalToursDialog::backdrop { background: #10283c80; }
+.tour-dialog-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 -20px 18px;
+    padding: 16px 20px;
+    background: linear-gradient(115deg, #142f46, #08685f);
+    color: white;
+}
+.tour-dialog-header h2 { font-size: clamp(1.1rem, 3vw, 1.45rem); font-weight: 750; }
+.tour-dialog-header button { border: 1px solid #ffffff70; border-radius: 8px; padding: 4px 10px; }
+#quoteForm > fieldset, #quoteForm > details, #nepalToursList article {
+    min-width: 0;
+    border: 1px solid #d4e4e6;
+    border-radius: 14px;
+    background: white;
+    box-shadow: 0 3px 10px #163c5010;
+}
+#quoteForm label, .nepal-followup label { font-weight: 600; }
+#quoteForm :is(input, select, textarea), .nepal-followup :is(input, textarea) {
+    max-width: 100%;
+    border: 1px solid #b8cdd3;
+    border-radius: 8px;
+    background: #f8fbfc;
+}
+#quotesDialog :is(button,input,select,textarea,summary):focus-visible,
+#nepalToursDialog :is(button,input,textarea):focus-visible {
+    outline: 2px solid #007d71;
+    outline-offset: 2px;
+}
+.quote-toolbar, .nepal-actions, .nepal-followup { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+.quote-toolbar { padding: 12px; border: 1px solid #d4e4e6; border-radius: 12px; background: white; }
+.nepal-card-head { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 8px; }
+.nepal-card-head h3 { font-size: 1.12rem; font-weight: 750; overflow-wrap: anywhere; }
+.nepal-card-meta { color: #486477; font-size: .88rem; overflow-wrap: anywhere; }
+.nepal-followup { padding: 12px; margin: 12px 0; background: #eef6f7; border-radius: 10px; }
+.nepal-followup textarea { flex-basis: 100%; }
+.nepal-actions button, .nepal-followup button { margin: 0; }
+#nepalToursCount { color: #08685f; font-weight: 700; }
+</style>
 </head>
 <body class="bg-slate-100 font-sans">
 
@@ -550,7 +609,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <label class="block">Discussion notes<textarea name="notes" rows="5" maxlength="5000" class="block w-full border rounded p-2"></textarea></label>
 <button class="bg-blue-700 text-white rounded px-4 py-2" type="submit">Save Lead Draft</button><button class="border rounded px-4 py-2" type="button" onclick="document.getElementById('leadNotesDialog').close()">Close</button>
 </form><p id="leadNotesMessage" role="status" class="text-sm my-3"></p></dialog>
-<dialog id="quotesDialog" aria-labelledby="quotesTitle" style="width:min(900px,96vw);max-height:90vh;border:0;border-radius:16px;padding:24px"><h2 id="quotesTitle" class="rounded-xl bg-slate-900 px-4 py-3 text-xl font-bold text-white">Tour Quotation &amp; Itinerary</h2><p class="text-sm my-2">Build a customer proposal from saved trip days, hotels, vehicles and photos. Drafts and libraries are stored in this browser.</p><label>Saved quotations<select id="quoteSaved" class="border rounded p-2 m-2" onchange="loadQuote(this.value)"></select></label><button type="button" onclick="newQuote()" class="border p-2 rounded">New quotation</button><button type="submit" form="quoteForm" class="bg-blue-700 text-white rounded p-2">Save quotation</button><p id="quoteMessage" role="status" class="my-2"></p><form id="quoteForm" novalidate class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3"><fieldset class="sm:col-span-2 grid gap-3 rounded-xl border bg-white p-4">
+<dialog id="quotesDialog" aria-labelledby="quotesTitle"><header class="tour-dialog-header"><h2 id="quotesTitle">Tour Quotation &amp; Itinerary</h2><button type="button" onclick="this.closest('dialog').close()">Close</button></header><p class="text-sm my-2">Build a customer proposal from saved trip days, hotels, vehicles and photos. Drafts and libraries are stored in this browser.</p><div class="quote-toolbar"><label>Saved quotations<select id="quoteSaved" class="border rounded p-2 m-2" onchange="loadQuote(this.value)"></select></label><button type="button" onclick="newQuote()" class="border p-2 rounded">New quotation</button><button type="submit" form="quoteForm" class="bg-blue-700 text-white rounded p-2">Save quotation</button></div><p id="quoteMessage" role="status" class="my-2"></p><form id="quoteForm" novalidate class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3"><fieldset class="sm:col-span-2 grid gap-3 rounded-xl border bg-white p-4">
 <legend class="font-bold">Nepal Package Library</legend>
 <div class="flex flex-wrap items-end gap-2">
 <label>Package <select id="nepalPackage" onchange="document.getElementById('loadNepalPackage').click()" class="block rounded border p-2"></select></label>
@@ -3343,8 +3402,8 @@ function renderUpcomingPickups() {
     document.getElementById('upcomingPickups').hidden = !pickups.length;
 }
 </script>
-<dialog id="nepalToursDialog" class="w-full max-w-3xl rounded-2xl bg-slate-50 p-6 text-slate-900 shadow-xl">
-<h2 class="text-xl font-bold">Nepal Tour Packages</h2>
+<dialog id="nepalToursDialog" aria-labelledby="nepalToursTitle" class="w-full max-w-3xl rounded-2xl bg-slate-50 p-6 text-slate-900 shadow-xl">
+<header class="tour-dialog-header"><h2 id="nepalToursTitle">Nepal Tour Packages</h2><button type="button" onclick="this.closest('dialog').close()">Close</button></header>
 <p id="nepalToursCount" role="status" class="my-2"></p>
 <div id="nepalToursList" class="grid gap-3"></div>
 <button type="button" class="mt-3 rounded border p-2" onclick="this.closest('dialog').close()">Close</button>
@@ -3407,9 +3466,25 @@ async function openNepalTours() {
         open.className = 'rounded border p-2';
         open.textContent = 'Open quotation';
         open.onclick = () => { dialog.close(); openQuotes(); loadQuote(quote.id); };
-        row.append(nepalStatusBadge(status),summary,note,date,save,open);
+        const head = document.createElement('div');
+        head.className = 'nepal-card-head';
+        const customer = document.createElement('h3');
+        customer.textContent = quote.customer || 'Unnamed customer';
+        head.append(customer, nepalStatusBadge(status));
+        summary.className = 'nepal-card-meta';
+        summary.textContent = [quote.title, quote.phone, quote.start && 'Travel starts ' + quote.start].filter(Boolean).join(' · ');
+        const followupPanel = document.createElement('div');
+        followupPanel.className = 'nepal-followup';
+        const dateLabel = document.createElement('label');
+        dateLabel.textContent = 'Next follow-up ';
+        dateLabel.append(date);
+        followupPanel.append(note, dateLabel, save);
+        const actions = document.createElement('div');
+        actions.className = 'nepal-actions';
+        actions.append(open);
+        row.append(head, summary, followupPanel, actions);
         if (!booking && status === 'Pending') {
-            row.append(
+            actions.append(
                 nepalAction('Confirm as booking', () => {
                     dialog.close();
                     openQuotes();
@@ -3426,8 +3501,8 @@ async function openNepalTours() {
         for (const [label, action] of [
             ['Download PDF', () => { dialog.close(); openQuotes(); loadQuote(quote.id); downloadQuote(); }],
             ['Share PDF to WhatsApp', () => { dialog.close(); openQuotes(); loadQuote(quote.id); downloadQuote(true); }]
-        ]) row.append(nepalAction(label, action));
-        if (booking) addNepalBookingActions(row, booking, dialog);
+        ]) actions.append(nepalAction(label, action));
+        if (booking) addNepalBookingActions(actions, booking, dialog);
         list.append(row);
     }
     const destinations = /\b(nepal|kathmandu|pokhara|muktinath|jomsom|janakpur|chitwan|lumbini)\b/i;
@@ -3458,7 +3533,12 @@ function nepalStatusBadge(status) {
 function nepalAction(label, action) {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'm-1 rounded border px-2 py-1';
+    button.className = 'rounded-lg border px-3 py-2 text-sm font-semibold ' + (
+        label === 'Confirm as booking' ? 'bg-teal-700 text-white border-teal-700' :
+        label.includes('WhatsApp') ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
+        label === 'Cancel package' ? 'bg-white text-red-700 border-red-200' :
+        'bg-white text-slate-800 border-slate-300'
+    );
     button.textContent = label;
     button.addEventListener('click', () => action(button));
     return button;
