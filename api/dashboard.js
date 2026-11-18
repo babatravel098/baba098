@@ -70,7 +70,7 @@ async function deleteBooking(req, res) {
   }
 }
 
-async function checkTourSheet(res) {
+async function handleTourStorage(req, res, action) {
   const url = process.env.TOUR_API_URL;
   const secret = process.env.TOUR_API_SECRET;
 
@@ -82,17 +82,58 @@ async function checkTourSheet(res) {
     return sendJson(res, 503, { error: 'TOUR_API_URL must be an Apps Script /exec URL.' });
   }
 
+  const payload = { action, secret };
+
+  if (action === 'savePackage') {
+    if (!req.headers.host || req.headers.origin !== `https://${req.headers.host}`) {
+      return sendJson(res, 403, { error: 'Save packages from the CRM dashboard.' });
+    }
+
+    const pack = req.body?.package;
+    if (!pack || typeof pack !== 'object' || Array.isArray(pack)) {
+      return sendJson(res, 400, { error: 'Package details are required.' });
+    }
+
+    payload.package = pack;
+  }
+
   try {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'health', secret }),
+      body: JSON.stringify(payload),
       signal: AbortSignal.timeout(15000)
     });
 
     const result = response.ok ? await response.json() : null;
+
     if (result?.ok !== true) {
-      return sendJson(res, 502, { error: 'Tour Sheet connection check failed.' });
+      if (action === 'savePackage' &&
+          ['Invalid package', 'Package is too large'].includes(result?.error)) {
+        return sendJson(res, 400, { error: result.error });
+      }
+
+      return sendJson(res, 502, {
+        error: action === 'health'
+          ? 'Tour Sheet connection check failed.'
+          : 'Tour storage request failed.'
+      });
+    }
+
+    if (action === 'listPackages') {
+      if (!Array.isArray(result.packages)) {
+        return sendJson(res, 502, { error: 'Tour storage returned an invalid package list.' });
+      }
+
+      return sendJson(res, 200, { ok: true, packages: result.packages });
+    }
+
+    if (action === 'savePackage') {
+      if (result.id !== payload.package.id) {
+        return sendJson(res, 502, { error: 'Tour storage could not confirm the saved package.' });
+      }
+
+      return sendJson(res, 200, { ok: true, id: result.id });
     }
 
     return sendJson(res, 200, { ok: true });
@@ -113,8 +154,10 @@ module.exports = async (req, res) => {
   const params = new URL(req.url, 'https://crm.invalid').searchParams;
   const wantsBookings = req.method === 'GET' && params.get('data') === 'bookings';
   const wantsTourHealth = req.method === 'GET' && params.get('data') === 'tour-health';
+  const wantsPackageList = req.method === 'GET' && params.get('data') === 'tour-packages';
+  const wantsPackageSave = req.method === 'POST' && params.get('action') === 'save-tour-package';
   const wantsDelete = req.method === 'POST' && params.get('action') === 'delete';
-  const isLogin = req.method === 'POST' && !wantsDelete;
+  const isLogin = req.method === 'POST' && !wantsDelete && !wantsPackageSave;
 
   const credential = isLogin
     ? req.body?.credential
@@ -136,9 +179,10 @@ module.exports = async (req, res) => {
       throw new Error('Account not allowed');
     }
   } catch {
-    if (wantsBookings || wantsDelete || wantsTourHealth) {
+    if (wantsBookings || wantsDelete || wantsTourHealth || wantsPackageList || wantsPackageSave) {
       return sendJson(res, 401, { error: 'Please sign in again.' });
     }
+
     return res.redirect(303, '/?login=denied');
   }
 
@@ -153,7 +197,9 @@ module.exports = async (req, res) => {
   }
 
   if (wantsDelete) return deleteBooking(req, res);
-  if (wantsTourHealth) return checkTourSheet(res);
+  if (wantsTourHealth) return handleTourStorage(req, res, 'health');
+  if (wantsPackageList) return handleTourStorage(req, res, 'listPackages');
+  if (wantsPackageSave) return handleTourStorage(req, res, 'savePackage');
 
   if (wantsBookings) {
     try {
