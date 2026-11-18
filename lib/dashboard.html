@@ -294,7 +294,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 
                 <!-- Booking Form -->
                 <form id="bookingForm" class="space-y-3" onsubmit="saveBooking(event)">
-                    <h2 class="text-sm font-bold text-blue-900">New Booking Entry</h2>
+                    <h2 class="text-sm font-bold text-blue-900">New Booking Entry</h2><button type="button" id="bookingPackagePdf" hidden class="rounded-lg border border-teal-700 px-3 py-2 font-semibold text-teal-800" onclick="downloadBookingPackagePdf()">Download Package PDF</button><p id="bookingPackagePdfStatus" role="status"></p>
                     <div>
                         <label class="text-xs font-semibold text-gray-600">Customer Name</label>
                         <input type="text" id="custName" required class="w-full border p-2 rounded text-sm">
@@ -625,7 +625,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <label>City<select id="quoteHotelCity" class="block border rounded p-2"><option>Kathmandu</option><option>Pokhara</option><option>Janakpur</option><option>Jomsom</option><option>Chitwan</option></select></label>
 <label>Hotel name<input id="quoteHotelName" class="block border rounded p-2"></label>
 <label>Category<select id="quoteHotelCategory" class="block border rounded p-2"><option value="">Choose category</option><option>2-star</option><option>3-star</option><option>4-star</option><option>5-star</option><option>Unrated</option></select></label>
-<button type="button" id="quoteAddHotel" class="border rounded p-2">Save hotel</button></div><p id="quoteHotelStatus" role="status"></p></details>
+<button type="button" id="quoteAddHotel" class="border rounded p-2">Save hotel</button></div><p id="quoteHotelStatus" role="status"></p></details><details class="rounded border p-3"><summary>Add vehicle to library</summary><label>Vehicle name<input id="quoteVehicleName" maxlength="120" class="block rounded border p-2"></label><button id="quoteAddVehicle" type="button" class="rounded border p-2">Save vehicle</button><p id="quoteVehicleStatus" role="status"></p></details>
 <div class="flex gap-3 flex-wrap"><label>Rooms<input name="roomCount" type="number" min="1" step="1" class="block border rounded p-2"></label>
 <label>Sharing<select name="roomSharing" class="block border rounded p-2"><option value="">Select sharing</option><option>Double sharing</option><option>Triple sharing</option><option>Four sharing</option><option>Mixed sharing</option></select></label></div>
 <details><summary>Optional inclusions</summary><div id="nepalExtras" class="flex flex-wrap gap-3"></div></details>
@@ -646,8 +646,8 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
   <label>Trip highlights<textarea name="highlights" class="block w-full rounded border p-2" placeholder="Tour type, pickup, drop, best season and key experiences"></textarea></label>
   <label>Pricing options and extras<textarea name="pricing" class="block w-full rounded border p-2" placeholder="Room sharing, per-person prices, offers and extras"></textarea></label>
   <div class="flex flex-wrap gap-2">
-    <button type="button" class="border rounded p-2" onclick="saveItineraryOption('hotel')">Save hotel option</button>
-    <button type="button" class="border rounded p-2" onclick="saveItineraryOption('vehicle')">Save vehicle option</button>
+    
+    
     <button type="button" class="border rounded p-2" onclick="addItineraryDay({}, true)">Add trip day</button>
     <select id="tripTemplates" aria-label="Day templates" class="border rounded p-2"></select>
     <button type="button" class="border rounded p-2" onclick="useItineraryTemplate()">Add saved day</button>
@@ -2384,7 +2384,7 @@ function showQuoteFeedback(message) {
  document.getElementById('quoteActionMessage').textContent = message;
 }
 function openQuotes() {
- try { refreshQuotes(); newQuote(); document.getElementById('quotesDialog').showModal(); void loadSharedTourPhotos().catch(error => showQuoteFeedback(error.message)).then(() => Promise.all([loadSharedTourPackages(), loadSharedQuotations()])).catch(error => showQuoteFeedback(error.message)); }
+ try { refreshQuotes(); newQuote(); document.getElementById('quotesDialog').showModal(); void Promise.allSettled([loadSharedTourPhotos(), loadSharedTourOptions()]).then(results => { const failed = results.find(result => result.status === 'rejected'); if (failed) showQuoteFeedback(failed.reason.message); return Promise.all([loadSharedTourPackages(), loadSharedQuotations()]); }).catch(error => showQuoteFeedback(error.message)); }
  catch(error) { alert('Could not open quotations. '+error.message); }
 }
 function loadQuote(id) {
@@ -2793,6 +2793,7 @@ async function quoteToBookingForm() {
         for (const [id,value] of Object.entries(mapping)) document.getElementById(id).value = value;
         await saveSharedQuotation(quote);
         pendingNepalQuote = quote.id;
+        document.getElementById('bookingPackagePdf').hidden = false;
         const vehicle = document.getElementById('vehicleSelect');
         const match = [...vehicle.options].find(option => option.value.toLowerCase() === quote.vehicle.toLowerCase());
         if (match) vehicle.value = match.value;
@@ -3123,9 +3124,28 @@ function useItineraryTemplate() {
     const day = itineraryLibrary.templates.find(item => item.id === quoteControl('tripTemplates').value);
     if (day) addItineraryDay(day, true);
 }
-async function downloadQuote(share = false) {
+async function downloadBookingPackagePdf() {
+    const quote = sharedQuotations.get(pendingNepalQuote);
+    const message = document.getElementById('bookingPackagePdfStatus');
+    const button = document.getElementById('bookingPackagePdf');
+    if (!quote) {
+        message.textContent = 'Open the booking form from a saved quotation first.';
+        return;
+    }
+    button.disabled = true;
     try {
-        const q = quoteValues();
+        await downloadQuote(false, quote);
+        message.textContent = 'Package PDF downloaded.';
+    } catch (error) {
+        message.textContent = error.message;
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function downloadQuote(share = false, bookingQuote = null) {
+    try {
+        const q = bookingQuote || quoteValues();
         if (!window.jspdf) throw Error('PDF library is still loading. Try again.');
         const pdf = new window.jspdf.jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
         const navy = '#143047', teal = '#0F766E', ink = '#243746';
@@ -3421,7 +3441,7 @@ async function downloadQuote(share = false) {
             pdf.text('/ 9415966902 / 9026060471  |  GSTIN 09AARPU5006D1ZI',left+25,289);
             pdf.text('Page ' + i + ' / ' + pages,left+width,289,{align:'right'});
         }
-        await saveSharedQuotation(q);
+        if (!bookingQuote) await saveSharedQuotation(q);
         refreshQuotes();
         quoteControl('quoteSaved').value = q.id;
         const filename = ((q.title || 'Tour Itinerary').replace(/[^a-z0-9 -]/gi,'').trim() || 'Tour Itinerary') + '.pdf';
@@ -3443,8 +3463,8 @@ async function downloadQuote(share = false) {
             itineraryMessage('PDF downloaded. Attach it in the customer WhatsApp chat.');
             return;
         }
-        itineraryMessage('Quotation saved and PDF downloaded.');
-    } catch(error) { itineraryMessage(error.message); }
+        if (!bookingQuote) itineraryMessage('Quotation saved and PDF downloaded.');
+    } catch(error) { if (bookingQuote) throw error; itineraryMessage(error.message); }
 }
 </script>
 <script>
@@ -3638,9 +3658,6 @@ for (const [id, values] of [
     ['nepalVehicle', ['Sedan','SUV','Innova','Innova Crysta','Scorpio','Bolero','Hiace','Tempo Traveller - 12 seats','Tempo Traveller - 17 seats','Tempo Traveller - 20 seats','Tempo Traveller - 26 seats','Mini bus','Coach']]
 ]) setItineraryOptions(quoteControl(id),values.map(value => [value,value]),'Choose an option');
 const quoteHotelKey = 'baba_quote_hotels_v1';
-function readQuoteHotels() {
-    return JSON.parse(localStorage.getItem(quoteHotelKey) || '[]');
-}
 function appendQuoteHotel({city, name, category}) {
     const select = quoteControl('nepal' + city);
     const value = name + ' (' + category + ')';
@@ -3648,30 +3665,60 @@ function appendQuoteHotel({city, name, category}) {
         select.add(new Option(value, value));
     }
 }
-readQuoteHotels().forEach(appendQuoteHotel);
-quoteControl('quoteAddHotel').addEventListener('click', () => {
-    const hotel = {
-        city: quoteControl('quoteHotelCity').value,
-        name: quoteControl('quoteHotelName').value.trim(),
-        category: quoteControl('quoteHotelCategory').value
-    };
-    const status = quoteControl('quoteHotelStatus');
-    if (!hotel.name || !hotel.category) {
-        status.textContent = 'Enter the hotel name and choose a category.';
-        return;
+
+function appendQuoteVehicle({name}) {
+    const select = quoteControl('nepalVehicle');
+    if (![...select.options].some(option => option.value === name)) {
+        select.add(new Option(name, name));
     }
-    try {
-        const hotels = readQuoteHotels();
-        if (!hotels.some(item => item.city === hotel.city && item.name.toLowerCase() === hotel.name.toLowerCase() && item.category === hotel.category)) {
-            localStorage.setItem(quoteHotelKey, JSON.stringify([...hotels, hotel]));
-            appendQuoteHotel(hotel);
+}
+
+async function loadSharedTourOptions() {
+    const [hotels, vehicles] = await Promise.all([
+        tourPackageRequest('data=tour-hotels'), tourPackageRequest('data=tour-vehicles')
+    ]);
+    hotels.hotels.forEach(appendQuoteHotel);
+    vehicles.vehicles.forEach(appendQuoteVehicle);
+}
+
+function bindTourOptionSave(kind, id, getDetails, append) {
+    const button = quoteControl(id);
+    let pending;
+    button.addEventListener('click', async () => {
+        const details = getDetails();
+        const status = quoteControl(kind === 'hotel' ? 'quoteHotelStatus' : 'quoteVehicleStatus');
+        if (Object.values(details).some(value => !value || value.length > 120)) {
+            status.textContent = 'Fill in all fields. The name can be up to 120 characters.';
+            return;
         }
-        quoteControl('quoteHotelName').value = '';
-        status.textContent = 'Hotel saved in the ' + hotel.city + ' dropdown.';
-    } catch (error) {
-        status.textContent = 'Hotel could not be saved. ' + error.message;
-    }
-});
+        const signature = JSON.stringify(details);
+        if (pending?.signature !== signature) pending = {signature, id: crypto.randomUUID()};
+        const record = {id: pending.id, ...details};
+        button.disabled = true;
+        status.textContent = 'Saving to the Tour Sheet...';
+        try {
+            const result = await tourPackageRequest('action=save-tour-' + kind, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({[kind]: record})
+            });
+            if (result.id !== record.id) throw new Error('Save could not be confirmed.');
+            append(record);
+            pending = undefined;
+            status.textContent = 'Saved to the Tour Sheet.';
+        } catch (error) {
+            status.textContent = 'Could not save. ' + error.message;
+        } finally { button.disabled = false; }
+    });
+}
+bindTourOptionSave('hotel', 'quoteAddHotel', () => ({
+    city: quoteControl('quoteHotelCity').value,
+    name: quoteControl('quoteHotelName').value.trim(),
+    category: quoteControl('quoteHotelCategory').value
+}), appendQuoteHotel);
+bindTourOptionSave('vehicle', 'quoteAddVehicle', () => ({
+    name: quoteControl('quoteVehicleName').value.trim()
+}), appendQuoteVehicle);
 for (const value of nepalOptional) {
     const label = document.createElement('label');
     const input = document.createElement('input');
@@ -3851,7 +3898,7 @@ for (const control of [fleetSelect, document.getElementById('startDate'), docume
     });
 }
 document.getElementById('fleetVendor').addEventListener('change', syncVendorFields);
-document.getElementById('bookingForm').addEventListener('reset', () => {pendingNepalQuote = null;queueMicrotask(() => {syncVendorFields();showFleetNotice(null);});});
+document.getElementById('bookingForm').addEventListener('reset', () => {pendingNepalQuote = null;document.getElementById('bookingPackagePdf').hidden = true;document.getElementById('bookingPackagePdfStatus').textContent = '';queueMicrotask(() => {syncVendorFields();showFleetNotice(null);});});
 function renderUpcomingPickups() {
     const today = operationsDay();
     const end = new Date(Date.parse(today) + 6 * 86400000).toISOString().slice(0,10);
@@ -3882,7 +3929,7 @@ async function openNepalTours() {
     count.textContent = 'Checking confirmed bookings…';
     if (!dialog.open) dialog.showModal();
     let bookings;
-    try { [bookings] = await Promise.all([readPrivateCrmBookings(), loadSharedQuotations(), loadSharedTourPhotos()]); }
+    try { [bookings] = await Promise.all([readPrivateCrmBookings(), loadSharedQuotations(), loadSharedTourPhotos(), loadSharedTourOptions()]); }
     catch { count.textContent = 'Could not load bookings or shared quotations. Reopen this list to retry.'; return; }
     if (!dialog.open) return;
     const linked = new Map();
