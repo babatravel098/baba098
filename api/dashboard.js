@@ -8,11 +8,11 @@ const sheetId = '1I6cFI9mU3z8EPc5cRxNZy25cj3E4sO6xVnXHBFqUQsE';
 const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbw4OfLzT9WCE4eQXPblPO1pu1br4U716qqIID_IBn3nsGjfBaE4etem0coCpY1tWUl5/exec';
 const google = new OAuth2Client(clientId);
 const readActions = new Map([
-  ['tour-health', 'health'], ['tour-packages', 'listPackages'], ['tour-quotations', 'listQuotations']
+  ['tour-health', 'health'], ['tour-packages', 'listPackages'], ['tour-quotations', 'listQuotations'], ['tour-photos', 'listPhotos'], ['tour-photo', 'getPhoto']
 ]);
 const writeActions = new Map([
   ['save-tour-package', 'savePackage'], ['save-tour-quotation', 'saveQuotation'],
-  ['set-tour-quotation-status', 'setQuotationStatus']
+  ['set-tour-quotation-status', 'setQuotationStatus'], ['save-tour-photo', 'savePhoto']
 ]);
 
 function sendJson(res, status, body) {
@@ -77,13 +77,21 @@ async function handleTourStorage(req, res, action) {
   }
 
   const payload = {action, secret};
-  const recordKey = action === 'savePackage' ? 'package' : action === 'saveQuotation' ? 'quotation' : null;
+  const recordKey = action === 'savePackage' ? 'package' : action === 'saveQuotation' ? 'quotation' : action === 'savePhoto' ? 'photo' : null;
   if (recordKey) {
     const record = req.body?.[recordKey];
     if (!record || typeof record !== 'object' || Array.isArray(record)) {
       return sendJson(res, 400, {error: `The ${recordKey} details are required.`});
     }
     payload[recordKey] = record;
+  }
+
+  if (action === 'getPhoto') {
+    const id = new URL(req.url, 'https://crm.invalid').searchParams.get('id');
+    if (!id || !/^[a-zA-Z0-9_-]{1,80}$/.test(id)) {
+      return sendJson(res, 400, {error: 'Invalid photo ID.'});
+    }
+    payload.id = id;
   }
 
   try {
@@ -121,7 +129,7 @@ async function handleTourStorage(req, res, action) {
     const result = response.ok ? await response.json() : null;
     if (result?.ok !== true) {
       const errors = new Map([
-        ['Invalid package', 400], ['Package is too large', 400],
+        ['Invalid photo', 400], ['Photo not found', 404], ['Invalid package', 400], ['Package is too large', 400],
         ['Invalid quotation', 400], ['Quotation is too large', 400],
         ['Invalid quotation status', 400], ['Quotation not found', 404],
         ['Quotation is no longer pending', 409]
@@ -132,7 +140,15 @@ async function handleTourStorage(req, res, action) {
       return sendJson(res, 502, {error});
     }
 
-    const listKey = action === 'listPackages' ? 'packages' : action === 'listQuotations' ? 'quotations' : null;
+    const listKey = action === 'listPackages' ? 'packages' : action === 'listQuotations' ? 'quotations' : action === 'listPhotos' ? 'photos' : null;
+    if (action === 'getPhoto') {
+      const photo = result.photo;
+      if (!photo || photo.id !== payload.id ||
+          typeof photo.data !== 'string' || !photo.data.startsWith('data:image/jpeg;base64,')) {
+        return sendJson(res, 502, {error: 'Tour storage returned an invalid photo.'});
+      }
+      return sendJson(res, 200, {ok: true, photo});
+    }
     if (listKey) {
       if (!Array.isArray(result[listKey])) return sendJson(res, 502, {error: `Tour storage returned an invalid ${listKey} list.`});
       return sendJson(res, 200, {ok: true, [listKey]: result[listKey]});
