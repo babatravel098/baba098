@@ -612,7 +612,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <div class="flex flex-wrap items-end gap-2">
 <label>Package <select id="nepalPackage" onchange="document.getElementById('loadNepalPackage').click()" class="block rounded border p-2"></select></label>
 </div><label class="block">Package title<input name="title" maxlength="200" class="block w-full rounded border p-2" placeholder="Enter the name to save this package"></label><div class="flex flex-wrap gap-2"><button type="button" id="loadNepalPackage" class="rounded bg-teal-800 px-3 py-2 text-white">Load package</button>
-<button type="button" id="saveNepalPackage" class="rounded border px-3 py-2">Save as package</button>
+<button type="button" id="saveNepalPackage" class="rounded border px-3 py-2">Save as package</button><button type="button" id="deleteSharedTourPackage" class="rounded border border-red-300 px-3 py-2 text-red-700" onclick="deleteSelectedTourPackage()">Delete saved package</button>
 </div>
 <div class="flex flex-wrap gap-3">
 <label>Kathmandu hotel <select id="nepalKathmandu" class="block rounded border p-2"></select></label>
@@ -1428,13 +1428,14 @@ function fetchBookings() {
         function generatePDF(b) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            doc.addImage(document.getElementById('crmBrandLogo').src,'JPEG',180,8,16,16,'baba-brand');
+
             const balance = bookingBalance(b);
             const displayStart = formatDisplayDate(b.startDate);
             const displayEnd = formatDisplayDate(b.endDate);
 
             doc.setFillColor(30, 58, 138);
             doc.rect(10, 10, 190, 25, "F");
+            doc.addImage(document.getElementById('crmBrandLogo').src,'JPEG',13,14,16,16,'baba-brand');
             doc.setTextColor(255, 255, 255);
             doc.setFontSize(18);
             doc.text("BABA TOUR AND TRAVELS", 105, 20, { align: "center" });
@@ -2922,6 +2923,24 @@ function openQuotePhotoLibrary() {
     summary.scrollIntoView({block:'center'});
 }
 
+async function deleteTourPhoto(photo, button) {
+    if (!confirm('Remove "' + photo.name + '" from the photo library and move its Drive file to Trash?')) return;
+    button.disabled = true;
+    try {
+        const result = await tourPackageRequest('action=delete-tour-photo', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({id:photo.id})
+        });
+        if (result.id !== photo.id) throw Error('Photo deletion could not be confirmed.');
+        if (photoListRequest) await photoListRequest.catch(() => {});
+        sharedTourPhotos = sharedTourPhotos.filter(item => item.id !== photo.id);
+        sharedPhotoData.delete(photo.id);
+        refreshItineraryPhotos();
+        itineraryMessage('Photo removed from the library.');
+    } catch (error) { itineraryMessage(error.message); }
+    finally { button.disabled = false; }
+}
+
 function photoLabel(photo) {
     return [photo.name, photo.place, photo.category || 'Uncategorized'].filter(Boolean).join(' · ');
 }
@@ -2958,7 +2977,14 @@ function refreshItineraryPhotos() {
         input.value = photo.id;
         input.checked = selected.has(photo.id);
         label.append(input, ' ' + photoLabel(photo));
-        gallery.append(label);
+        const card = document.createElement('div');
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'mt-1 text-xs font-semibold text-red-700';
+        remove.textContent = 'Delete photo';
+        remove.addEventListener('click', () => deleteTourPhoto(photo, remove));
+        card.append(label, remove);
+        gallery.append(card);
     }
     const choices = sharedTourPhotos.map(photo => [photo.id, photoLabel(photo)]);
     const cover = quoteControl('tripCover');
@@ -3636,6 +3662,27 @@ async function loadSharedTourPackages() {
         if (revision === sharedTourRevision) nepalStatus('Could not load shared packages. ' + error.message);
     }
 }
+async function deleteSelectedTourPackage() {
+    const select = quoteControl('nepalPackage');
+    const pack = sharedTourPackages.find(item => item.id === select.value);
+    if (!pack) return nepalStatus('Choose a saved custom package to delete.');
+    if (!confirm('Permanently delete "' + pack.title + '" from the Tour Sheet?')) return;
+    const button = quoteControl('deleteSharedTourPackage');
+    button.disabled = true;
+    try {
+        const result = await tourPackageRequest('action=delete-tour-package', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({id:pack.id})
+        });
+        if (result.id !== pack.id) throw Error('Package deletion could not be confirmed.');
+        ++sharedTourRevision;
+        sharedTourPackages = sharedTourPackages.filter(item => item.id !== pack.id);
+        refreshNepalPackages();
+        nepalStatus('Package permanently deleted.');
+    } catch (error) { nepalStatus(error.message); }
+    finally { button.disabled = false; }
+}
+
 function refreshNepalPackages() {
     setItineraryOptions(quoteControl('nepalPackage'), [...nepalPackages, ...sharedTourPackages].map(p => [p.id,p.title]), 'Choose a saved package');
 }
