@@ -2384,7 +2384,7 @@ function showQuoteFeedback(message) {
  document.getElementById('quoteActionMessage').textContent = message;
 }
 function openQuotes() {
- try { refreshQuotes(); newQuote(); document.getElementById('quotesDialog').showModal(); void loadSharedTourPackages(); void loadSharedQuotations().catch(error => showQuoteFeedback(error.message)); }
+ try { refreshQuotes(); newQuote(); document.getElementById('quotesDialog').showModal(); void loadSharedTourPhotos().catch(error => showQuoteFeedback(error.message)).then(() => Promise.all([loadSharedTourPackages(), loadSharedQuotations()])).catch(error => showQuoteFeedback(error.message)); }
  catch(error) { alert('Could not open quotations. '+error.message); }
 }
 function loadQuote(id) {
@@ -2877,6 +2877,39 @@ function refreshItineraryLibrary() {
     setItineraryOptions(quoteControl('tripTemplates'), itineraryLibrary.templates.map(day => [day.id, day.title]), 'Choose a saved day');
     refreshItineraryPhotos();
 }
+let sharedTourPhotos = [];
+let photoListRequest;
+const sharedPhotoData = new Map();
+const pendingPhotoUploads = new WeakMap();
+
+function loadSharedTourPhotos() {
+    if (!photoListRequest) {
+        photoListRequest = tourPackageRequest('data=tour-photos').then(result => {
+            if (!Array.isArray(result.photos)) throw new Error('Invalid Drive photo list.');
+            sharedTourPhotos = result.photos;
+            refreshItineraryPhotos();
+        }).finally(() => { photoListRequest = null; });
+    }
+    return photoListRequest;
+}
+
+async function getSharedTourPhoto(id) {
+    if (!sharedPhotoData.has(id)) {
+        const request = tourPackageRequest('data=tour-photo&id=' + encodeURIComponent(id))
+            .then(result => {
+                if (result.photo?.id !== id || !result.photo.data?.startsWith('data:image/jpeg;base64,')) {
+                    throw new Error('Drive photo could not be loaded.');
+                }
+                return result.photo;
+            }).catch(error => {
+                sharedPhotoData.delete(id);
+                throw error;
+            });
+        sharedPhotoData.set(id, request);
+    }
+    return sharedPhotoData.get(id);
+}
+
 function openQuotePhotoLibrary() {
     const summary = quoteControl('quotePhotoLibrary');
     let section = summary.closest('details');
@@ -2894,12 +2927,16 @@ function photoLabel(photo) {
 
 function renderPhotoSelection(select) {
     const preview = select.parentElement.nextElementSibling;
-    const photo = itineraryLibrary.photos.find(item => item.id === select.value);
+    const photo = sharedTourPhotos.find(item => item.id === select.value);
     preview.replaceChildren();
     preview.hidden = !photo;
     if (!photo) return;
     const image = new Image();
-    image.src = photo.data;
+    void getSharedTourPhoto(photo.id).then(asset => {
+        if (image.isConnected) image.src = asset.data;
+    }).catch(() => {
+        if (image.isConnected) caption.textContent = photoLabel(photo) + ' (photo unavailable)';
+    });
     image.alt = photoLabel(photo);
     image.className = 'h-24 max-w-full object-contain rounded border';
     const caption = document.createElement('p');
@@ -2912,22 +2949,17 @@ function refreshItineraryPhotos() {
     const gallery = quoteControl('tripGallery');
     const selected = new Set([...gallery.querySelectorAll('input:checked')].map(input => input.value));
     gallery.replaceChildren();
-    for (const photo of itineraryLibrary.photos) {
+    for (const photo of sharedTourPhotos) {
         const label = document.createElement('label');
         label.className = 'rounded border overflow-hidden text-xs p-2 break-words';
-        const img = new Image();
-        img.src = photo.data;
-        img.alt = '';
-        img.loading = 'lazy';
-        img.className = 'w-full h-20 object-contain rounded';
         const input = document.createElement('input');
         input.type = 'checkbox';
         input.value = photo.id;
         input.checked = selected.has(photo.id);
-        label.append(img, input, ' ' + photoLabel(photo));
+        label.append(input, ' ' + photoLabel(photo));
         gallery.append(label);
     }
-    const choices = itineraryLibrary.photos.map(photo => [photo.id, photoLabel(photo)]);
+    const choices = sharedTourPhotos.map(photo => [photo.id, photoLabel(photo)]);
     const cover = quoteControl('tripCover');
     setItineraryOptions(cover, choices, 'No cover photo');
     renderPhotoSelection(cover);
@@ -2960,9 +2992,27 @@ async function saveItineraryPhoto(button) {
         context.fillRect(0, 0, canvas.width, canvas.height);
         context.drawImage(image, 0, 0, canvas.width, canvas.height);
         image.close();
-        const photo = {id: crypto.randomUUID(), name, place, category, data: canvas.toDataURL('image/jpeg', .8)};
-        itineraryLibrary.photos.push(photo);
-        try { storeItineraryLibrary(); } catch (error) { itineraryLibrary.photos.pop(); throw error; }
+        const data = canvas.toDataURL('image/jpeg', .8);
+        if (data.length > 1200023) throw new Error('Choose a smaller image.');
+        const file = input.files[0];
+        const previous = pendingPhotoUploads.get(input);
+        const sameUpload = previous?.file === file && previous.name === name &&
+            previous.place === place && previous.category === category;
+        const photo = {id: sameUpload ? previous.id : crypto.randomUUID(), name, place, category, data};
+        pendingPhotoUploads.set(input, {file, id: photo.id, name, place, category});
+        status.textContent = 'Uploading photo to Drive...';
+        const result = await tourPackageRequest('action=save-tour-photo', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({photo})
+        });
+        if (result.id !== photo.id) throw new Error('Photo upload could not be confirmed.');
+        pendingPhotoUploads.delete(input);
+        sharedPhotoData.set(photo.id, Promise.resolve(photo));
+        if (photoListRequest) await photoListRequest.catch(() => {});
+        if (!sharedTourPhotos.some(item => item.id === photo.id)) {
+            sharedTourPhotos.push({id: photo.id, name, place, category});
+        }
         refreshItineraryPhotos();
         const select = editor.closest('[data-photo-card]')?.querySelector('[data-day="photo"]');
         if (select) {
@@ -2970,9 +3020,9 @@ async function saveItineraryPhoto(button) {
             renderPhotoSelection(select);
         }
         for (const field of editor.querySelectorAll('input, select')) field.value = '';
-        status.textContent = select ? 'Photo saved and selected for this day.' : 'Photo saved to the library.';
-    } catch {
-        status.textContent = 'Could not save the photo. Check image format and browser storage.';
+        status.textContent = select ? 'Photo saved to Drive and selected for this day.' : 'Photo saved to Drive.';
+    } catch (error) {
+        status.textContent = 'Could not save the photo. ' + error.message;
     } finally {
         button.disabled = false;
     }
@@ -3146,7 +3196,7 @@ async function downloadQuote(share = false) {
         async function photoFor(id) {
             if (!id) return null;
             if (photoCache.has(id)) return photoCache.get(id);
-            const asset = itineraryLibrary.photos.find(photo => photo.id === id);
+            const asset = await getSharedTourPhoto(id).catch(() => null);
             if (!asset) return null;
             try {
                 const image = new Image();
@@ -3832,7 +3882,7 @@ async function openNepalTours() {
     count.textContent = 'Checking confirmed bookings…';
     if (!dialog.open) dialog.showModal();
     let bookings;
-    try { [bookings] = await Promise.all([readPrivateCrmBookings(), loadSharedQuotations()]); }
+    try { [bookings] = await Promise.all([readPrivateCrmBookings(), loadSharedQuotations(), loadSharedTourPhotos()]); }
     catch { count.textContent = 'Could not load bookings or shared quotations. Reopen this list to retry.'; return; }
     if (!dialog.open) return;
     const linked = new Map();
