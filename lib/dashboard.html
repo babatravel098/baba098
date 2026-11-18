@@ -2739,7 +2739,20 @@ function downloadDraftBackup() {
 }
 
 function isNepalQuoteCancelled(id) {
-    return localStorage.getItem('baba_quote_cancelled:' + SCRIPT_URL + ':' + id) === 'yes';
+    return sharedQuotations.get(id)?.status === 'Cancelled';
+}
+
+async function syncTourQuotationStatus(id, status, bookingReference = '') {
+    const result = await tourPackageRequest('action=set-tour-quotation-status', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id, status, bookingReference})
+    });
+    if (result.id !== id || result.status !== status || result.bookingReference !== bookingReference) {
+        throw new Error('Quotation status could not be confirmed.');
+    }
+    const quote = sharedQuotations.get(id);
+    if (quote) sharedQuotations.set(id, {...quote, status, bookingReference});
 }
 
 async function saveQuoteFollowup() {
@@ -2774,6 +2787,7 @@ async function quoteToBookingForm() {
     try {
         const quote = quoteValues();
         if (isNepalQuoteCancelled(quote.id)) throw Error('This quotation is cancelled.');
+        if (sharedQuotations.get(quote.id)?.status === 'Confirmed') throw Error('This quotation already has a booking.');
         document.getElementById('bookingForm').reset();
         const mapping = {custName:quote.customer,custPhone:quote.phone,startDate:quote.start,endDate:quote.end,totalAmount:quote.amount,advanceAmount:'0',tourRoute:quote.itinerary || quote.days.map(day => day.route || day.title).join(" / "),custAddress:quote.address,pickup:quote.pickupLocation || "Gorakhpur",drop:quote.dropLocation || "Gorakhpur",staffName:quote.staffName};
         for (const [id,value] of Object.entries(mapping)) document.getElementById(id).value = value;
@@ -3830,7 +3844,13 @@ async function openNepalTours() {
     const displayed = new Set();
     for (const quote of sharedQuotations.values()) {
         const booking = linked.get(quote.id);
-        const status = booking ? getBookingStatus(booking) : isNepalQuoteCancelled(quote.id) ? 'Cancelled' : 'Pending';
+        const status = booking ? getBookingStatus(booking) : (quote.status || 'Pending');
+        if (booking && (!quote.status || quote.status === 'Pending') &&
+            ['Confirmed', 'Ongoing', 'Completed'].includes(status)) {
+            void syncTourQuotationStatus(quote.id, 'Confirmed', booking.bookingId).catch(() => {
+                if (dialog.open) count.textContent += ' | A linked status could not sync. Reopen to retry.';
+            });
+        }
         if (booking) displayed.add(booking.bookingId);
         const row = document.createElement('article');
         row.className = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm';
@@ -3889,10 +3909,17 @@ async function openNepalTours() {
                     loadQuote(quote.id);
                     quoteToBookingForm();
                 }),
-                nepalAction('Cancel package', () => {
+                nepalAction('Cancel package', async button => {
                     if (!confirm('Cancel this package and keep the customer record?')) return;
-                    localStorage.setItem('baba_quote_cancelled:' + SCRIPT_URL + ':' + quote.id, 'yes');
-                    openNepalTours();
+                    button.disabled = true;
+                    try {
+                        await syncTourQuotationStatus(quote.id, 'Cancelled');
+                        if (dialog.open) await openNepalTours();
+                    } catch (error) {
+                        if (dialog.open) count.textContent = 'Cancellation could not be confirmed. ' + error.message;
+                    } finally {
+                        button.disabled = false;
+                    }
                 })
             );
         }
