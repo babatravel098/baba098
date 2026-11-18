@@ -687,7 +687,14 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
         }
 
         function bookingBalance(booking) {
-            return (Number(booking.total) || 0) - (Number(booking.advance) || 0);
+            const sheetBalance = (Number(booking.total) || 0) - (Number(booking.advance) || 0);
+            try {
+                const summary = paymentSummary(booking, readPaymentDrafts(booking));
+                // A changed Sheet amount may already include a browser payment.
+                return Math.max(0, summary.changed ? sheetBalance : summary.balance / 100);
+            } catch {
+                return Math.max(0, sheetBalance);
+            }
         }
 
         function isPickupToday(booking) {
@@ -1212,7 +1219,7 @@ function fetchBookings() {
             }
 
             filteredData.forEach((b) => {
-                const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+                const balance = bookingBalance(b);
                 const displayStart = formatDisplayDate(b.startDate);
                 const displayEnd = formatDisplayDate(b.endDate);
                 let key = (b.phone || '') + "_" + (b.timestamp || '');
@@ -1243,7 +1250,7 @@ function fetchBookings() {
                     <td class="p-2">
                         Tot: <b>₹${b.total || 0}</b><br>
                         Adv: <span class="text-green-600 font-semibold">₹${b.advance || 0}</span><br>
-                        Bal: <span class="text-red-600 font-bold">₹${balance}</span>
+                        Bal: <span class="${balance === 0 ? 'text-green-700' : 'text-red-600'} font-bold">₹${balance}</span>
                     </td>
                     <td class="p-2 text-gray-600">${/^\d+(?:\.\d+)?$/.test(String(b.staff ?? '').trim()) ? 'Check Sheet mapping' : escapeHtml(b.staff || '—')}</td>
                     <td class="p-2 space-y-1">
@@ -1339,7 +1346,7 @@ function fetchBookings() {
         }
 
         function sendWhatsApp(b) {
-            const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+            const balance = bookingBalance(b);
             const displayStart = formatDisplayDate(b.startDate);
             const displayEnd = formatDisplayDate(b.endDate);
 
@@ -1360,7 +1367,7 @@ function fetchBookings() {
         function generatePDF(b) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            const balance = (parseFloat(b.total) || 0) - (parseFloat(b.advance) || 0);
+            const balance = bookingBalance(b);
             const displayStart = formatDisplayDate(b.startDate);
             const displayEnd = formatDisplayDate(b.endDate);
 
@@ -1948,7 +1955,9 @@ document.getElementById('paymentDraftForm').addEventListener('submit', async eve
         });
         event.target.reset();
         document.getElementById('paymentDate').value = operationsDay();
-        document.getElementById('paymentMessage').textContent = 'Payment draft saved in this browser. Google Sheet sync is pending.';
+        document.getElementById('paymentMessage').textContent = 'Payment saved in this browser. Dashboard balance updated. Google Sheet sync is pending.';
+        renderTable();
+        renderOperations();
     } catch (error) {
         document.getElementById('paymentMessage').textContent = 'Payment draft could not be saved. ' + error.message;
     } finally {
@@ -1966,6 +1975,8 @@ async function discardPaymentDraft(id) {
             localStorage.setItem(paymentStorageKey(paymentBooking), JSON.stringify(data));
         });
         document.getElementById('paymentMessage').textContent = 'Payment draft discarded.';
+        renderTable();
+        renderOperations();
     } catch (error) {
         document.getElementById('paymentMessage').textContent = 'Could not discard draft. ' + error.message;
     }
@@ -1973,6 +1984,10 @@ async function discardPaymentDraft(id) {
 }
 
 window.addEventListener('storage', event => {
+    if (event.key?.startsWith('baba_payment_drafts_v1:')) {
+        renderTable();
+        renderOperations();
+    }
     if (paymentBooking && event.key === paymentStorageKey(paymentBooking) && document.getElementById('paymentDialog').open) renderPaymentHistory();
 });
 
