@@ -607,7 +607,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <label class="block">Discussion notes<textarea name="notes" rows="5" maxlength="5000" class="block w-full border rounded p-2"></textarea></label>
 <button class="bg-blue-700 text-white rounded px-4 py-2" type="submit">Save Lead Draft</button><button class="border rounded px-4 py-2" type="button" onclick="document.getElementById('leadNotesDialog').close()">Close</button>
 </form><p id="leadNotesMessage" role="status" class="text-sm my-3"></p></dialog>
-<dialog id="quotesDialog" aria-labelledby="quotesTitle"><header class="tour-dialog-header"><h2 id="quotesTitle">Tour Quotation &amp; Itinerary</h2><button type="button" onclick="this.closest('dialog').close()">Close</button></header><p class="text-sm my-2">Build a customer proposal from saved trip days, hotels, vehicles and photos. Drafts and libraries are stored in this browser.</p><div class="quote-toolbar"><label>Saved quotations<select id="quoteSaved" class="border rounded p-2 m-2" onchange="loadQuote(this.value)"></select></label><button type="button" onclick="newQuote()" class="border p-2 rounded">New quotation</button><button type="submit" form="quoteForm" class="bg-blue-700 text-white rounded p-2">Save quotation</button></div><button type="button" class="my-2 rounded border border-teal-700 px-3 py-2 font-semibold text-teal-800" onclick="openQuotePhotoLibrary()">Add photos</button><p id="quoteMessage" role="status" class="my-2"></p><form id="quoteForm" novalidate class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3"><fieldset class="sm:col-span-2 grid gap-3 rounded-xl border bg-white p-4">
+<dialog id="quotesDialog" aria-labelledby="quotesTitle"><header class="tour-dialog-header"><h2 id="quotesTitle">Tour Quotation &amp; Itinerary</h2><button type="button" onclick="this.closest('dialog').close()">Close</button></header><p class="text-sm my-2">Build a customer proposal from saved trip days, hotels, vehicles and photos. Saved quotations, packages, hotels, vehicles and photos are stored in your shared Tour storage.</p><div class="quote-toolbar"><label>Saved quotations<select id="quoteSaved" class="border rounded p-2 m-2" onchange="loadQuote(this.value)"></select></label><button type="button" onclick="newQuote()" class="border p-2 rounded">New quotation</button><button type="submit" form="quoteForm" class="bg-blue-700 text-white rounded p-2">Save quotation</button></div><button type="button" class="my-2 rounded border border-teal-700 px-3 py-2 font-semibold text-teal-800" onclick="openQuotePhotoLibrary()">Add photos</button><p id="quoteMessage" role="status" class="my-2"></p><form id="quoteForm" novalidate class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3"><fieldset class="sm:col-span-2 grid gap-3 rounded-xl border bg-white p-4">
 <legend class="font-bold">Tour Package Library</legend>
 <div class="flex flex-wrap items-end gap-2">
 <label>Package <select id="nepalPackage" onchange="document.getElementById('loadNepalPackage').click()" class="block rounded border p-2"></select></label>
@@ -1854,6 +1854,7 @@ document.getElementById('bookingEditForm').addEventListener('submit', async even
     const button = form.querySelector('button[type="submit"]');
     const message = document.getElementById('bookingEditMessage');
     const booking = editingBooking;
+    let saveConfirmed = false;
     try {
         const values = {};
         for (const [key, , type] of bookingEditFields) {
@@ -1872,6 +1873,7 @@ document.getElementById('bookingEditForm').addEventListener('submit', async even
         });
         const result = await response.json();
         if (!response.ok || result.ok !== true) throw new Error(result.error || 'Booking save could not be confirmed.');
+        saveConfirmed = true;
         try { localStorage.removeItem(bookingDraftKey(booking)); } catch {}
         // Reload the canonical records so every view, receipt and booking action uses saved values.
         const fresh = await readPrivateCrmBookings();
@@ -1881,9 +1883,9 @@ document.getElementById('bookingEditForm').addEventListener('submit', async even
         renderOperations();
         renderTable();
         document.getElementById('bookingEditDialog').close();
-        alert('Booking changes saved to Google Sheet.');
+        alert('Booking saved successfully.');
     } catch (error) {
-        message.textContent = error.message + ' Your entered details remain in this form.';
+        message.textContent = saveConfirmed ? 'Booking saved. Refresh the dashboard to see changes.' : error.message;
     } finally {
         bookingEditSaving = false;
         for (const control of form.elements) control.disabled = false;
@@ -2470,7 +2472,7 @@ document.getElementById('quoteForm').addEventListener('submit', async event => {
     showQuoteFeedback('Saving quotation to the Tour Sheet...');
     await saveSharedQuotation(quote);
     if (activeQuoteId === quote.id) document.getElementById('quoteSaved').value = quote.id;
-    showQuoteFeedback('Quotation saved to the Tour Sheet.');
+    showQuoteFeedback('Quotation saved successfully.');
  } catch (error) {
     showQuoteFeedback('Quotation could not be saved. ' + error.message);
  } finally {
@@ -4054,10 +4056,10 @@ async function openNepalTours() {
         const head = document.createElement('div');
         head.className = 'nepal-card-head';
         const customer = document.createElement('h3');
-        customer.textContent = quote.customer || 'Unnamed customer';
+        customer.textContent = (booking ? booking.name : quote.customer) || 'Unnamed customer';
         head.append(customer, nepalStatusBadge(status));
         summary.className = 'nepal-card-meta';
-        summary.textContent = [quote.title, quote.phone, quote.start && 'Travel starts ' + quote.start].filter(Boolean).join(' · ');
+        summary.textContent = [quote.title, booking ? booking.phone : quote.phone, (booking ? booking.startDate : quote.start) && 'Travel starts ' + (booking ? booking.startDate : quote.start)].filter(Boolean).join(' · ');
         const followupPanel = document.createElement('div');
         followupPanel.className = 'nepal-followup';
         const dateLabel = document.createElement('label');
