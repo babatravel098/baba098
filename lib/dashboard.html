@@ -3223,10 +3223,85 @@ async function downloadBookingPackagePdf() {
     }
 }
 
+function quotationWhatsAppMessage(q) {
+ const customer = String(q.customer || 'Guest').trim();
+ const title = String(q.title || 'Your tour package').trim();
+ const dates = q.start && q.end ? 'Travel dates: ' + q.start + ' to ' + q.end : '';
+ const travellers = q.pax ? 'Travellers: ' + q.pax : '';
+ return [
+  'Namaste ' + customer + ' ji,', '',
+  'Thank you for choosing Baba Tour & Travels!', '',
+  'Your personalised tour proposal is ready.',
+  'Package: ' + title,
+  ...[dates, travellers].filter(Boolean), '',
+  'Please review the attached PDF for your day-wise itinerary, hotel and room-sharing details, inclusions and package price.', '',
+  'If you would like any changes or wish to proceed with your booking, please reply here. We will be happy to help you plan a comfortable and memorable journey.', '',
+  'Warm regards,',
+  String(q.staffName || '').trim(),
+  'Baba Tour & Travels, Gorakhpur',
+  'Call / WhatsApp: +91 8726667104'
+ ].filter((line,index,lines) => line !== '' || lines[index - 1] !== '').join('\n');
+}
+function quotationWhatsAppUrl(q) {
+ let phone = String(q.phone || '').replace(/\D/g,'');
+ if (phone.startsWith('00')) phone = phone.slice(2);
+ if (phone.length === 11 && phone.startsWith('0')) phone = phone.slice(1);
+ if (phone.length === 10) phone = '91' + phone;
+ if (!/^[1-9]\d{7,14}$/.test(phone)) throw Error('Enter the customer WhatsApp number with country code.');
+ return 'https://wa.me/' + phone + '?text=' + encodeURIComponent(quotationWhatsAppMessage(q));
+}
+function mobilePdfSharing() {
+ return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '') || (/Macintosh/i.test(navigator.userAgent || '') && navigator.maxTouchPoints > 1);
+}
+function showPreparedPdfShare(file, q, url) {
+ const dialog = document.getElementById('preparedPdfShareDialog');
+ const message = document.getElementById('preparedPdfShareMessage');
+ const status = document.getElementById('preparedPdfShareStatus');
+ const send = document.getElementById('preparedPdfShareSend');
+ const download = document.getElementById('preparedPdfShareDownload');
+ const open = document.getElementById('preparedPdfShareOpen');
+ message.value = quotationWhatsAppMessage(q);
+ open.href = url;
+ status.textContent = 'PDF ready. Tap Share PDF + message, then choose WhatsApp and the customer. Review before sending.';
+ send.hidden = !navigator.canShare?.({files:[file]});
+ send.onclick = async () => {
+  send.disabled = true;
+  try {
+   await navigator.share({files:[file], title:q.title || 'Tour Itinerary', text:message.value});
+   status.textContent = 'Handed to your sharing app. Check the PDF and message in WhatsApp before sending.';
+  } catch (error) {
+   status.textContent = error.name === 'AbortError' ? 'Sharing cancelled. You can try again.' : 'File sharing unavailable. Download the PDF and attach it in WhatsApp.';
+  } finally { send.disabled = false; }
+ };
+ download.onclick = () => {
+  const objectUrl = URL.createObjectURL(file);
+  const link = document.createElement('a');
+  link.href = objectUrl; link.download = file.name; link.click();
+  setTimeout(() => URL.revokeObjectURL(objectUrl),60000);
+ };
+ document.getElementById('preparedPdfShareCopy').onclick = async () => {
+  try { await navigator.clipboard.writeText(message.value); status.textContent = 'Message copied. Paste it in WhatsApp if needed.'; }
+  catch { message.focus(); message.select(); status.textContent = 'Message selected. Copy it and paste in WhatsApp.'; }
+ };
+ if (!dialog.open) dialog.showModal();
+}
+
 async function downloadQuote(share = false, bookingQuote = null) {
+    let shareWindow = null;
     try {
         const q = bookingQuote || quoteValues();
         if (!window.jspdf) throw Error('PDF library is still loading. Try again.');
+        const whatsappUrl = share ? quotationWhatsAppUrl(q) : '';
+        const mobileShare = share && mobilePdfSharing();
+        // Reserve the desktop chat window during the click, before asynchronous PDF work.
+        if (share && !mobileShare) {
+            shareWindow = window.open('about:blank', '_blank');
+            if (shareWindow) {
+                shareWindow.opener = null;
+                shareWindow.document.title = 'Preparing your tour PDF';
+                shareWindow.document.body.textContent = 'Preparing your PDF and WhatsApp message...';
+            }
+        }
         const pdf = new window.jspdf.jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
         const navy = '#143047', teal = '#0F766E', ink = '#243746';
         const left = 15, width = 180, bottom = 277, leading = 4.7;
@@ -3526,25 +3601,24 @@ async function downloadQuote(share = false, bookingQuote = null) {
         quoteControl('quoteSaved').value = q.id;
         const filename = ((q.title || 'Tour Itinerary').replace(/[^a-z0-9 -]/gi,'').trim() || 'Tour Itinerary') + '.pdf';
         const file = new File([pdf.output('blob')], filename, {type:'application/pdf'});
-        if (share && navigator.canShare?.({files:[file]})) {
-            try {
-                await navigator.share({files:[file], title:q.title || 'Tour Itinerary'});
-                itineraryMessage('PDF shared through your device.');
-                return;
-            } catch (error) {
-                if (error.name === 'AbortError') return;
-            }
-        }
-        pdf.save(filename);
         if (share) {
-            const phone = q.phone.replace(/\D/g,'');
-            const recipient = phone.length === 10 ? '91' + phone : phone;
-            if (recipient) window.open('https://wa.me/' + recipient, '_blank', 'noopener,noreferrer');
-            itineraryMessage('PDF downloaded. Attach it in the customer WhatsApp chat.');
+            if (mobileShare) {
+                showPreparedPdfShare(file, q, whatsappUrl);
+                return;
+            }
+            pdf.save(filename);
+            if (shareWindow && !shareWindow.closed) {
+                try { shareWindow.location.replace(whatsappUrl); }
+                catch { shareWindow.close(); showPreparedPdfShare(file, q, whatsappUrl); }
+            } else {
+                showPreparedPdfShare(file, q, whatsappUrl);
+            }
+            itineraryMessage('PDF downloaded. Customer WhatsApp opens with your message. Attach the PDF and send.');
             return;
         }
+        pdf.save(filename);
         if (!bookingQuote) itineraryMessage('Quotation saved and PDF downloaded.');
-    } catch(error) { if (bookingQuote) throw error; itineraryMessage(error.message); }
+    } catch(error) { if (shareWindow && !shareWindow.closed) shareWindow.close(); if (bookingQuote) throw error; itineraryMessage(error.message); }
 }
 </script>
 <script>
@@ -4016,6 +4090,7 @@ function renderUpcomingPickups() {
     document.getElementById('upcomingPickups').hidden = !pickups.length;
 }
 </script>
+<dialog id="preparedPdfShareDialog" class="w-full max-w-xl rounded-xl p-5"><h2 class="text-xl font-bold text-teal-800">Share your tour PDF</h2><p id="preparedPdfShareStatus" role="status" class="my-3"></p><label class="block text-sm">Message for customer<textarea id="preparedPdfShareMessage" rows="12" class="block w-full border rounded p-3 my-2"></textarea></label><div class="flex flex-wrap gap-2"><button id="preparedPdfShareSend" type="button" class="rounded bg-emerald-700 text-white px-3 py-2">Share PDF + message</button><a id="preparedPdfShareOpen" target="_blank" rel="noopener noreferrer" class="rounded border px-3 py-2">Open customer WhatsApp</a><button id="preparedPdfShareDownload" type="button" class="rounded border px-3 py-2">Download PDF</button><button id="preparedPdfShareCopy" type="button" class="rounded border px-3 py-2">Copy message</button><button type="button" onclick="this.closest('dialog').close()" class="rounded border px-3 py-2">Close</button></div></dialog>
 <dialog id="nepalToursDialog" aria-labelledby="nepalToursTitle" class="w-full max-w-3xl rounded-2xl bg-slate-50 p-6 text-slate-900 shadow-xl">
 <header class="tour-dialog-header"><h2 id="nepalToursTitle">Nepal Tour Packages</h2><button type="button" onclick="this.closest('dialog').close()">Close</button></header>
 <div id="nepalTourFilters" role="group" aria-label="Filter tour packages" class="flex flex-wrap gap-2 my-3"><button type="button" data-tour-filter="New Bookings" onclick="setNepalTourFilter('New Bookings')" class="rounded-lg border px-3 py-2 font-semibold">New Bookings</button><button type="button" data-tour-filter="Completed" onclick="setNepalTourFilter('Completed')" class="rounded-lg border px-3 py-2 font-semibold">Completed</button><button type="button" data-tour-filter="Confirmed" onclick="setNepalTourFilter('Confirmed')" class="rounded-lg border px-3 py-2 font-semibold">Confirmed</button><button type="button" data-tour-filter="Pending" onclick="setNepalTourFilter('Pending')" class="rounded-lg border px-3 py-2 font-semibold">Pending</button><button type="button" data-tour-filter="Cancelled" onclick="setNepalTourFilter('Cancelled')" class="rounded-lg border px-3 py-2 font-semibold">Cancelled</button></div><p id="nepalToursCount" role="status" class="my-2"></p>
