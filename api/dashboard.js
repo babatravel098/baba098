@@ -9,10 +9,10 @@ const sheetId = '1I6cFI9mU3z8EPc5cRxNZy25cj3E4sO6xVnXHBFqUQsE';
 const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbw4OfLzT9WCE4eQXPblPO1pu1br4U716qqIID_IBn3nsGjfBaE4etem0coCpY1tWUl5/exec';
 const google = new OAuth2Client(clientId);
 const readActions = new Map([
-  ['tour-health', 'health'], ['tour-packages', 'listPackages'], ['tour-quotations', 'listQuotations'], ['tour-photos', 'listPhotos'], ['tour-photo', 'getPhoto'], ['tour-hotels', 'listHotels'], ['tour-vehicles', 'listVehicles']
+  ['gst-invoices', 'listGstInvoices'], ['tour-health', 'health'], ['tour-packages', 'listPackages'], ['tour-quotations', 'listQuotations'], ['tour-photos', 'listPhotos'], ['tour-photo', 'getPhoto'], ['tour-hotels', 'listHotels'], ['tour-vehicles', 'listVehicles']
 ]);
 const writeActions = new Map([
-  ['save-tour-package', 'savePackage'], ['save-tour-quotation', 'saveQuotation'],
+  ['save-gst-invoice', 'saveGstInvoice'], ['cancel-gst-invoice', 'cancelGstInvoice'], ['save-tour-package', 'savePackage'], ['save-tour-quotation', 'saveQuotation'],
   ['set-tour-quotation-status', 'setQuotationStatus'], ['save-tour-photo', 'savePhoto'], ['save-tour-hotel', 'saveHotel'], ['save-tour-vehicle', 'saveVehicle'], ['delete-tour-package', 'deletePackage'], ['delete-tour-photo', 'deletePhoto']
 ]);
 
@@ -146,6 +146,7 @@ async function deleteBooking(req, res) {
 }
 
 async function handleTourStorage(req, res, action) {
+  if (['listGstInvoices','saveGstInvoice','cancelGstInvoice'].includes(action)) return handleGstStorage(req,res,action);
   const url = process.env.TOUR_API_URL;
   const secret = process.env.TOUR_API_SECRET;
   if (!url || !secret) return sendJson(res, 503, {error: 'Tour API variables are missing.'});
@@ -262,6 +263,35 @@ async function handleTourStorage(req, res, action) {
   } catch {
     return sendJson(res, 502, {error: 'Could not complete the Tour Sheet request.'});
   }
+}
+
+
+async function handleGstStorage(req,res,action) {
+ if(req.method==='POST'&&!isDashboardOrigin(req))return sendJson(res,403,{error:'Open billing from the CRM dashboard.'});
+ const secret=process.env.TOUR_API_SECRET, url=process.env.TOUR_API_URL;
+ if(!secret||!url)return sendJson(res,503,{error:'Shared storage is not configured.'});
+ const body=req.body||{};
+ const payload={action,secret};
+ if(action==='saveGstInvoice') {
+  if(!body.invoice||typeof body.invoice!=='object'||JSON.stringify(body.invoice).length>40000)return sendJson(res,400,{error:'Invoice details are required and must be under 40 KB.'});
+  payload.invoice=body.invoice;
+ }
+ if(action==='cancelGstInvoice')Object.assign(payload,{id:body.id,version:body.version,reason:body.reason});
+ try {
+  const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)});
+  const result=response.ok?await response.json():null;
+  if(!result?.ok) {
+   const message=typeof result?.error==='string'?result.error:'Could not confirm invoice save. Keep this form open and retry.';
+   return sendJson(res,502,{error:message});
+  }
+  if(action==='listGstInvoices') {
+   if(!Array.isArray(result.invoices))throw Error('Invalid list');
+   return sendJson(res,200,{ok:true,invoices:result.invoices});
+  }
+  const id=action==='saveGstInvoice'?body.invoice.id:body.id;
+  if(result.invoice?.id!==id||!result.invoice.invoiceNo||!result.invoice.version)throw Error('Invalid response');
+  return sendJson(res,200,{ok:true,invoice:result.invoice});
+ } catch {return sendJson(res,502,{error:'Could not confirm invoice save. Keep this form open and retry with the same invoice.'});}
 }
 
 module.exports = async (req, res) => {
