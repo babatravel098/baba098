@@ -105,7 +105,7 @@ async function updateBooking(req, res) {
     const client = await auth.getClient();
     // Only C:M are edited. Booking identity, status, payment ledger and other columns stay intact.
     const {data} = await client.request({url: 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '/values:batchUpdate', method: 'POST', timeout: 15000,
-      data: {valueInputOption: 'RAW', includeValuesInResponse: true, data: [{range: 'Bookings!C' + (index + 1) + ':M' + (index + 1), values: [saved]}]}});
+      data: {valueInputOption: 'RAW', includeValuesInResponse: true, responseValueRenderOption: 'UNFORMATTED_VALUE', data: [{range: 'Bookings!C' + (index + 1) + ':M' + (index + 1), values: [saved]}]}});
     const actual = data.responses?.[0]?.updatedData?.values?.[0];
     if (!actual || JSON.stringify(actual) !== JSON.stringify(saved)) throw new Error('Save not confirmed');
     return sendJson(res, 200, {ok: true, booking_id: id});
