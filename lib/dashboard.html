@@ -4180,6 +4180,7 @@ function addNepalBookingActions(row, booking, dialog) {
 }
 </script>
 <dialog id="gstReportsDialog" class="rounded-xl p-5 max-w-2xl w-full"><h2 class="text-xl font-bold">Billing Reports</h2><p id="gstReportRange" class="my-3"></p><p class="text-sm my-3">Reports use invoice dates. Received figures are cumulative, not a dated payment cashbook. Cancelled invoices are excluded from sales totals. These are accounting review exports, not GST return upload files.</p><div class="grid grid-cols-2 gap-2"><button type="button" onclick="gstAdvancedReport('sales')" class="border rounded p-3">Sales Register</button><button type="button" onclick="gstAdvancedReport('items')" class="border rounded p-3">Item Details</button><button type="button" onclick="gstAdvancedReport('monthly')" class="border rounded p-3">Monthly Sales</button><button type="button" onclick="gstAdvancedReport('gst')" class="border rounded p-3">GST Summary for Review</button><button type="button" onclick="gstAdvancedReport('party')" class="border rounded p-3">Party Summary</button><button type="button" onclick="gstAdvancedReport('ledger')" class="border rounded p-3">Customer Invoice Ledger</button><button type="button" onclick="gstAdvancedReport('outstanding')" class="border rounded p-3">Outstanding Invoices</button><button type="button" onclick="gstAdvancedReport('payments')" class="border rounded p-3">Received / Balance Summary</button><button type="button" onclick="gstAdvancedReport('hsn')" class="border rounded p-3">SAC Gross Item Summary</button><button type="button" onclick="gstAdvancedReport('cancelled')" class="border rounded p-3">Cancelled Invoices</button></div><button type="button" onclick="this.closest('dialog').close()" class="border rounded px-3 py-2 mt-4">Close</button></dialog>
+<dialog id="gstCancellationDialog" class="rounded-xl p-5 max-w-lg w-full" aria-labelledby="gstCancellationTitle"><form id="gstCancellationForm"><h2 id="gstCancellationTitle" class="text-xl font-bold text-red-800">Cancel invoice</h2><p id="gstCancellationDetails" class="my-3"></p><label class="block text-sm">Cancellation reason<textarea id="gstCancellationReason" maxlength="500" rows="3" class="block w-full border rounded p-2 mt-1"></textarea></label><p id="gstCancellationMessage" role="status" class="my-3"></p><div class="flex gap-2"><button id="gstCancellationConfirm" type="submit" class="rounded bg-red-700 text-white px-4 py-2">Confirm cancellation</button><button type="button" onclick="closeGstCancellation()" class="rounded border px-4 py-2">Close</button></div></form></dialog>
 <script>
 // Shared invoice validation and arithmetic: embedded unchanged in the browser and Apps Script.
 function gstMoney(value, label) {
@@ -6839,13 +6840,49 @@ async function fetchGstInvoices() {
   return true;
  }catch(error){if(currentTab==='gst'){tbody.replaceChildren();const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=6;td.textContent='GST invoices: '+error.message;tr.append(td);tbody.append(tr);}return false;}
 }
-async function deleteGstInvoice(invoiceNo) {
+let gstCancellationInvoice=null;
+let gstCancellationSaving=false;
+function deleteGstInvoice(invoiceNo) {
  const invoice=gstLoadedRecords.find(item=>item.invoiceNo===invoiceNo);
  if(!invoice){alert('Older invoices are preserved. Use the original billing system to correct this legacy invoice.');return;}
- const reason=prompt('Cancel '+invoiceNo+'? Enter the reason. The invoice and its history will be retained.');
- if(!reason?.trim())return;
- try {await tourPackageRequest('action=cancel-gst-invoice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:invoice.id,version:invoice.version,reason:reason.trim()})});await fetchGstInvoices();}
- catch(error){alert(error.message);}
+ if(gstCancellationSaving)return;
+ gstCancellationInvoice=invoice;
+ gstControl('gstCancellationTitle').textContent='Cancel invoice '+invoice.invoiceNo;
+ gstControl('gstCancellationDetails').textContent=invoice.customerName+' | Total: '+gstFormat(invoice.totals.grandTotal);
+ gstControl('gstCancellationReason').value='';
+ gstControl('gstCancellationMessage').textContent='Enter a reason. The invoice and its history will be retained.';
+ gstControl('gstCancellationConfirm').hidden=invoice.status==='Cancelled';
+ if(!gstControl('gstCancellationDialog').open)gstControl('gstCancellationDialog').showModal();
+ gstControl('gstCancellationReason').focus();
+}
+function closeGstCancellation(){if(!gstCancellationSaving)gstControl('gstCancellationDialog').close();}
+async function submitGstCancellation(event) {
+ event.preventDefault();
+ if(gstCancellationSaving||!gstCancellationInvoice)return;
+ const reason=gstValue('gstCancellationReason');
+ const message=gstControl('gstCancellationMessage');
+ if(!reason){message.textContent='Enter a cancellation reason.';gstControl('gstCancellationReason').focus();return;}
+ const invoice=gstCancellationInvoice;
+ gstCancellationSaving=true;
+ for(const control of gstControl('gstCancellationForm').elements)control.disabled=true;
+ message.textContent='Cancelling invoice...';
+ try {
+  const result=await tourPackageRequest('action=cancel-gst-invoice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:invoice.id,version:invoice.version,reason})});
+  if(result.invoice?.id!==invoice.id||result.invoice.status!=='Cancelled')throw Error('Cancellation could not be confirmed. Refresh the invoice list before retrying.');
+  const saved=result.invoice;
+  gstLoadedRecords=gstLoadedRecords.map(item=>item.id===saved.id?saved:item);
+  allGstInvoicesData=allGstInvoicesData.map(item=>item.id===saved.id?{...saved,source:'shared',...saved.totals,timestamp:saved.date}:item);
+  if(gstActiveInvoice?.id===saved.id)gstActiveInvoice=saved;
+  if(currentTab==='gst')renderTable();
+  gstControl('gstCancellationConfirm').hidden=true;
+  gstCancellationInvoice=null;
+  const refreshed=await fetchGstInvoices();
+  message.textContent=refreshed?'Invoice cancelled successfully.':'Invoice cancelled. Refresh the dashboard to reload the list.';
+ }catch(error){message.textContent=error.message;}
+ finally{
+  gstCancellationSaving=false;
+  for(const control of gstControl('gstCancellationForm').elements)control.disabled=false;
+ }
 }
 function gstExportRows(lineItems=false) {
  const from=gstControl('filterFromDate').value,to=gstControl('filterToDate').value;
@@ -7037,6 +7074,8 @@ gstControl('gstModal').addEventListener('input',calculateInvoiceTotals);
 gstControl('gstModal').addEventListener('change',event=>{if(event.target.id==='invState')gstControl('invTaxType').value=event.target.value.startsWith('09-')?'CGST/SGST':'IGST';calculateInvoiceTotals();});
 
 gstControl('invCustomerGstin').addEventListener('change',()=>gstFindCustomer(true));
+gstControl('gstCancellationForm').addEventListener('submit',submitGstCancellation);
+gstControl('gstCancellationDialog').addEventListener('cancel',event=>{if(gstCancellationSaving)event.preventDefault();});
 
 </script>
 </body>
