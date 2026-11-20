@@ -294,6 +294,65 @@ async function handleGstStorage(req,res,action) {
  } catch {return sendJson(res,502,{error:'Could not confirm invoice save. Keep this form open and retry with the same invoice.'});}
 }
 
+// Authenticated Appyflow lookup. Secret stays server-side and is sent in the POST body.
+const gstLookupCache = new Map();
+const gstLookupPending = new Map();
+const gstLookupBudget = {start: 0, count: 0};
+async function lookupGstin(req,res) {
+ if(!isDashboardOrigin(req))return sendJson(res,403,{error:'Use GST lookup from the CRM dashboard.'});
+ const gstin=typeof req.body?.gstin==='string'?req.body.gstin.trim().toUpperCase():'';
+ if(!/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstin))return sendJson(res,400,{error:'Enter a valid 15-character GSTIN.'});
+ const secret=process.env.APPYFLOW_GST_API_SECRET?.trim();
+ if(!secret)return sendJson(res,503,{error:'GST lookup key is not configured for this deployment.'});
+ const cacheKey=crypto.createHash('sha256').update(secret).digest('hex').slice(0,16)+':'+gstin;
+ const cached=gstLookupCache.get(cacheKey);
+ if(cached&&cached.expires>Date.now())return sendJson(res,200,{ok:true,customer:cached.customer,cached:true});
+ try {
+  let pending=gstLookupPending.get(cacheKey);
+  if(!pending) {
+   const now=Date.now();
+   if(now-gstLookupBudget.start>60000){gstLookupBudget.start=now;gstLookupBudget.count=0;}
+   if(gstLookupBudget.count>=10)return sendJson(res,429,{error:'Too many GST lookups. Wait one minute before retrying.'});
+   gstLookupBudget.count++;
+   pending=fetchGstCustomer(gstin,secret);
+   gstLookupPending.set(cacheKey,pending);
+  }
+  const customer=await pending;
+  if(gstLookupCache.size>=64)gstLookupCache.delete(gstLookupCache.keys().next().value);
+  gstLookupCache.set(cacheKey,{customer,expires:Date.now()+15*60*1000});
+  return sendJson(res,200,{ok:true,customer,cached:false});
+ }catch(error){return sendJson(res,error.gstStatus||502,{error:error.gstMessage||'GST lookup is unavailable. Retry later or enter the verified details manually.'});}
+ finally{gstLookupPending.delete(cacheKey);}
+}
+function gstLookupFailure(status,message){const error=new Error('GST lookup failed');error.gstStatus=status;error.gstMessage=message;return error;}
+async function fetchGstCustomer(gstin,secret) {
+ const response=await fetch('https://appyflow.in/api/verifyGST',{
+  method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gstNo:gstin,key_secret:secret}),signal:AbortSignal.timeout(15000),redirect:'error'
+ });
+ if(response.status===401||response.status===403)throw gstLookupFailure(502,'GST lookup credentials were rejected. Check the Vercel key.');
+ if(response.status===429)throw gstLookupFailure(429,'GST lookup limit reached. Retry later.');
+ if(!response.ok)throw gstLookupFailure(502,'GST provider is unavailable. Retry later.');
+ const result=await response.json();
+ if(result?.error) {
+  const message=String(result.message||'').toLowerCase();
+  if(/credit|balance|quota|recharge|limit/.test(message))throw gstLookupFailure(503,'GST lookup credits are unavailable. Check your Appyflow dashboard.');
+  if(/key|secret|unauthor/.test(message))throw gstLookupFailure(502,'GST lookup credentials were rejected. Check the Vercel key.');
+  if(/not found|invalid gst|no record/.test(message))throw gstLookupFailure(404,'No taxpayer details were found for this GSTIN.');
+  throw gstLookupFailure(502,'GST provider could not verify this GSTIN. Check the number or retry later.');
+ }
+ const info=result?.taxpayerInfo;
+ if(!info||String(info.gstin||'').toUpperCase()!==gstin)throw gstLookupFailure(502,'GST provider returned mismatched details. Nothing was filled.');
+ const clean=value=>typeof value==='string'?value.trim().slice(0,300):'';
+ const legalName=clean(info.lgnm),tradeName=clean(info.tradeNam),address=info.pradr?.addr;
+ if(!legalName&&!tradeName)throw gstLookupFailure(502,'GST provider returned incomplete customer details.');
+ let formattedAddress='';
+ if(address&&typeof address==='object') {
+  const pieces=[address.bno,address.flno,address.bnm,address.st,address.loc,address.city,address.dst,address.stcd,address.pncd].map(clean).filter(Boolean);
+  formattedAddress=Array.from(new Set(pieces)).join(', ');
+ }
+ return {gstin,legalName,tradeName,customerName:legalName||tradeName,customerAddress:formattedAddress.slice(0,500),stateCode:gstin.slice(0,2),stateName:clean(address?.stcd),status:clean(info.sts)||'Not provided',registrationDate:clean(info.rgdt),taxpayerType:clean(info.dty),source:'Appyflow',fetchedAt:new Date().toISOString()};
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (!['GET', 'POST'].includes(req.method)) {
@@ -309,8 +368,9 @@ module.exports = async (req, res) => {
   const wantsDelete = req.method === 'POST' && action === 'delete';
   const tourAction = req.method === 'GET' ? readActions.get(data) : writeActions.get(action);
   const wantsUpdate = req.method === 'POST' && action === 'update-booking';
+  const wantsGstLookup = req.method === 'POST' && action === 'lookup-gstin';
   const isLogin = req.method === 'POST' && !action;
-  if (req.method === 'POST' && !isLogin && !wantsDelete && !wantsUpdate && !tourAction) return sendJson(res, 400, {error: 'Unknown action.'});
+  if (req.method === 'POST' && !isLogin && !wantsDelete && !wantsUpdate && !wantsGstLookup && !tourAction) return sendJson(res, 400, {error: 'Unknown action.'});
   const credential = isLogin ? req.body?.credential
     : /(?:^|;\s*)baba_google=([^;]+)/.exec(req.headers.cookie || '')?.[1];
 
@@ -325,10 +385,11 @@ module.exports = async (req, res) => {
       setDailyCookie(res);
     }
   } catch {
-    if (wantsBookings || wantsDelete || wantsUpdate || tourAction) return sendJson(res, 401, {error: 'Please sign in again. Your unsaved form is still open.'});
+    if (wantsBookings || wantsDelete || wantsUpdate || wantsGstLookup || tourAction) return sendJson(res, 401, {error: 'Please sign in again. Your unsaved form is still open.'});
     return res.redirect(303, '/?login=denied');
   }
   if (isLogin) return res.redirect(303, '/api/dashboard');
+  if (wantsGstLookup) return lookupGstin(req,res);
   if (wantsUpdate) return updateBooking(req, res);
   if (wantsDelete) return deleteBooking(req, res);
   if (tourAction) return handleTourStorage(req, res, tourAction);
