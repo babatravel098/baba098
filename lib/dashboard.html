@@ -4018,27 +4018,45 @@ function renderUpcomingPickups() {
 </script>
 <dialog id="nepalToursDialog" aria-labelledby="nepalToursTitle" class="w-full max-w-3xl rounded-2xl bg-slate-50 p-6 text-slate-900 shadow-xl">
 <header class="tour-dialog-header"><h2 id="nepalToursTitle">Nepal Tour Packages</h2><button type="button" onclick="this.closest('dialog').close()">Close</button></header>
-<div id="nepalTourFilters" role="group" aria-label="Filter tour packages" class="flex flex-wrap gap-2 my-3"><button type="button" data-tour-filter="Confirmed" onclick="setNepalTourFilter('Confirmed')" class="rounded-lg border px-3 py-2 font-semibold">Confirmed</button><button type="button" data-tour-filter="Pending" onclick="setNepalTourFilter('Pending')" class="rounded-lg border px-3 py-2 font-semibold">Pending</button><button type="button" data-tour-filter="Cancelled" onclick="setNepalTourFilter('Cancelled')" class="rounded-lg border px-3 py-2 font-semibold">Cancelled</button></div><p id="nepalToursCount" role="status" class="my-2"></p>
+<div id="nepalTourFilters" role="group" aria-label="Filter tour packages" class="flex flex-wrap gap-2 my-3"><button type="button" data-tour-filter="New Bookings" onclick="setNepalTourFilter('New Bookings')" class="rounded-lg border px-3 py-2 font-semibold">New Bookings</button><button type="button" data-tour-filter="Completed" onclick="setNepalTourFilter('Completed')" class="rounded-lg border px-3 py-2 font-semibold">Completed</button><button type="button" data-tour-filter="Confirmed" onclick="setNepalTourFilter('Confirmed')" class="rounded-lg border px-3 py-2 font-semibold">Confirmed</button><button type="button" data-tour-filter="Pending" onclick="setNepalTourFilter('Pending')" class="rounded-lg border px-3 py-2 font-semibold">Pending</button><button type="button" data-tour-filter="Cancelled" onclick="setNepalTourFilter('Cancelled')" class="rounded-lg border px-3 py-2 font-semibold">Cancelled</button></div><p id="nepalToursCount" role="status" class="my-2"></p>
 <div id="nepalToursList" class="grid gap-3"></div>
 <button type="button" class="mt-3 rounded border p-2" onclick="this.closest('dialog').close()">Close</button>
 </dialog>
 <script>
-let nepalTourFilter = 'Confirmed';
-function nepalTourGroup(status) {
- return status === 'Cancelled' ? 'Cancelled' : ['Confirmed','Ongoing','Completed'].includes(status) ? 'Confirmed' : 'Pending';
+let nepalTourFilter = 'New Bookings';
+function nepalTourGroup(status, endDate) {
+ if (status === 'Cancelled') return 'Cancelled';
+ if (status === 'Completed') return 'Completed';
+ if (['Confirmed','Ongoing'].includes(status)) {
+  const end = endDate ? operationsDay(endDate) : '';
+  return end && end < operationsDay() ? 'Completed' : 'Confirmed';
+ }
+ return 'Pending';
+}
+function tagNepalTourCard(row, status, startDate, endDate) {
+ const group = nepalTourGroup(status, endDate);
+ const start = startDate ? operationsDay(startDate) : '';
+ const end = endDate ? operationsDay(endDate) : '';
+ row.dataset.tourStatus = group;
+ row.dataset.tourStart = start || '9999-12-31';
+ row.dataset.tourUpcoming = String(group === 'Confirmed' && Boolean((end || start) && (end || start) >= operationsDay()));
 }
 function setNepalTourFilter(status) {
- if (!['Confirmed','Pending','Cancelled'].includes(status)) return;
+ if (!['New Bookings','Completed','Confirmed','Pending','Cancelled'].includes(status)) return;
  nepalTourFilter = status;
  applyNepalTourFilter();
 }
 function applyNepalTourFilter() {
  const list = document.getElementById('nepalToursList');
  list.querySelector('[data-tour-empty]')?.remove();
- const counts = {Confirmed:0, Pending:0, Cancelled:0};
- for (const card of list.querySelectorAll('[data-tour-status]')) {
+ const counts = {'New Bookings':0, Completed:0, Confirmed:0, Pending:0, Cancelled:0};
+ const cards = Array.from(list.querySelectorAll('[data-tour-status]'));
+ cards.sort((a,b) => (a.dataset.tourStart || '').localeCompare(b.dataset.tourStart || ''));
+ for (const card of cards) {
+  list.append(card);
   counts[card.dataset.tourStatus]++;
-  card.hidden = card.dataset.tourStatus !== nepalTourFilter;
+  if (card.dataset.tourUpcoming === 'true') counts['New Bookings']++;
+  card.hidden = nepalTourFilter === 'New Bookings' ? card.dataset.tourUpcoming !== 'true' : card.dataset.tourStatus !== nepalTourFilter;
  }
  for (const button of document.getElementById('nepalTourFilters').querySelectorAll('[data-tour-filter]')) {
   const status = button.dataset.tourFilter;
@@ -4061,7 +4079,7 @@ async function openNepalTours() {
     const count = document.getElementById('nepalToursCount');
     list.replaceChildren();
     count.textContent = 'Checking confirmed bookings…';
-    if (!dialog.open) dialog.showModal();
+    if (!dialog.open) { nepalTourFilter = 'New Bookings'; dialog.showModal(); }
     let bookings;
     try { [bookings] = await Promise.all([readPrivateCrmBookings(), loadSharedQuotations(), loadSharedTourPhotos(), loadSharedTourOptions()]); }
     catch { count.textContent = 'Could not load bookings or shared quotations. Reopen this list to retry.'; return; }
@@ -4075,7 +4093,7 @@ async function openNepalTours() {
     const displayed = new Set();
     for (const quote of sharedQuotations.values()) {
         const booking = linked.get(quote.id);
-        const status = booking ? getBookingStatus(booking) : (quote.status || 'Pending');
+        const status = booking ? getBookingStatus(booking) : nepalTourGroup(quote.status || 'Pending', quote.end);
         if (booking && (!quote.status || quote.status === 'Pending') &&
             ['Confirmed', 'Ongoing', 'Completed'].includes(status)) {
             void syncTourQuotationStatus(quote.id, 'Confirmed', booking.bookingId).catch(() => {
@@ -4084,7 +4102,7 @@ async function openNepalTours() {
         }
         if (booking) displayed.add(booking.bookingId);
         const row = document.createElement('article');
-        row.dataset.tourStatus = nepalTourGroup(status);
+        tagNepalTourCard(row, status, booking ? booking.startDate : quote.start, booking ? booking.endDate : quote.end);
         row.className = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm';
         const summary = document.createElement('p');
         summary.textContent = [quote.customer,quote.phone,quote.title,quote.start,''].filter(Boolean).join(' | ');
@@ -4169,7 +4187,7 @@ async function openNepalTours() {
         ['Confirmed','Ongoing','Completed'].includes(getBookingStatus(b))).length;
     for (const booking of savedBookings.filter(b => !displayed.has(b.bookingId))) {
         const row = document.createElement('article');
-        row.dataset.tourStatus = nepalTourGroup(getBookingStatus(booking));
+        tagNepalTourCard(row, getBookingStatus(booking), booking.startDate, booking.endDate);
         row.className = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm';
         const summary = document.createElement('p');
         summary.textContent = [booking.name,booking.phone,booking.tourRoute,booking.startDate,booking.endDate,getBookingStatus(booking)].filter(Boolean).join(' | ');
