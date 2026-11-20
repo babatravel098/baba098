@@ -669,7 +669,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <label class="block text-sm">Inclusions<textarea rows="3" name="inclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
 <label class="block text-sm">Exclusions<textarea rows="3" name="exclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
 
-<label class="block">Rooming and sharing<input name="rooming" class="block w-full border rounded p-2" placeholder="Room count, double, triple or quad sharing"></label>
+<fieldset class="sm:col-span-2 rounded-xl border bg-white p-3"><legend class="font-semibold">Rooms by sharing type</legend><p class="mb-2 text-sm">Enter the number of rooms for each sharing type. Leave unused types blank or zero.</p><div class="grid grid-cols-2 sm:grid-cols-4 gap-3"><label class="text-sm">Single-sharing rooms<input name="singleRooms" type="number" min="0" max="999" step="1" placeholder="0" class="block w-full border rounded p-2 mt-1"></label><label class="text-sm">Double-sharing rooms<input name="doubleRooms" type="number" min="0" max="999" step="1" placeholder="0" class="block w-full border rounded p-2 mt-1"></label><label class="text-sm">Triple-sharing rooms<input name="tripleRooms" type="number" min="0" max="999" step="1" placeholder="0" class="block w-full border rounded p-2 mt-1"></label><label class="text-sm">Four-sharing rooms<input name="fourSharingRooms" type="number" min="0" max="999" step="1" placeholder="0" class="block w-full border rounded p-2 mt-1"></label></div><p id="roomAllocationSummary" role="status" class="mt-2 text-sm text-teal-800"></p></fieldset><label class="block">Rooming and sharing<input name="rooming" class="block w-full border rounded p-2" placeholder="Room count, double, triple or quad sharing"></label>
 <label class="block">Regional transport<input name="specialTransport" class="block w-full border rounded p-2" placeholder="Separate vehicle for Mustang, if quoted"></label>
 <label class="block">Cancellation schedule<select class="block w-full rounded border p-2" onchange="if(this.value) this.form.elements.namedItem('cancellation').value=quoteCancellationPolicies[this.value]"><option value="">Choose a schedule</option><option value="departure">Departure-based schedule</option><option value="arrival">Arrival-based schedule</option></select></label>
 <label class="block">Payment schedule<select class="block w-full rounded border p-2" onchange="if(this.value) this.form.elements.namedItem('terms').value=quotePaymentPolicies[this.value]"><option value="">Choose a schedule</option><option value="reservation">Reservation instalments (20/30/30/20)</option><option value="pickup">Advance plus pickup and mid-tour balance</option></select></label><label class="block">Cancellation policy<textarea name="cancellation" rows="5" class="block w-full border rounded p-2"></textarea></label>
@@ -2355,12 +2355,38 @@ document.getElementById('leadNotesForm').addEventListener('submit', event => {
     } catch(error) { document.getElementById('leadNotesMessage').textContent = 'Could not save draft. ' + error.message; }
 });
 
-const quoteFieldNames = ["customer","phone","start","end","pax","vehicle","hotel","itinerary","inclusions","exclusions","amount","terms","title","highlights","pricing","address","pickupLocation","dropLocation","rooming","specialTransport","cancellation","travelNotes","bankDetails","staffName","roomCount","roomSharing"];
+const quoteFieldNames = ["customer","phone","start","end","pax","vehicle","hotel","itinerary","inclusions","exclusions","amount","terms","title","highlights","pricing","address","pickupLocation","dropLocation","rooming","specialTransport","cancellation","travelNotes","bankDetails","staffName","roomCount","roomSharing","singleRooms","doubleRooms","tripleRooms","fourSharingRooms"];
 let pendingNepalQuote = null;
 let activeQuoteId = '';
 const quotePrefix = 'baba_quote_v1:' + SCRIPT_URL + ':';
+const roomAllocationFields = ['singleRooms','doubleRooms','tripleRooms','fourSharingRooms'];
+function roomAllocationDetails(q) {
+ const labels = ['Single sharing','Double sharing','Triple sharing','Four sharing'];
+ const allocations = roomAllocationFields.map((key,i) => {
+  const count = Number(q[key] || 0);
+  if (!Number.isInteger(count) || count < 0 || count > 999) throw Error('Enter whole room counts from 0 to 999.');
+  return {count, label:labels[i]};
+ });
+ const total = allocations.reduce((sum,item) => sum + item.count, 0);
+ return {total, text: allocations.filter(item => item.count).map(item => item.label + ': ' + item.count + (item.count === 1 ? ' room' : ' rooms')).join(' | ')};
+}
+function roomingSummary(q) {
+ const rooms = roomAllocationDetails(q);
+ return [rooms.total ? 'Total: ' + rooms.total + ' rooms' : q.roomCount && q.roomCount + ' room(s)', rooms.text || q.roomSharing, q.rooming].filter(Boolean).join(' | ');
+}
+function updateRoomAllocationSummary() {
+ const form = document.getElementById('quoteForm');
+ const q = Object.fromEntries(roomAllocationFields.map(key => [key, form.elements.namedItem(key).value]));
+ try {
+  const rooms = roomAllocationDetails(q);
+  document.getElementById('roomAllocationSummary').textContent = rooms.total ? 'Total rooms: ' + rooms.total + ' | ' + rooms.text : '';
+ } catch (error) { document.getElementById('roomAllocationSummary').textContent = error.message; }
+}
+document.getElementById('quoteForm').addEventListener('input', updateRoomAllocationSummary);
+
 function newQuote() {
  document.getElementById('quoteForm').reset();
+ updateRoomAllocationSummary();
  resetItinerary();
  resetNepalOptions();
  syncQuoteRoute();
@@ -2423,6 +2449,7 @@ function loadQuote(id) {
   resetItinerary(q);
   resetNepalOptions(q.nepalOptions);
   syncQuoteRoute();
+  updateRoomAllocationSummary();
   activeQuoteId=id;
   document.getElementById('quoteMessage').textContent='Saved quotation loaded';
  } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
@@ -2440,6 +2467,8 @@ function quoteValues() {
  for(const key of quoteFieldNames) q[key]=form.elements.namedItem(key).value.trim();
  if(!q.customer || q.end<q.start) throw Error('Check customer name and travel dates.');
  if(!Number.isInteger(Number(q.pax)) || Number(q.pax)<1 || !Number.isFinite(Number(q.amount)) || Number(q.amount)<0) throw Error('Check passengers and amount.');
+ const rooms = roomAllocationDetails(q);
+ if (rooms.total) { q.roomCount = String(rooms.total); q.roomSharing = 'Mixed sharing'; }
  const itinerary = itineraryValues();
  const pickup = q.pickupLocation || 'Gorakhpur';
  const drop = q.dropLocation || 'Gorakhpur';
@@ -3299,7 +3328,7 @@ async function downloadQuote(share = false, bookingQuote = null) {
         const tripDetails = [
             ['Pickup', q.pickupLocation], ['Drop', q.dropLocation], ['Vehicle', q.vehicle],
             ['Hotel', q.hotel], ['Meal plan', q.nepalOptions?.values?.[3]],
-            ['Rooming', [q.roomCount && q.roomCount + ' room(s)', q.roomSharing, q.rooming].filter(Boolean).join(' | ')],
+            ['Rooming', roomingSummary(q)],
             ['Regional transport', q.specialTransport]
         ].filter(([, value]) => value);
         for (const [index, [label, value]] of tripDetails.entries()) {
@@ -3829,13 +3858,14 @@ quoteControl('loadNepalPackage').addEventListener('click', () => {
     nepalValue('terms').value = pack.termsOverride || quotePaymentPolicies.reservation;
     nepalValue('cancellation').value = pack.cancellation || quoteCancellationPolicies.departure;
     nepalValue('travelNotes').value = pack.travelNotes || (pack.domestic ? 'Carry a valid photo ID. Darshan and sightseeing depend on opening hours, queues, weather and local access. Hotel and vehicle arrangements are subject to confirmation.' : 'Carry a valid passport or voter ID where accepted. Check current document rules for each traveller before departure.\nConfirm permitted Indian currency denominations with official authorities before travel.\nVehicle service is non-AC and limited to the agreed itinerary.\nIf the requested hotel is unavailable, accommodation of a similar category may be offered.\nSightseeing order may change with road conditions, weather or opening times.');
-    for (const key of ['rooming','roomCount','roomSharing']) nepalValue(key).value = pack[key] || '';
+    for (const key of ['rooming','roomCount','roomSharing','singleRooms','doubleRooms','tripleRooms','fourSharingRooms']) nepalValue(key).value = pack[key] || '';
     nepalValue('specialTransport').value = pack.specialTransport || '';
     nepalValue('bankDetails').value = '';
     for (const key of ['pickupLocation','dropLocation']) nepalValue(key).value = pack[key] || 'Gorakhpur';
     resetItinerary(pack);
     resetNepalOptions({...pack.nepalOptions, domestic: pack.domestic ?? pack.nepalOptions?.domestic});
     syncQuoteRoute(true);
+    updateRoomAllocationSummary();
     quoteControl('nepalPackage').value = pack.id;
     nepalStatus('Package loaded. Enter the price for this customer.');
 });
@@ -3847,7 +3877,7 @@ quoteControl('saveNepalPackage').addEventListener('click', async event => {
     }
     const button = event.currentTarget;
     const details = {...fields, domestic: nepalOptionsDomestic, nepalOptions: getNepalOptions()};
-    for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms','rooming','roomCount','roomSharing','specialTransport','cancellation','travelNotes','pickupLocation','dropLocation']) {
+    for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms','rooming','roomCount','roomSharing','singleRooms','doubleRooms','tripleRooms','fourSharingRooms','specialTransport','cancellation','travelNotes','pickupLocation','dropLocation']) {
         details[key] = nepalValue(key).value.trim();
     }
     details.termsOverride = details.terms;
@@ -3988,11 +4018,43 @@ function renderUpcomingPickups() {
 </script>
 <dialog id="nepalToursDialog" aria-labelledby="nepalToursTitle" class="w-full max-w-3xl rounded-2xl bg-slate-50 p-6 text-slate-900 shadow-xl">
 <header class="tour-dialog-header"><h2 id="nepalToursTitle">Nepal Tour Packages</h2><button type="button" onclick="this.closest('dialog').close()">Close</button></header>
-<p id="nepalToursCount" role="status" class="my-2"></p>
+<div id="nepalTourFilters" role="group" aria-label="Filter tour packages" class="flex flex-wrap gap-2 my-3"><button type="button" data-tour-filter="Confirmed" onclick="setNepalTourFilter('Confirmed')" class="rounded-lg border px-3 py-2 font-semibold">Confirmed</button><button type="button" data-tour-filter="Pending" onclick="setNepalTourFilter('Pending')" class="rounded-lg border px-3 py-2 font-semibold">Pending</button><button type="button" data-tour-filter="Cancelled" onclick="setNepalTourFilter('Cancelled')" class="rounded-lg border px-3 py-2 font-semibold">Cancelled</button></div><p id="nepalToursCount" role="status" class="my-2"></p>
 <div id="nepalToursList" class="grid gap-3"></div>
 <button type="button" class="mt-3 rounded border p-2" onclick="this.closest('dialog').close()">Close</button>
 </dialog>
 <script>
+let nepalTourFilter = 'Confirmed';
+function nepalTourGroup(status) {
+ return status === 'Cancelled' ? 'Cancelled' : ['Confirmed','Ongoing','Completed'].includes(status) ? 'Confirmed' : 'Pending';
+}
+function setNepalTourFilter(status) {
+ if (!['Confirmed','Pending','Cancelled'].includes(status)) return;
+ nepalTourFilter = status;
+ applyNepalTourFilter();
+}
+function applyNepalTourFilter() {
+ const list = document.getElementById('nepalToursList');
+ list.querySelector('[data-tour-empty]')?.remove();
+ const counts = {Confirmed:0, Pending:0, Cancelled:0};
+ for (const card of list.querySelectorAll('[data-tour-status]')) {
+  counts[card.dataset.tourStatus]++;
+  card.hidden = card.dataset.tourStatus !== nepalTourFilter;
+ }
+ for (const button of document.getElementById('nepalTourFilters').querySelectorAll('[data-tour-filter]')) {
+  const status = button.dataset.tourFilter;
+  button.textContent = status + ' (' + counts[status] + ')';
+  button.setAttribute('aria-pressed', String(status === nepalTourFilter));
+  button.className = 'rounded-lg border px-3 py-2 font-semibold ' + (status === nepalTourFilter ? 'bg-teal-700 text-white border-teal-700' : 'bg-white text-slate-800');
+ }
+ document.getElementById('nepalToursCount').textContent = nepalTourFilter + ' packages: ' + counts[nepalTourFilter];
+ if (!counts[nepalTourFilter]) {
+  const empty = document.createElement('p');
+  empty.dataset.tourEmpty = 'true';
+  empty.textContent = 'No ' + nepalTourFilter.toLowerCase() + ' packages.';
+  list.append(empty);
+ }
+}
+
 async function openNepalTours() {
     const dialog = document.getElementById('nepalToursDialog');
     const list = document.getElementById('nepalToursList');
@@ -4022,6 +4084,7 @@ async function openNepalTours() {
         }
         if (booking) displayed.add(booking.bookingId);
         const row = document.createElement('article');
+        row.dataset.tourStatus = nepalTourGroup(status);
         row.className = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm';
         const summary = document.createElement('p');
         summary.textContent = [quote.customer,quote.phone,quote.title,quote.start,''].filter(Boolean).join(' | ');
@@ -4106,6 +4169,7 @@ async function openNepalTours() {
         ['Confirmed','Ongoing','Completed'].includes(getBookingStatus(b))).length;
     for (const booking of savedBookings.filter(b => !displayed.has(b.bookingId))) {
         const row = document.createElement('article');
+        row.dataset.tourStatus = nepalTourGroup(getBookingStatus(booking));
         row.className = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm';
         const summary = document.createElement('p');
         summary.textContent = [booking.name,booking.phone,booking.tourRoute,booking.startDate,booking.endDate,getBookingStatus(booking)].filter(Boolean).join(' | ');
@@ -4113,7 +4177,7 @@ async function openNepalTours() {
         addNepalBookingActions(row, booking, dialog);
         list.append(row);
     }
-    if (!list.children.length) list.textContent = 'No saved Nepal tours or quotations yet.';
+    applyNepalTourFilter();
 }
 function nepalStatusBadge(status) {
     const badge = document.createElement('span');
