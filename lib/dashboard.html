@@ -549,13 +549,13 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
     
 <dialog id="bookingEditDialog" aria-labelledby="bookingEditTitle" style="width:min(720px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
 <form id="bookingEditForm">
-<h2 id="bookingEditTitle" class="text-xl font-bold text-blue-900">Edit Booking · Draft Preview</h2>
+<h2 id="bookingEditTitle" class="text-xl font-bold text-blue-900">Edit Booking</h2>
 <p class="text-sm text-slate-600 my-3">Step 1 · Changes are saved in this browser on this website. Google Sheet editing will be connected in a later step.</p>
 <div id="bookingEditFields" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
 <p id="bookingEditBalance" class="my-3 font-semibold"></p>
 <p id="bookingEditMessage" role="status" class="my-3 text-sm text-blue-800"></p>
 <div class="flex flex-wrap gap-2">
-<button type="submit" class="rounded-lg bg-blue-700 text-white px-4 py-2">Save Draft Preview</button>
+<button type="submit" class="rounded-lg bg-blue-700 text-white px-4 py-2">Save booking changes</button>
 <button type="button" id="discardBookingDraft" class="rounded-lg border px-4 py-2">Discard Draft</button>
 <button type="button" onclick="document.getElementById('bookingEditDialog').close()" class="rounded-lg border px-4 py-2">Close</button>
 </div></form></dialog>
@@ -607,7 +607,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <label class="block">Discussion notes<textarea name="notes" rows="5" maxlength="5000" class="block w-full border rounded p-2"></textarea></label>
 <button class="bg-blue-700 text-white rounded px-4 py-2" type="submit">Save Lead Draft</button><button class="border rounded px-4 py-2" type="button" onclick="document.getElementById('leadNotesDialog').close()">Close</button>
 </form><p id="leadNotesMessage" role="status" class="text-sm my-3"></p></dialog>
-<dialog id="quotesDialog" aria-labelledby="quotesTitle"><header class="tour-dialog-header"><h2 id="quotesTitle">Tour Quotation &amp; Itinerary</h2><button type="button" onclick="this.closest('dialog').close()">Close</button></header><p class="text-sm my-2">Build a customer proposal from saved trip days, hotels, vehicles and photos. Drafts and libraries are stored in this browser.</p><div class="quote-toolbar"><label>Saved quotations<select id="quoteSaved" class="border rounded p-2 m-2" onchange="loadQuote(this.value)"></select></label><button type="button" onclick="newQuote()" class="border p-2 rounded">New quotation</button><button type="submit" form="quoteForm" class="bg-blue-700 text-white rounded p-2">Save quotation</button></div><button type="button" class="my-2 rounded border border-teal-700 px-3 py-2 font-semibold text-teal-800" onclick="openQuotePhotoLibrary()">Add photos</button><p id="quoteMessage" role="status" class="my-2"></p><form id="quoteForm" novalidate class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3"><fieldset class="sm:col-span-2 grid gap-3 rounded-xl border bg-white p-4">
+<dialog id="quotesDialog" aria-labelledby="quotesTitle"><header class="tour-dialog-header"><h2 id="quotesTitle">Tour Quotation &amp; Itinerary</h2><button type="button" onclick="this.closest('dialog').close()">Close</button></header><p class="text-sm my-2">Build a customer proposal from saved trip days, hotels, vehicles and photos. Saved quotations, packages, hotels, vehicles and photos are stored in your shared Tour storage.</p><div class="quote-toolbar"><label>Saved quotations<select id="quoteSaved" class="border rounded p-2 m-2" onchange="loadQuote(this.value)"></select></label><button type="button" onclick="newQuote()" class="border p-2 rounded">New quotation</button><button type="submit" form="quoteForm" class="bg-blue-700 text-white rounded p-2">Save quotation</button></div><button type="button" class="my-2 rounded border border-teal-700 px-3 py-2 font-semibold text-teal-800" onclick="openQuotePhotoLibrary()">Add photos</button><p id="quoteMessage" role="status" class="my-2"></p><form id="quoteForm" novalidate class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3"><fieldset class="sm:col-span-2 grid gap-3 rounded-xl border bg-white p-4">
 <legend class="font-bold">Tour Package Library</legend>
 <div class="flex flex-wrap items-end gap-2">
 <label>Package <select id="nepalPackage" onchange="document.getElementById('loadNepalPackage').click()" class="block rounded border p-2"></select></label>
@@ -669,7 +669,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <label class="block text-sm">Inclusions<textarea rows="3" name="inclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
 <label class="block text-sm">Exclusions<textarea rows="3" name="exclusions" class="block w-full border rounded p-2 mt-1"></textarea></label>
 
-<label class="block">Rooming and sharing<input name="rooming" class="block w-full border rounded p-2" placeholder="Room count, double, triple or quad sharing"></label>
+<fieldset class="sm:col-span-2 rounded-xl border bg-white p-3"><legend class="font-semibold">Rooms by sharing type</legend><p class="mb-2 text-sm">Enter the number of rooms for each sharing type. Leave unused types blank or zero.</p><div class="grid grid-cols-2 sm:grid-cols-4 gap-3"><label class="text-sm">Single-sharing rooms<input name="singleRooms" type="number" min="0" max="999" step="1" placeholder="0" class="block w-full border rounded p-2 mt-1"></label><label class="text-sm">Double-sharing rooms<input name="doubleRooms" type="number" min="0" max="999" step="1" placeholder="0" class="block w-full border rounded p-2 mt-1"></label><label class="text-sm">Triple-sharing rooms<input name="tripleRooms" type="number" min="0" max="999" step="1" placeholder="0" class="block w-full border rounded p-2 mt-1"></label><label class="text-sm">Four-sharing rooms<input name="fourSharingRooms" type="number" min="0" max="999" step="1" placeholder="0" class="block w-full border rounded p-2 mt-1"></label></div><p id="roomAllocationSummary" role="status" class="mt-2 text-sm text-teal-800"></p></fieldset><label class="block">Rooming and sharing<input name="rooming" class="block w-full border rounded p-2" placeholder="Room count, double, triple or quad sharing"></label>
 <label class="block">Regional transport<input name="specialTransport" class="block w-full border rounded p-2" placeholder="Separate vehicle for Mustang, if quoted"></label>
 <label class="block">Cancellation schedule<select class="block w-full rounded border p-2" onchange="if(this.value) this.form.elements.namedItem('cancellation').value=quoteCancellationPolicies[this.value]"><option value="">Choose a schedule</option><option value="departure">Departure-based schedule</option><option value="arrival">Arrival-based schedule</option></select></label>
 <label class="block">Payment schedule<select class="block w-full rounded border p-2" onchange="if(this.value) this.form.elements.namedItem('terms').value=quotePaymentPolicies[this.value]"><option value="">Choose a schedule</option><option value="reservation">Reservation instalments (20/30/30/20)</option><option value="pickup">Advance plus pickup and mid-tour balance</option></select></label><label class="block">Cancellation policy<textarea name="cancellation" rows="5" class="block w-full border rounded p-2"></textarea></label>
@@ -1007,7 +1007,7 @@ function openEntry(type) {
     if (!response.ok) {
         throw new Error('Could not load bookings. Use the refresh button to retry.');
     }
-    const { valueRanges } = await response.json();
+    const { valueRanges, bookingVersions = {} } = await response.json();
     const [bookings, payments] = valueRanges.map(range => range.values || []);
     if (bookings[0]?.[0] !== 'booking_id' || payments[0]?.[1] !== 'booking_id') {
         throw new Error('CRM sheet headers do not match.');
@@ -1022,7 +1022,7 @@ function openEntry(type) {
         '<':'‹', '>':'›', '&':'＆', '"':'＂', "'":'’', '\u0060':'ʼ'
     })[c]);
     return bookings.slice(1).filter(row => /^(BK-|LEGACY-)/.test(row[0])).map(row => ({
-        bookingId: safe(row[0]), timestamp: safe(row[0]), name: safe(row[2]),
+        version: bookingVersions[row[0]], bookingId: safe(row[0]), timestamp: safe(row[0]), name: safe(row[2]),
         phone: safe(row[3]), address: safe(row[4]), staff: safe(row[5]),
         pickup: safe(row[6]), drop: safe(row[7]), tourRoute: safe(row[8]),
         startDate: safe(row[9]), endDate: safe(row[10]), vehicle: safe(row[11]),
@@ -1170,8 +1170,8 @@ function fetchBookings() {
                 visibleLeads.forEach(l => {
                     const row = document.createElement('tr');
                     row.className = "border-b hover:bg-slate-50";
-                    let waText = `Hello ${l.name},\n\nThank you for contacting Baba Tour & Travels, Gorakhpur regarding your travel inquiry. We would love to assist you with the best vehicle options, comfortable rides, and affordable package rates for your upcoming journey!\n\nPlease let us know your travel dates and requirements so we can share the best quotation with you.\n\nBest Regards,\nBaba Tour & Travels\nRailway Station Road, Gorakhpur\nHelpline: +91 8726667104 / 9026060471\nGSTIN: 09AARPU5006D1ZI`;
-                    let encodedWaMsg = encodeURIComponent(waText);
+                    let waText = `Hello ${l.name},\n\nThank you for contacting Baba Tour & Travels, Gorakhpur regarding your travel inquiry. We would love to assist you with the best vehicle options, comfortable rides, and affordable package rates for your upcoming journey!\n\nPlease let us know your travel dates and requirements so we can share the best quotation with you.\n\nBest Regards,\nBaba Tour & Travels\nRailway Station Road, Gorakhpur\nGSTIN: 09AARPU5006D1ZI`;
+                    let encodedWaMsg = encodeCustomerWhatsAppMessage(waText);
 
                     row.innerHTML = `
                         <td class="p-2"><b>${l.name}</b><br><span class="text-gray-600">${l.phone}</span></td>
@@ -1315,8 +1315,8 @@ function fetchBookings() {
                     </td>
                     <td class="p-2 text-gray-600">${/^\d+(?:\.\d+)?$/.test(String(b.staff ?? '').trim()) ? 'Check Sheet mapping' : escapeHtml(b.staff || '—')}</td>
                     <td class="p-2 space-y-1">
-                        <a href="https://wa.me/91${b.phone}?text=${waRemindText}" target="_blank" class="block text-center bg-amber-500 text-white px-2 py-0.5 rounded font-semibold text-[10px]">🔔 2-Day Reminder</a>
-                        <a href="https://wa.me/91${b.phone}?text=${waFeedbackText}" target="_blank" class="block text-center bg-teal-600 text-white px-2 py-0.5 rounded font-semibold text-[10px]">⭐ Send Review Link</a>
+                        <a href="https://wa.me/91${b.phone}?text=${encodeCustomerWhatsAppMessage(waRemindText)}" target="_blank" class="block text-center bg-amber-500 text-white px-2 py-0.5 rounded font-semibold text-[10px]">🔔 2-Day Reminder</a>
+                        <a href="https://wa.me/91${b.phone}?text=${encodeCustomerWhatsAppMessage(waFeedbackText)}" target="_blank" class="block text-center bg-teal-600 text-white px-2 py-0.5 rounded font-semibold text-[10px]">⭐ Send Review Link</a>
                         <button onclick='sendWhatsApp(${JSON.stringify(b)})' class="block w-full text-center bg-green-600 text-white px-2 py-0.5 rounded font-semibold cursor-pointer">WhatsApp</button>
                         <button onclick='generatePDF(${JSON.stringify(b)})' class="block w-full text-center bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold hover:bg-blue-200 cursor-pointer">Receipt</button>
                         <button onclick='openVyaparGstModal(${JSON.stringify(b)})' class="block w-full text-center bg-purple-600 text-white px-2 py-0.5 rounded font-semibold hover:bg-purple-700 cursor-pointer">GST Invoice</button>
@@ -1406,6 +1406,26 @@ function fetchBookings() {
             document.body.removeChild(link);
         }
 
+function customerContactSignature() {
+ return [
+  '*Call / WhatsApp:*',
+  '\uD83D\uDCAC +91 8726667104',
+  '\uD83D\uDCAC +91 9415966902',
+  '\uD83D\uDCAC +91 9026060471 \u2014 Customer Support',
+  '*Email:* babatourandtravel098@gmail.com',
+  '*Website:* www.babatourandtravel.com'
+ ].join('\n');
+}
+function withCustomerContacts(message) {
+ const text = String(message || '').trim();
+ const signature = customerContactSignature();
+ return text.endsWith(signature) ? text : text + '\n\n' + signature;
+}
+function encodeCustomerWhatsAppMessage(message) {
+ // Older booking templates use literal %0A. Encode the entire message once.
+ return encodeURIComponent(withCustomerContacts(String(message || '').replace(/%0A/gi, '\n')));
+}
+
         function sendWhatsApp(b) {
             const balance = bookingBalance(b);
             const displayStart = formatDisplayDate(b.startDate);
@@ -1421,8 +1441,8 @@ function fetchBookings() {
                            `• Driver Night: ${b.driverNight || ''} | Toll: ${b.tollInc || ''}%0A` +
                            `• Total: ₹${b.total || 0}/- | Advance: ₹${b.advance || 0}/- | Balance: ₹${balance}/-%0A%0A` +
                            `🏢 *Baba Tour and Travels* (Railway Station Road, Gorakhpur)%0A` +
-                           `🧾 GSTIN: 09AARPU5006D1ZI | Ph: 8726667104`;
-            window.open(`https://wa.me/91${b.phone}?text=${waText}`, '_blank');
+                           `🧾 GSTIN: 09AARPU5006D1ZI`;
+            window.open(`https://wa.me/91${b.phone}?text=${encodeCustomerWhatsAppMessage(waText)}`, '_blank');
         }
 
         function generatePDF(b) {
@@ -1786,12 +1806,12 @@ function addBookingEditButton(row, booking) {
 function openBookingEdit(booking) {
     editingBooking = booking;
     let values = booking;
-    let message = 'Edit the details below, then save a draft preview.';
+    let message = 'Edit the details below, then save changes to the booking Sheet.';
     try {
         const draft = readBookingDraft(booking);
         if (draft) {
             values = {...booking, ...draft.values};
-            message = 'Browser draft loaded. The main booking list shows Google Sheet data.';
+            message = 'Your previous unsaved changes are loaded. Save booking changes to update the Google Sheet.';
         }
     } catch (error) {
         message = error.message;
@@ -1826,7 +1846,7 @@ function openBookingEdit(booking) {
 function updateEditBalance() {
     const fields = document.getElementById('bookingEditForm').elements;
     const balance = Number(fields.namedItem('total').value) - Number(fields.namedItem('advance').value);
-    document.getElementById('bookingEditBalance').textContent = 'Draft balance · ' + new Intl.NumberFormat('en-IN', {
+    document.getElementById('bookingEditBalance').textContent = 'Booking balance · ' + new Intl.NumberFormat('en-IN', {
         style: 'currency', currency: 'INR'
     }).format(balance);
 }
@@ -1846,24 +1866,49 @@ function validateBookingEdit(values) {
 }
 
 document.getElementById('bookingEditForm').addEventListener('input', updateEditBalance);
-document.getElementById('bookingEditForm').addEventListener('submit', event => {
+let bookingEditSaving = false;
+document.getElementById('bookingEditForm').addEventListener('submit', async event => {
     event.preventDefault();
+    if (bookingEditSaving) return;
+    const form = event.currentTarget;
+    const button = form.querySelector('button[type="submit"]');
     const message = document.getElementById('bookingEditMessage');
+    const booking = editingBooking;
+    let saveConfirmed = false;
     try {
         const values = {};
         for (const [key, , type] of bookingEditFields) {
-            const value = event.currentTarget.elements.namedItem(key).value.trim();
+            const value = form.elements.namedItem(key).value.trim();
             values[key] = type === 'number' ? Number(value) : value;
         }
         validateBookingEdit(values);
-        if (!editingBooking.phone || !editingBooking.timestamp) {
-            throw new Error('Original booking mobile and timestamp are needed to identify this draft.');
-        }
-        const draft = {version:1, values, savedAt:new Date().toISOString()};
-        localStorage.setItem(bookingDraftKey(editingBooking), JSON.stringify(draft));
-        message.textContent = 'Draft saved in this browser. Reopen Edit Booking to review it. Google Sheet sync is pending.';
+        if (!booking.bookingId || !booking.version) throw new Error('Refresh bookings and reopen Edit Booking first.');
+        try { localStorage.setItem(bookingDraftKey(booking), JSON.stringify({version: 1, values, savedAt: new Date().toISOString()})); } catch {}
+        bookingEditSaving = true;
+        for (const control of form.elements) control.disabled = true;
+        message.textContent = 'Saving booking changes to Google Sheet...';
+        const response = await fetch('/api/dashboard?action=update-booking', {
+            method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({booking_id: booking.bookingId, version: booking.version, values})
+        });
+        const result = await response.json();
+        if (!response.ok || result.ok !== true) throw new Error(result.error || 'Booking save could not be confirmed.');
+        saveConfirmed = true;
+        try { localStorage.removeItem(bookingDraftKey(booking)); } catch {}
+        // Reload the canonical records so every view, receipt and booking action uses saved values.
+        const fresh = await readPrivateCrmBookings();
+        allBookingsData = fresh.reverse();
+        bookingsLoaded = true;
+        renderUpcomingPickups();
+        renderOperations();
+        renderTable();
+        document.getElementById('bookingEditDialog').close();
+        alert('Booking saved successfully.');
     } catch (error) {
-        message.textContent = 'Draft could not be saved. ' + error.message;
+        message.textContent = saveConfirmed ? 'Booking saved. Refresh the dashboard to see changes.' : error.message;
+    } finally {
+        bookingEditSaving = false;
+        for (const control of form.elements) control.disabled = false;
     }
 });
 
@@ -2330,12 +2375,38 @@ document.getElementById('leadNotesForm').addEventListener('submit', event => {
     } catch(error) { document.getElementById('leadNotesMessage').textContent = 'Could not save draft. ' + error.message; }
 });
 
-const quoteFieldNames = ["customer","phone","start","end","pax","vehicle","hotel","itinerary","inclusions","exclusions","amount","terms","title","highlights","pricing","address","pickupLocation","dropLocation","rooming","specialTransport","cancellation","travelNotes","bankDetails","staffName","roomCount","roomSharing"];
+const quoteFieldNames = ["customer","phone","start","end","pax","vehicle","hotel","itinerary","inclusions","exclusions","amount","terms","title","highlights","pricing","address","pickupLocation","dropLocation","rooming","specialTransport","cancellation","travelNotes","bankDetails","staffName","roomCount","roomSharing","singleRooms","doubleRooms","tripleRooms","fourSharingRooms"];
 let pendingNepalQuote = null;
 let activeQuoteId = '';
 const quotePrefix = 'baba_quote_v1:' + SCRIPT_URL + ':';
+const roomAllocationFields = ['singleRooms','doubleRooms','tripleRooms','fourSharingRooms'];
+function roomAllocationDetails(q) {
+ const labels = ['Single sharing','Double sharing','Triple sharing','Four sharing'];
+ const allocations = roomAllocationFields.map((key,i) => {
+  const count = Number(q[key] || 0);
+  if (!Number.isInteger(count) || count < 0 || count > 999) throw Error('Enter whole room counts from 0 to 999.');
+  return {count, label:labels[i]};
+ });
+ const total = allocations.reduce((sum,item) => sum + item.count, 0);
+ return {total, text: allocations.filter(item => item.count).map(item => item.label + ': ' + item.count + (item.count === 1 ? ' room' : ' rooms')).join(' | ')};
+}
+function roomingSummary(q) {
+ const rooms = roomAllocationDetails(q);
+ return [rooms.total ? 'Total: ' + rooms.total + ' rooms' : q.roomCount && q.roomCount + ' room(s)', rooms.text || q.roomSharing, q.rooming].filter(Boolean).join(' | ');
+}
+function updateRoomAllocationSummary() {
+ const form = document.getElementById('quoteForm');
+ const q = Object.fromEntries(roomAllocationFields.map(key => [key, form.elements.namedItem(key).value]));
+ try {
+  const rooms = roomAllocationDetails(q);
+  document.getElementById('roomAllocationSummary').textContent = rooms.total ? 'Total rooms: ' + rooms.total + ' | ' + rooms.text : '';
+ } catch (error) { document.getElementById('roomAllocationSummary').textContent = error.message; }
+}
+document.getElementById('quoteForm').addEventListener('input', updateRoomAllocationSummary);
+
 function newQuote() {
  document.getElementById('quoteForm').reset();
+ updateRoomAllocationSummary();
  resetItinerary();
  resetNepalOptions();
  syncQuoteRoute();
@@ -2398,6 +2469,7 @@ function loadQuote(id) {
   resetItinerary(q);
   resetNepalOptions(q.nepalOptions);
   syncQuoteRoute();
+  updateRoomAllocationSummary();
   activeQuoteId=id;
   document.getElementById('quoteMessage').textContent='Saved quotation loaded';
  } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
@@ -2415,6 +2487,8 @@ function quoteValues() {
  for(const key of quoteFieldNames) q[key]=form.elements.namedItem(key).value.trim();
  if(!q.customer || q.end<q.start) throw Error('Check customer name and travel dates.');
  if(!Number.isInteger(Number(q.pax)) || Number(q.pax)<1 || !Number.isFinite(Number(q.amount)) || Number(q.amount)<0) throw Error('Check passengers and amount.');
+ const rooms = roomAllocationDetails(q);
+ if (rooms.total) { q.roomCount = String(rooms.total); q.roomSharing = 'Mixed sharing'; }
  const itinerary = itineraryValues();
  const pickup = q.pickupLocation || 'Gorakhpur';
  const drop = q.dropLocation || 'Gorakhpur';
@@ -2447,7 +2521,7 @@ document.getElementById('quoteForm').addEventListener('submit', async event => {
     showQuoteFeedback('Saving quotation to the Tour Sheet...');
     await saveSharedQuotation(quote);
     if (activeQuoteId === quote.id) document.getElementById('quoteSaved').value = quote.id;
-    showQuoteFeedback('Quotation saved to the Tour Sheet.');
+    showQuoteFeedback('Quotation saved successfully.');
  } catch (error) {
     showQuoteFeedback('Quotation could not be saved. ' + error.message);
  } finally {
@@ -3169,10 +3243,84 @@ async function downloadBookingPackagePdf() {
     }
 }
 
+function quotationWhatsAppMessage(q) {
+ const customer = String(q.customer || 'Guest').trim();
+ const title = String(q.title || 'Your tour package').trim();
+ const dates = q.start && q.end ? 'Travel dates: ' + q.start + ' to ' + q.end : '';
+ const travellers = q.pax ? 'Travellers: ' + q.pax : '';
+ return withCustomerContacts([
+  'Namaste ' + customer + ' ji,', '',
+  'Thank you for choosing Baba Tour & Travels!', '',
+  'Your personalised tour proposal is ready.',
+  'Package: ' + title,
+  ...[dates, travellers].filter(Boolean), '',
+  'Please review the attached PDF for your day-wise itinerary, hotel and room-sharing details, inclusions and package price.', '',
+  'If you would like any changes or wish to proceed with your booking, please reply here. We will be happy to help you plan a comfortable and memorable journey.', '',
+  'Warm regards,',
+  String(q.staffName || '').trim(),
+  'Baba Tour & Travels, Gorakhpur',
+ ].filter((line,index,lines) => line !== '' || lines[index - 1] !== '').join('\n'));
+}
+function quotationWhatsAppUrl(q) {
+ let phone = String(q.phone || '').replace(/\D/g,'');
+ if (phone.startsWith('00')) phone = phone.slice(2);
+ if (phone.length === 11 && phone.startsWith('0')) phone = phone.slice(1);
+ if (phone.length === 10) phone = '91' + phone;
+ if (!/^[1-9]\d{7,14}$/.test(phone)) throw Error('Enter the customer WhatsApp number with country code.');
+ return 'https://wa.me/' + phone + '?text=' + encodeURIComponent(quotationWhatsAppMessage(q));
+}
+function mobilePdfSharing() {
+ return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '') || (/Macintosh/i.test(navigator.userAgent || '') && navigator.maxTouchPoints > 1);
+}
+function showPreparedPdfShare(file, q, url) {
+ const dialog = document.getElementById('preparedPdfShareDialog');
+ const message = document.getElementById('preparedPdfShareMessage');
+ const status = document.getElementById('preparedPdfShareStatus');
+ const send = document.getElementById('preparedPdfShareSend');
+ const download = document.getElementById('preparedPdfShareDownload');
+ const open = document.getElementById('preparedPdfShareOpen');
+ message.value = quotationWhatsAppMessage(q);
+ open.href = url;
+ status.textContent = 'PDF ready. Tap Share PDF + message, then choose WhatsApp and the customer. Review before sending.';
+ send.hidden = !navigator.canShare?.({files:[file]});
+ send.onclick = async () => {
+  send.disabled = true;
+  try {
+   await navigator.share({files:[file], title:q.title || 'Tour Itinerary', text:message.value});
+   status.textContent = 'Handed to your sharing app. Check the PDF and message in WhatsApp before sending.';
+  } catch (error) {
+   status.textContent = error.name === 'AbortError' ? 'Sharing cancelled. You can try again.' : 'File sharing unavailable. Download the PDF and attach it in WhatsApp.';
+  } finally { send.disabled = false; }
+ };
+ download.onclick = () => {
+  const objectUrl = URL.createObjectURL(file);
+  const link = document.createElement('a');
+  link.href = objectUrl; link.download = file.name; link.click();
+  setTimeout(() => URL.revokeObjectURL(objectUrl),60000);
+ };
+ document.getElementById('preparedPdfShareCopy').onclick = async () => {
+  try { await navigator.clipboard.writeText(message.value); status.textContent = 'Message copied. Paste it in WhatsApp if needed.'; }
+  catch { message.focus(); message.select(); status.textContent = 'Message selected. Copy it and paste in WhatsApp.'; }
+ };
+ if (!dialog.open) dialog.showModal();
+}
+
 async function downloadQuote(share = false, bookingQuote = null) {
+    let shareWindow = null;
     try {
         const q = bookingQuote || quoteValues();
         if (!window.jspdf) throw Error('PDF library is still loading. Try again.');
+        const whatsappUrl = share ? quotationWhatsAppUrl(q) : '';
+        const mobileShare = share && mobilePdfSharing();
+        // Reserve the desktop chat window during the click, before asynchronous PDF work.
+        if (share && !mobileShare) {
+            shareWindow = window.open('about:blank', '_blank');
+            if (shareWindow) {
+                shareWindow.opener = null;
+                shareWindow.document.title = 'Preparing your tour PDF';
+                shareWindow.document.body.textContent = 'Preparing your PDF and WhatsApp message...';
+            }
+        }
         const pdf = new window.jspdf.jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
         const navy = '#143047', teal = '#0F766E', ink = '#243746';
         const left = 15, width = 180, bottom = 277, leading = 4.7;
@@ -3274,7 +3422,7 @@ async function downloadQuote(share = false, bookingQuote = null) {
         const tripDetails = [
             ['Pickup', q.pickupLocation], ['Drop', q.dropLocation], ['Vehicle', q.vehicle],
             ['Hotel', q.hotel], ['Meal plan', q.nepalOptions?.values?.[3]],
-            ['Rooming', [q.roomCount && q.roomCount + ' room(s)', q.roomSharing, q.rooming].filter(Boolean).join(' | ')],
+            ['Rooming', roomingSummary(q)],
             ['Regional transport', q.specialTransport]
         ].filter(([, value]) => value);
         for (const [index, [label, value]] of tripDetails.entries()) {
@@ -3472,25 +3620,24 @@ async function downloadQuote(share = false, bookingQuote = null) {
         quoteControl('quoteSaved').value = q.id;
         const filename = ((q.title || 'Tour Itinerary').replace(/[^a-z0-9 -]/gi,'').trim() || 'Tour Itinerary') + '.pdf';
         const file = new File([pdf.output('blob')], filename, {type:'application/pdf'});
-        if (share && navigator.canShare?.({files:[file]})) {
-            try {
-                await navigator.share({files:[file], title:q.title || 'Tour Itinerary'});
-                itineraryMessage('PDF shared through your device.');
-                return;
-            } catch (error) {
-                if (error.name === 'AbortError') return;
-            }
-        }
-        pdf.save(filename);
         if (share) {
-            const phone = q.phone.replace(/\D/g,'');
-            const recipient = phone.length === 10 ? '91' + phone : phone;
-            if (recipient) window.open('https://wa.me/' + recipient, '_blank', 'noopener,noreferrer');
-            itineraryMessage('PDF downloaded. Attach it in the customer WhatsApp chat.');
+            if (mobileShare) {
+                showPreparedPdfShare(file, q, whatsappUrl);
+                return;
+            }
+            pdf.save(filename);
+            if (shareWindow && !shareWindow.closed) {
+                try { shareWindow.location.replace(whatsappUrl); }
+                catch { shareWindow.close(); showPreparedPdfShare(file, q, whatsappUrl); }
+            } else {
+                showPreparedPdfShare(file, q, whatsappUrl);
+            }
+            itineraryMessage('PDF downloaded. Customer WhatsApp opens with your message. Attach the PDF and send.');
             return;
         }
+        pdf.save(filename);
         if (!bookingQuote) itineraryMessage('Quotation saved and PDF downloaded.');
-    } catch(error) { if (bookingQuote) throw error; itineraryMessage(error.message); }
+    } catch(error) { if (shareWindow && !shareWindow.closed) shareWindow.close(); if (bookingQuote) throw error; itineraryMessage(error.message); }
 }
 </script>
 <script>
@@ -3804,13 +3951,14 @@ quoteControl('loadNepalPackage').addEventListener('click', () => {
     nepalValue('terms').value = pack.termsOverride || quotePaymentPolicies.reservation;
     nepalValue('cancellation').value = pack.cancellation || quoteCancellationPolicies.departure;
     nepalValue('travelNotes').value = pack.travelNotes || (pack.domestic ? 'Carry a valid photo ID. Darshan and sightseeing depend on opening hours, queues, weather and local access. Hotel and vehicle arrangements are subject to confirmation.' : 'Carry a valid passport or voter ID where accepted. Check current document rules for each traveller before departure.\nConfirm permitted Indian currency denominations with official authorities before travel.\nVehicle service is non-AC and limited to the agreed itinerary.\nIf the requested hotel is unavailable, accommodation of a similar category may be offered.\nSightseeing order may change with road conditions, weather or opening times.');
-    for (const key of ['rooming','roomCount','roomSharing']) nepalValue(key).value = pack[key] || '';
+    for (const key of ['rooming','roomCount','roomSharing','singleRooms','doubleRooms','tripleRooms','fourSharingRooms']) nepalValue(key).value = pack[key] || '';
     nepalValue('specialTransport').value = pack.specialTransport || '';
     nepalValue('bankDetails').value = '';
     for (const key of ['pickupLocation','dropLocation']) nepalValue(key).value = pack[key] || 'Gorakhpur';
     resetItinerary(pack);
     resetNepalOptions({...pack.nepalOptions, domestic: pack.domestic ?? pack.nepalOptions?.domestic});
     syncQuoteRoute(true);
+    updateRoomAllocationSummary();
     quoteControl('nepalPackage').value = pack.id;
     nepalStatus('Package loaded. Enter the price for this customer.');
 });
@@ -3822,7 +3970,7 @@ quoteControl('saveNepalPackage').addEventListener('click', async event => {
     }
     const button = event.currentTarget;
     const details = {...fields, domestic: nepalOptionsDomestic, nepalOptions: getNepalOptions()};
-    for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms','rooming','roomCount','roomSharing','specialTransport','cancellation','travelNotes','pickupLocation','dropLocation']) {
+    for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms','rooming','roomCount','roomSharing','singleRooms','doubleRooms','tripleRooms','fourSharingRooms','specialTransport','cancellation','travelNotes','pickupLocation','dropLocation']) {
         details[key] = nepalValue(key).value.trim();
     }
     details.termsOverride = details.terms;
@@ -3961,20 +4109,71 @@ function renderUpcomingPickups() {
     document.getElementById('upcomingPickups').hidden = !pickups.length;
 }
 </script>
+<dialog id="preparedPdfShareDialog" class="w-full max-w-xl rounded-xl p-5"><h2 class="text-xl font-bold text-teal-800">Share your tour PDF</h2><p id="preparedPdfShareStatus" role="status" class="my-3"></p><label class="block text-sm">Message for customer<textarea id="preparedPdfShareMessage" rows="12" class="block w-full border rounded p-3 my-2"></textarea></label><div class="flex flex-wrap gap-2"><button id="preparedPdfShareSend" type="button" class="rounded bg-emerald-700 text-white px-3 py-2">Share PDF + message</button><a id="preparedPdfShareOpen" target="_blank" rel="noopener noreferrer" class="rounded border px-3 py-2">Open customer WhatsApp</a><button id="preparedPdfShareDownload" type="button" class="rounded border px-3 py-2">Download PDF</button><button id="preparedPdfShareCopy" type="button" class="rounded border px-3 py-2">Copy message</button><button type="button" onclick="this.closest('dialog').close()" class="rounded border px-3 py-2">Close</button></div></dialog>
 <dialog id="nepalToursDialog" aria-labelledby="nepalToursTitle" class="w-full max-w-3xl rounded-2xl bg-slate-50 p-6 text-slate-900 shadow-xl">
 <header class="tour-dialog-header"><h2 id="nepalToursTitle">Nepal Tour Packages</h2><button type="button" onclick="this.closest('dialog').close()">Close</button></header>
-<p id="nepalToursCount" role="status" class="my-2"></p>
+<div id="nepalTourFilters" role="group" aria-label="Filter tour packages" class="flex flex-wrap gap-2 my-3"><button type="button" data-tour-filter="New Bookings" onclick="setNepalTourFilter('New Bookings')" class="rounded-lg border px-3 py-2 font-semibold">New Bookings</button><button type="button" data-tour-filter="Completed" onclick="setNepalTourFilter('Completed')" class="rounded-lg border px-3 py-2 font-semibold">Completed</button><button type="button" data-tour-filter="Confirmed" onclick="setNepalTourFilter('Confirmed')" class="rounded-lg border px-3 py-2 font-semibold">Confirmed</button><button type="button" data-tour-filter="Pending" onclick="setNepalTourFilter('Pending')" class="rounded-lg border px-3 py-2 font-semibold">Pending</button><button type="button" data-tour-filter="Cancelled" onclick="setNepalTourFilter('Cancelled')" class="rounded-lg border px-3 py-2 font-semibold">Cancelled</button></div><p id="nepalToursCount" role="status" class="my-2"></p>
 <div id="nepalToursList" class="grid gap-3"></div>
 <button type="button" class="mt-3 rounded border p-2" onclick="this.closest('dialog').close()">Close</button>
 </dialog>
 <script>
+let nepalTourFilter = 'New Bookings';
+function nepalTourGroup(status, endDate) {
+ if (status === 'Cancelled') return 'Cancelled';
+ if (status === 'Completed') return 'Completed';
+ if (['Confirmed','Ongoing'].includes(status)) {
+  const end = endDate ? operationsDay(endDate) : '';
+  return end && end < operationsDay() ? 'Completed' : 'Confirmed';
+ }
+ return 'Pending';
+}
+function tagNepalTourCard(row, status, startDate, endDate) {
+ const group = nepalTourGroup(status, endDate);
+ const start = startDate ? operationsDay(startDate) : '';
+ const end = endDate ? operationsDay(endDate) : '';
+ row.dataset.tourStatus = group;
+ row.dataset.tourStart = start || '9999-12-31';
+ row.dataset.tourUpcoming = String(group === 'Confirmed' && Boolean((end || start) && (end || start) >= operationsDay()));
+}
+function setNepalTourFilter(status) {
+ if (!['New Bookings','Completed','Confirmed','Pending','Cancelled'].includes(status)) return;
+ nepalTourFilter = status;
+ applyNepalTourFilter();
+}
+function applyNepalTourFilter() {
+ const list = document.getElementById('nepalToursList');
+ list.querySelector('[data-tour-empty]')?.remove();
+ const counts = {'New Bookings':0, Completed:0, Confirmed:0, Pending:0, Cancelled:0};
+ const cards = Array.from(list.querySelectorAll('[data-tour-status]'));
+ cards.sort((a,b) => (a.dataset.tourStart || '').localeCompare(b.dataset.tourStart || ''));
+ for (const card of cards) {
+  list.append(card);
+  counts[card.dataset.tourStatus]++;
+  if (card.dataset.tourUpcoming === 'true') counts['New Bookings']++;
+  card.hidden = nepalTourFilter === 'New Bookings' ? card.dataset.tourUpcoming !== 'true' : card.dataset.tourStatus !== nepalTourFilter;
+ }
+ for (const button of document.getElementById('nepalTourFilters').querySelectorAll('[data-tour-filter]')) {
+  const status = button.dataset.tourFilter;
+  button.textContent = status + ' (' + counts[status] + ')';
+  button.setAttribute('aria-pressed', String(status === nepalTourFilter));
+  button.className = 'rounded-lg border px-3 py-2 font-semibold ' + (status === nepalTourFilter ? 'bg-teal-700 text-white border-teal-700' : 'bg-white text-slate-800');
+ }
+ document.getElementById('nepalToursCount').textContent = nepalTourFilter + ' packages: ' + counts[nepalTourFilter];
+ if (!counts[nepalTourFilter]) {
+  const empty = document.createElement('p');
+  empty.dataset.tourEmpty = 'true';
+  empty.textContent = 'No ' + nepalTourFilter.toLowerCase() + ' packages.';
+  list.append(empty);
+ }
+}
+
 async function openNepalTours() {
     const dialog = document.getElementById('nepalToursDialog');
     const list = document.getElementById('nepalToursList');
     const count = document.getElementById('nepalToursCount');
     list.replaceChildren();
     count.textContent = 'Checking confirmed bookings…';
-    if (!dialog.open) dialog.showModal();
+    if (!dialog.open) { nepalTourFilter = 'New Bookings'; dialog.showModal(); }
     let bookings;
     try { [bookings] = await Promise.all([readPrivateCrmBookings(), loadSharedQuotations(), loadSharedTourPhotos(), loadSharedTourOptions()]); }
     catch { count.textContent = 'Could not load bookings or shared quotations. Reopen this list to retry.'; return; }
@@ -3988,7 +4187,7 @@ async function openNepalTours() {
     const displayed = new Set();
     for (const quote of sharedQuotations.values()) {
         const booking = linked.get(quote.id);
-        const status = booking ? getBookingStatus(booking) : (quote.status || 'Pending');
+        const status = booking ? getBookingStatus(booking) : nepalTourGroup(quote.status || 'Pending', quote.end);
         if (booking && (!quote.status || quote.status === 'Pending') &&
             ['Confirmed', 'Ongoing', 'Completed'].includes(status)) {
             void syncTourQuotationStatus(quote.id, 'Confirmed', booking.bookingId).catch(() => {
@@ -3997,6 +4196,7 @@ async function openNepalTours() {
         }
         if (booking) displayed.add(booking.bookingId);
         const row = document.createElement('article');
+        tagNepalTourCard(row, status, booking ? booking.startDate : quote.start, booking ? booking.endDate : quote.end);
         row.className = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm';
         const summary = document.createElement('p');
         summary.textContent = [quote.customer,quote.phone,quote.title,quote.start,''].filter(Boolean).join(' | ');
@@ -4031,10 +4231,10 @@ async function openNepalTours() {
         const head = document.createElement('div');
         head.className = 'nepal-card-head';
         const customer = document.createElement('h3');
-        customer.textContent = quote.customer || 'Unnamed customer';
+        customer.textContent = (booking ? booking.name : quote.customer) || 'Unnamed customer';
         head.append(customer, nepalStatusBadge(status));
         summary.className = 'nepal-card-meta';
-        summary.textContent = [quote.title, quote.phone, quote.start && 'Travel starts ' + quote.start].filter(Boolean).join(' · ');
+        summary.textContent = [quote.title, booking ? booking.phone : quote.phone, (booking ? booking.startDate : quote.start) && 'Travel starts ' + (booking ? booking.startDate : quote.start)].filter(Boolean).join(' · ');
         const followupPanel = document.createElement('div');
         followupPanel.className = 'nepal-followup';
         const dateLabel = document.createElement('label');
@@ -4081,6 +4281,7 @@ async function openNepalTours() {
         ['Confirmed','Ongoing','Completed'].includes(getBookingStatus(b))).length;
     for (const booking of savedBookings.filter(b => !displayed.has(b.bookingId))) {
         const row = document.createElement('article');
+        tagNepalTourCard(row, getBookingStatus(booking), booking.startDate, booking.endDate);
         row.className = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm';
         const summary = document.createElement('p');
         summary.textContent = [booking.name,booking.phone,booking.tourRoute,booking.startDate,booking.endDate,getBookingStatus(booking)].filter(Boolean).join(' | ');
@@ -4088,7 +4289,7 @@ async function openNepalTours() {
         addNepalBookingActions(row, booking, dialog);
         list.append(row);
     }
-    if (!list.children.length) list.textContent = 'No saved Nepal tours or quotations yet.';
+    applyNepalTourFilter();
 }
 function nepalStatusBadge(status) {
     const badge = document.createElement('span');

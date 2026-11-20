@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+const crypto = require('node:crypto');
 const path = require('node:path');
 const { GoogleAuth, OAuth2Client } = require('google-auth-library');
 
@@ -33,6 +34,85 @@ async function readBookingRanges(ranges) {
   const sheets = await auth.getClient();
   const {data} = await sheets.request({url: url.href, timeout: 10000});
   return data.valueRanges;
+}
+
+
+// A daily session is independent of the short-lived Google ID token.
+function sessionKey() {
+  const key = process.env.CRM_SESSION_SECRET || JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON || '{}').private_key;
+  if (typeof key !== 'string' || key.length < 32) throw new Error('Session signing is not configured');
+  return crypto.createHmac('sha256', key).update('baba-crm-daily-session-v1').digest();
+}
+function dailyExpiry(now = Date.now()) {
+  const day = 86400000, offset = 19800000;
+  return Math.floor(((Math.floor((now + offset) / day) + 1) * day - offset) / 1000);
+}
+function signSession(payload) {
+  const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  return encoded + '.' + crypto.createHmac('sha256', sessionKey()).update(encoded).digest('base64url');
+}
+function readSession(token) {
+  const parts = token.split('.');
+  if (parts.length !== 2) throw new Error('Invalid session');
+  const expected = crypto.createHmac('sha256', sessionKey()).update(parts[0]).digest();
+  const received = Buffer.from(parts[1], 'base64url');
+  if (received.length !== expected.length || !crypto.timingSafeEqual(received, expected)) throw new Error('Invalid signature');
+  const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString());
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.email !== allowedEmail || !Number.isInteger(payload.exp) || payload.exp <= now ||
+      payload.exp > dailyExpiry() || !Number.isInteger(payload.iat) || payload.iat > now || now - payload.iat > 86400) throw new Error('Expired session');
+  return payload;
+}
+function setDailyCookie(res) {
+  const now = Math.floor(Date.now() / 1000), exp = dailyExpiry();
+  const token = signSession({email: allowedEmail, iat: now, exp});
+  res.setHeader('Set-Cookie', 'baba_google=' + token + '; Path=/api/dashboard; HttpOnly; Secure; SameSite=Strict; Max-Age=' + (exp - now));
+}
+function bookingVersion(row) {
+  return crypto.createHash('sha256').update(JSON.stringify(Array.from({length: 18}, (_, i) => String(row[i] ?? '')))).digest('hex');
+}
+async function updateBooking(req, res) {
+  if (!isDashboardOrigin(req)) return sendJson(res, 403, {error: 'Save must be requested from the CRM dashboard.'});
+  const {booking_id: id, version, values} = req.body || {};
+  if (typeof id !== 'string' || !/^(?:BK|LEGACY)-[A-Za-z0-9_:-]{1,200}$/.test(id) ||
+      typeof version !== 'string' || !/^[a-f0-9]{64}$/.test(version) || !values || typeof values !== 'object') {
+    return sendJson(res, 400, {error: 'Invalid booking update. Refresh bookings and reopen Edit Booking.'});
+  }
+  const keys = ['name', 'phone', 'address', 'staff', 'pickup', 'drop', 'tourRoute', 'startDate', 'endDate', 'vehicle'];
+  if (keys.some(key => typeof values[key] !== 'string' || values[key].length > 4000) ||
+      ['name', 'phone', 'pickup', 'drop', 'vehicle'].some(key => !values[key].trim()) ||
+      !/^[+\d\s()-]{7,20}$/.test(values.phone) ||
+      ![values.startDate, values.endDate].every(value => /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value) ||
+      values.endDate < values.startDate || typeof values.total !== 'number' || !Number.isFinite(values.total) || values.total < 0 || values.total > 1000000000) {
+    return sendJson(res, 400, {error: 'Check customer, dates, vehicle and total amount.'});
+  }
+  try {
+    const ranges = await readBookingRanges(['Bookings!A1:R', 'Payments!A1:I']);
+    const rows = ranges[0]?.values || [], payments = ranges[1]?.values || [];
+    if (rows[0]?.[0] !== 'booking_id' || payments[0]?.[1] !== 'booking_id') throw new Error('Unexpected headers');
+    const matches = rows.map((row, index) => ({row, index})).filter(item => item.index > 0 && item.row[0] === id);
+    if (matches.length !== 1) return sendJson(res, matches.length ? 409 : 404, {error: 'Booking could not be uniquely identified. Refresh the list.'});
+    const {row, index} = matches[0];
+    if (bookingVersion(row) !== version) return sendJson(res, 409, {error: 'This booking changed after you opened it. Your edits are retained. Refresh and review before saving again.'});
+    const paid = payments.slice(1).filter(p => p[1] === id).reduce((sum, p) => sum + Math.round((Number(String(p[3] ?? '').replace(/[,\s₹]/g, '')) || 0) * 100), 0);
+    if (Math.round(values.total * 100) < paid) return sendJson(res, 400, {error: 'Total cannot be below the payments already received.'});
+    const marker = String(row[8] || '').match(/\[Nepal quote [^\]]+\]/g) || [];
+    let route = values.tourRoute.trim();
+    for (const item of marker) if (!route.includes(item)) route += ' ' + item;
+    const saved = keys.map(key => key === 'tourRoute' ? route.trim() : values[key].trim());
+    saved.push(Math.round(values.total * 100) / 100);
+    const auth = new GoogleAuth({credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets']});
+    const client = await auth.getClient();
+    // Only C:M are edited. Booking identity, status, payment ledger and other columns stay intact.
+    const {data} = await client.request({url: 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '/values:batchUpdate', method: 'POST', timeout: 15000,
+      data: {valueInputOption: 'RAW', includeValuesInResponse: true, responseValueRenderOption: 'UNFORMATTED_VALUE', data: [{range: 'Bookings!C' + (index + 1) + ':M' + (index + 1), values: [saved]}]}});
+    const actual = data.responses?.[0]?.updatedData?.values?.[0];
+    if (!actual || JSON.stringify(actual) !== JSON.stringify(saved)) throw new Error('Save not confirmed');
+    return sendJson(res, 200, {ok: true, booking_id: id});
+  } catch (error) {
+    const forbidden = error.response?.status === 403;
+    return sendJson(res, forbidden ? 403 : 502, {error: forbidden ? 'Booking Sheet permission denied. Give the CRM service account Editor access to the booking Sheet.' : 'Could not confirm the booking save. Your edits are retained. Refresh the booking list before retrying.'});
+  }
 }
 
 async function deleteBooking(req, res) {
@@ -198,33 +278,34 @@ module.exports = async (req, res) => {
   const wantsBookings = req.method === 'GET' && data === 'bookings';
   const wantsDelete = req.method === 'POST' && action === 'delete';
   const tourAction = req.method === 'GET' ? readActions.get(data) : writeActions.get(action);
-  const isLogin = req.method === 'POST' && !wantsDelete && !tourAction;
+  const wantsUpdate = req.method === 'POST' && action === 'update-booking';
+  const isLogin = req.method === 'POST' && !action;
+  if (req.method === 'POST' && !isLogin && !wantsDelete && !wantsUpdate && !tourAction) return sendJson(res, 400, {error: 'Unknown action.'});
   const credential = isLogin ? req.body?.credential
     : /(?:^|;\s*)baba_google=([^;]+)/.exec(req.headers.cookie || '')?.[1];
 
-  let identity;
   try {
     if (typeof credential !== 'string' || credential.length > 3500) throw new Error('Invalid credential');
-    const ticket = await google.verifyIdToken({idToken: credential, audience: clientId});
-    identity = ticket.getPayload();
-    if (!identity?.email_verified || identity.email !== allowedEmail) throw new Error('Account not allowed');
+    if (!isLogin && credential.split('.').length === 2) {
+      readSession(credential);
+    } else {
+      const ticket = await google.verifyIdToken({idToken: credential, audience: clientId});
+      const identity = ticket.getPayload();
+      if (!identity?.email_verified || identity.email !== allowedEmail) throw new Error('Account not allowed');
+      setDailyCookie(res);
+    }
   } catch {
-    if (wantsBookings || wantsDelete || tourAction) return sendJson(res, 401, {error: 'Please sign in again.'});
+    if (wantsBookings || wantsDelete || wantsUpdate || tourAction) return sendJson(res, 401, {error: 'Please sign in again. Your unsaved form is still open.'});
     return res.redirect(303, '/?login=denied');
   }
-
-  if (isLogin) {
-    const remaining = Math.max(0, identity.exp - Math.floor(Date.now() / 1000));
-    res.setHeader('Set-Cookie', 'baba_google=' + credential +
-      '; Path=/api/dashboard; HttpOnly; Secure; SameSite=Strict; Max-Age=' + remaining);
-    return res.redirect(303, '/api/dashboard');
-  }
+  if (isLogin) return res.redirect(303, '/api/dashboard');
+  if (wantsUpdate) return updateBooking(req, res);
   if (wantsDelete) return deleteBooking(req, res);
   if (tourAction) return handleTourStorage(req, res, tourAction);
   if (wantsBookings) {
     try {
       const valueRanges = await readBookingRanges(['Bookings!A1:R', 'Payments!A1:I']);
-      return sendJson(res, 200, {valueRanges});
+      return sendJson(res, 200, {valueRanges, bookingVersions: Object.fromEntries((valueRanges[0]?.values || []).slice(1).map(row => [row[0], bookingVersion(row)]))});
     } catch (error) {
       console.error('CRM Sheets read failed', error.response?.status ?? error.code ?? error.name);
       return sendJson(res, 502, {error: 'Could not load CRM bookings.'});
