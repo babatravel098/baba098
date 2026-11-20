@@ -549,13 +549,13 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
     
 <dialog id="bookingEditDialog" aria-labelledby="bookingEditTitle" style="width:min(720px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
 <form id="bookingEditForm">
-<h2 id="bookingEditTitle" class="text-xl font-bold text-blue-900">Edit Booking · Draft Preview</h2>
+<h2 id="bookingEditTitle" class="text-xl font-bold text-blue-900">Edit Booking</h2>
 <p class="text-sm text-slate-600 my-3">Step 1 · Changes are saved in this browser on this website. Google Sheet editing will be connected in a later step.</p>
 <div id="bookingEditFields" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
 <p id="bookingEditBalance" class="my-3 font-semibold"></p>
 <p id="bookingEditMessage" role="status" class="my-3 text-sm text-blue-800"></p>
 <div class="flex flex-wrap gap-2">
-<button type="submit" class="rounded-lg bg-blue-700 text-white px-4 py-2">Save Draft Preview</button>
+<button type="submit" class="rounded-lg bg-blue-700 text-white px-4 py-2">Save booking changes</button>
 <button type="button" id="discardBookingDraft" class="rounded-lg border px-4 py-2">Discard Draft</button>
 <button type="button" onclick="document.getElementById('bookingEditDialog').close()" class="rounded-lg border px-4 py-2">Close</button>
 </div></form></dialog>
@@ -1007,7 +1007,7 @@ function openEntry(type) {
     if (!response.ok) {
         throw new Error('Could not load bookings. Use the refresh button to retry.');
     }
-    const { valueRanges } = await response.json();
+    const { valueRanges, bookingVersions = {} } = await response.json();
     const [bookings, payments] = valueRanges.map(range => range.values || []);
     if (bookings[0]?.[0] !== 'booking_id' || payments[0]?.[1] !== 'booking_id') {
         throw new Error('CRM sheet headers do not match.');
@@ -1022,7 +1022,7 @@ function openEntry(type) {
         '<':'‹', '>':'›', '&':'＆', '"':'＂', "'":'’', '\u0060':'ʼ'
     })[c]);
     return bookings.slice(1).filter(row => /^(BK-|LEGACY-)/.test(row[0])).map(row => ({
-        bookingId: safe(row[0]), timestamp: safe(row[0]), name: safe(row[2]),
+        version: bookingVersions[row[0]], bookingId: safe(row[0]), timestamp: safe(row[0]), name: safe(row[2]),
         phone: safe(row[3]), address: safe(row[4]), staff: safe(row[5]),
         pickup: safe(row[6]), drop: safe(row[7]), tourRoute: safe(row[8]),
         startDate: safe(row[9]), endDate: safe(row[10]), vehicle: safe(row[11]),
@@ -1786,12 +1786,12 @@ function addBookingEditButton(row, booking) {
 function openBookingEdit(booking) {
     editingBooking = booking;
     let values = booking;
-    let message = 'Edit the details below, then save a draft preview.';
+    let message = 'Edit the details below, then save changes to the booking Sheet.';
     try {
         const draft = readBookingDraft(booking);
         if (draft) {
             values = {...booking, ...draft.values};
-            message = 'Browser draft loaded. The main booking list shows Google Sheet data.';
+            message = 'Your previous unsaved changes are loaded. Save booking changes to update the Google Sheet.';
         }
     } catch (error) {
         message = error.message;
@@ -1826,7 +1826,7 @@ function openBookingEdit(booking) {
 function updateEditBalance() {
     const fields = document.getElementById('bookingEditForm').elements;
     const balance = Number(fields.namedItem('total').value) - Number(fields.namedItem('advance').value);
-    document.getElementById('bookingEditBalance').textContent = 'Draft balance · ' + new Intl.NumberFormat('en-IN', {
+    document.getElementById('bookingEditBalance').textContent = 'Booking balance · ' + new Intl.NumberFormat('en-IN', {
         style: 'currency', currency: 'INR'
     }).format(balance);
 }
@@ -1846,24 +1846,47 @@ function validateBookingEdit(values) {
 }
 
 document.getElementById('bookingEditForm').addEventListener('input', updateEditBalance);
-document.getElementById('bookingEditForm').addEventListener('submit', event => {
+let bookingEditSaving = false;
+document.getElementById('bookingEditForm').addEventListener('submit', async event => {
     event.preventDefault();
+    if (bookingEditSaving) return;
+    const form = event.currentTarget;
+    const button = form.querySelector('button[type="submit"]');
     const message = document.getElementById('bookingEditMessage');
+    const booking = editingBooking;
     try {
         const values = {};
         for (const [key, , type] of bookingEditFields) {
-            const value = event.currentTarget.elements.namedItem(key).value.trim();
+            const value = form.elements.namedItem(key).value.trim();
             values[key] = type === 'number' ? Number(value) : value;
         }
         validateBookingEdit(values);
-        if (!editingBooking.phone || !editingBooking.timestamp) {
-            throw new Error('Original booking mobile and timestamp are needed to identify this draft.');
-        }
-        const draft = {version:1, values, savedAt:new Date().toISOString()};
-        localStorage.setItem(bookingDraftKey(editingBooking), JSON.stringify(draft));
-        message.textContent = 'Draft saved in this browser. Reopen Edit Booking to review it. Google Sheet sync is pending.';
+        if (!booking.bookingId || !booking.version) throw new Error('Refresh bookings and reopen Edit Booking first.');
+        try { localStorage.setItem(bookingDraftKey(booking), JSON.stringify({version: 1, values, savedAt: new Date().toISOString()})); } catch {}
+        bookingEditSaving = true;
+        for (const control of form.elements) control.disabled = true;
+        message.textContent = 'Saving booking changes to Google Sheet...';
+        const response = await fetch('/api/dashboard?action=update-booking', {
+            method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({booking_id: booking.bookingId, version: booking.version, values})
+        });
+        const result = await response.json();
+        if (!response.ok || result.ok !== true) throw new Error(result.error || 'Booking save could not be confirmed.');
+        try { localStorage.removeItem(bookingDraftKey(booking)); } catch {}
+        // Reload the canonical records so every view, receipt and booking action uses saved values.
+        const fresh = await readPrivateCrmBookings();
+        allBookingsData = fresh.reverse();
+        bookingsLoaded = true;
+        renderUpcomingPickups();
+        renderOperations();
+        renderTable();
+        document.getElementById('bookingEditDialog').close();
+        alert('Booking changes saved to Google Sheet.');
     } catch (error) {
-        message.textContent = 'Draft could not be saved. ' + error.message;
+        message.textContent = error.message + ' Your entered details remain in this form.';
+    } finally {
+        bookingEditSaving = false;
+        for (const control of form.elements) control.disabled = false;
     }
 });
 
