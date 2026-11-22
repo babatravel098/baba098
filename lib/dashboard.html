@@ -880,7 +880,7 @@ function openEntry(type) {
         '<':'‹', '>':'›', '&':'＆', '"':'＂', "'":'’', '\u0060':'ʼ'
     })[c]);
     return bookings.slice(1).filter(row => /^(BK-|LEGACY-)/.test(row[0])).map(row => ({
-        payments: payments.slice(1).filter(p=>p[1]===row[0]).map(p=>({id:String(p[0]),date:String(p[2]).slice(0,10),amount:Math.round(money(p[3])*100),mode:String(p[5]||''),reference:String(p[6]||''),note:String(p[7]||'')})), version: bookingVersions[row[0]], bookingId: safe(row[0]), timestamp: safe(row[0]), name: safe(row[2]),
+        payments: payments.slice(1).filter(p=>p[1]===row[0]).map(p=>({id:String(p[0]),date:String(p[2]).slice(0,10),amount:Math.round(money(p[3])*100),mode:String(p[5]||''),reference:String(p[6]||''),note:String(p[7]||'')})), version: bookingVersions[row[0]], bookingCreatedAt: safe(row[16]), bookingId: safe(row[0]), timestamp: safe(row[0]), name: safe(row[2]),
         phone: safe(row[3]), address: safe(row[4]), staff: safe(row[5]),
         pickup: safe(row[6]), drop: safe(row[7]), tourRoute: safe(row[8]),
         startDate: safe(row[9]), endDate: safe(row[10]), vehicle: safe(row[11]),
@@ -1189,6 +1189,7 @@ function fetchBookings() {
                 addPaymentButton(row, b);
                 addStatusButton(row, b);
                 addAssignmentButton(row, b);
+                addDutySlipButton(row, b);
                 addExpenseButton(row, b);
                 compactBookingActions(row);
                 tbody.appendChild(row);
@@ -2307,6 +2308,8 @@ document.getElementById('quoteForm').addEventListener('submit', async event => {
     if (button) button.disabled = false;
  }
 });
+let assignmentBooking = null;
+const assignmentFields = ['registration','driver','mobile','time','notes'];
 function assignmentKey(booking) {
  return 'baba_assignment_v1:' + JSON.stringify([SCRIPT_URL, String(booking.phone || ''), String(booking.timestamp || '')]);
 }
@@ -4067,6 +4070,7 @@ function nepalAction(label, action) {
     return button;
 }
 function addNepalBookingActions(row, booking, dialog) {
+    if (getBookingStatus(booking) === 'Confirmed') row.append(nepalAction('Duty Slip PDF', () => openDutySlip(booking)));
     row.append(
         nepalAction('Edit booking', () => {dialog.close(); openBookingEdit(booking);}),
         ...(getBookingStatus(booking) === 'Cancelled' ? [] : [
@@ -7219,5 +7223,190 @@ gstControl('gstCancellationForm').addEventListener('submit',submitGstCancellatio
 gstControl('gstCancellationDialog').addEventListener('cancel',event=>{if(gstCancellationSaving)event.preventDefault();});
 
 </script>
+<dialog id="dutyDialog" aria-labelledby="dutyTitle" style="width:min(540px,94vw);max-height:90vh;overflow:auto;border:0;border-radius:14px;padding:24px">
+  <form id="dutyForm">
+    <h2 id="dutyTitle" class="text-xl font-bold text-teal-900">Driver duty slip</h2>
+    <p id="dutySummary" class="my-3 text-sm whitespace-pre-line"></p>
+    <p class="text-sm text-slate-600 mb-3">Edit the details for this slip, or leave them blank to fill by hand.</p>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <label>Driver name<input name="driver" maxlength="100" class="block w-full border rounded p-2"></label>
+      <label>Driver mobile<input name="mobile" type="tel" maxlength="24" class="block w-full border rounded p-2"></label>
+      <label>Vehicle number<input name="registration" maxlength="30" class="block w-full border rounded p-2"></label>
+      <label>Pickup time<input name="time" type="time" class="block w-full border rounded p-2"></label>
+      <label>Opening km<input name="opening" type="number" min="0" max="99999999" step="0.1" class="block w-full border rounded p-2"></label>
+      <label>Closing km<input name="closing" type="number" min="0" max="99999999" step="0.1" class="block w-full border rounded p-2"></label>
+    </div>
+    <p id="dutyMessage" role="status" class="my-3 text-sm"></p>
+    <div class="flex gap-2"><button type="submit" class="rounded bg-teal-700 px-4 py-2 text-white font-semibold">Download Duty Slip PDF</button>
+      <button type="button" onclick="this.closest('dialog').close()" class="rounded border px-4 py-2">Close</button></div>
+  </form>
+</dialog>
+<script>
+let dutyBooking;
+function openDutySlip(booking) {
+  const form = document.getElementById('dutyForm');
+  form.reset();
+  dutyBooking = booking;
+  const message = document.getElementById('dutyMessage');
+  message.textContent = '';
+  try {
+    const assigned = readAssignment(booking) || {};
+    for (const key of ['driver', 'mobile', 'registration', 'time']) form.elements[key].value = assigned[key] || '';
+  } catch {
+    message.textContent = 'Could not read the assignment. Enter driver and vehicle details here.';
+  }
+  document.getElementById('dutySummary').textContent = [
+    [booking.name, booking.phone].filter(Boolean).join(' · '),
+    [booking.pickup, booking.drop].filter(Boolean).join(' → '),
+    [booking.startDate, booking.endDate].filter(Boolean).map(formatDisplayDate).join(' – ')
+  ].filter(Boolean).join('\n');
+  document.getElementById('dutyDialog').showModal();
+}
+function addDutySlipButton(row, booking) {
+  if (getBookingStatus(booking) !== 'Confirmed') return;
+  const button = nepalAction('Duty Slip PDF', () => openDutySlip(booking));
+  button.className = 'block w-full rounded bg-teal-700 text-white p-1 font-semibold';
+  row.lastElementChild.prepend(button);
+}
+function createDutySlip(booking, trip) {
+  const pdf = new window.jspdf.jsPDF({unit:'mm',format:'a4',compress:true});
+  const ink = '#15343D', accent = '#08685E', muted = '#4B6469', rule = '#AAC0BF';
+  const left = 14, right = 196, bodyBottom = 271;
+  const logo = document.getElementById('crmBrandLogo');
+  const canvas = document.createElement('canvas');
+  const pen = canvas.getContext('2d');
+  pdf.setProperties({title:'Driver Duty Slip - ' + (booking.bookingId || booking.name),author:'Baba Tour & Travels'});
+  function label(text,x,y,size=10,color=ink,bold=false) {
+    pdf.setFont('helvetica',bold?'bold':'normal');
+    pdf.setFontSize(size);
+    pdf.setTextColor(color);
+    pdf.text(text,x,y);
+  }
+  function line(x,y,end,color=rule) {
+    pdf.setDrawColor(color); pdf.setLineWidth(0.24); pdf.line(x,y,end,y);
+  }
+  // The browser shapes Indian-script names and addresses using the device fonts.
+  // Latin values stay selectable in the PDF.
+  const scale = 9, fontMM = 3.8;
+  const font = '500 '+(fontMM*scale)+'px "Nirmala UI","Noto Sans Devanagari",Arial,sans-serif';
+  function width(text) {
+    if (/^[\x20-\x7E]*$/.test(text)) {
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(10.6); return pdf.getTextWidth(text);
+    }
+    pen.font = font;
+    return pen.measureText(text).width / scale;
+  }
+  function value(text,x,y) {
+    if (/^[\x20-\x7E]*$/.test(text)) return label(text,x,y,10.6);
+    const w = Math.ceil(width(text)*scale)+6;
+    canvas.width=w; canvas.height=58;
+    pen.font=font; pen.fillStyle=ink; pen.fillText(text,2,40);
+    pdf.addImage(canvas.toDataURL('image/png'),'PNG',x,y-40/scale,w/scale,58/scale);
+  }
+  function wrap(text,max) {
+    const lines=[];
+    for (const paragraph of String(text || '').split(/\r?\n/)) {
+      let current='';
+      for (const word of paragraph.trim().split(/\s+/)) {
+        const joined=current ? current+' '+word : word;
+        if (width(joined)<=max) {current=joined;continue;}
+        if (current) lines.push(current);
+        current='';
+        for (const char of word) {
+          if (current && width(current+char)>max) {lines.push(current);current='';}
+          current+=char;
+        }
+      }
+      lines.push(current);
+    }
+    return lines;
+  }
+  function footer() {
+    line(left,277,right);
+    label('Customer support   +91 9026060471',left,283,9,accent,true);
+    label('babatourandtravel098@gmail.com   |   www.babatourandtravel.com',left,288,8,muted);
+    label('Page '+pdf.getNumberOfPages(),181,285,8,muted);
+  }
+  let y;
+  function header(first) {
+    if (logo?.src) pdf.addImage(logo.src,'JPEG',left,11,20,20,'duty-brand');
+    label('BABA TOUR & TRAVELS',38,17,15,ink,true);
+    label('Opposite Gorakhpur Railway Station, Gate No. 6',38,23,9,muted);
+    label('Gorakhpur, Uttar Pradesh 273001',38,28,9,muted);
+    label('Dispatch office',155,17,9,accent,true);
+    label('+91 8726667104',155,23,10,ink);
+    label('+91 9415966902',155,28,10,ink);
+    pdf.setFillColor(accent);pdf.rect(left,35,right-left,14,'F');
+    label(first?'DRIVER DUTY SLIP':'DRIVER DUTY SLIP  /  CONTINUED',left+4,44.5,15,'#FFFFFF',true);
+    y=54;footer();
+  }
+  function nextPage() {pdf.addPage();header(false);}
+  function space(height) {if (y+height>bodyBottom) nextPage();}
+  function section(title) {
+    space(25);
+    pdf.setFillColor('#E9F2F0');pdf.rect(left,y,right-left,7.5,'F');
+    label(title,left+3,y+5.3,9,accent,true);y+=9;
+  }
+  function fields(pairs) {
+    const column=(right-left)/pairs.length;
+    const lines=pairs.map(pair=>wrap(pair[1],column-8));
+    const count=Math.max(...lines.map(list=>list.length));
+    let start=0;
+    while (start<count) {
+      space(16);
+      const take=Math.min(count-start,Math.floor((bodyBottom-y-9)/5.4));
+      pairs.forEach(([title],index)=>{
+        const x=left+column*index+2;
+        label(title+(start?' (cont.)':''),x,y+3.6,8,muted,true);
+        for(let n=0;n<take;n++) {
+          const text=lines[index][start+n];
+          if(text) value(text,x,y+10+n*5.4);
+        }
+        if(!start&&!lines[index].some(Boolean)) line(x,y+11,x+column-9);
+      });
+      y+=9+take*5.4;line(left,y,right,'#DEE7E5');y+=1;start+=take;
+      if(start<count) nextPage();
+    }
+  }
+  header(true);
+  fields([['Booking reference',booking.bookingId],['Booking date',formatDisplayDate(booking.bookingCreatedAt)]]);
+  section('CUSTOMER & JOURNEY');
+  fields([['Customer name',booking.name],['Mobile number',booking.phone]]);
+  fields([['Travel from',formatDisplayDate(booking.startDate)],['Travel until',formatDisplayDate(booking.endDate)],['Pickup time',trip.time]]);
+  fields([['Pickup location',booking.pickup],['Drop location',booking.drop]]);
+  const route=String(booking.tourRoute || '').replace(/\s*\[Nepal quote [\w-]+\]/gi,'').trim();
+  if(route) fields([['Route / visiting places',route]]);
+  section('DRIVER & VEHICLE');
+  fields([['Driver name',trip.driver],['Driver mobile',trip.mobile]]);
+  fields([['Booked vehicle',booking.vehicle],['Vehicle registration',trip.registration]]);
+  section('DUTY RECORD');
+  const total=trip.opening!=='' && trip.closing!=='' ? String(Math.round((Number(trip.closing)-Number(trip.opening))*10)/10) : '';
+  fields([['Opening km',trip.opening],['Closing km',trip.closing],['Total distance (km)',total]]);
+  fields([['Actual start date / time',''],['Actual finish date / time','']]);
+  space(40);y+=2;
+  label('Trip remarks',left+2,y+3,8,muted,true);line(left+22,y+4,right);
+  label('I confirm the journey and readings recorded above.',left+2,y+12,9,ink);
+  line(left+2,y+29,99);line(111,y+29,right-2);
+  label('Customer signature',left+2,y+34,9,accent,true);
+  label('Driver signature',111,y+34,9,accent,true);
+  return pdf;
+}
+document.getElementById('dutyForm').addEventListener('submit',event=>{
+  event.preventDefault();
+  const form=event.currentTarget, message=document.getElementById('dutyMessage');
+  const trip=Object.fromEntries(new FormData(form));
+  if(trip.opening!=='' && trip.closing!=='' && Number(trip.closing)<Number(trip.opening)) {
+    message.textContent='Closing km must be at least the opening km.';form.elements.closing.focus();return;
+  }
+  try {
+    if(!window.jspdf) throw Error('PDF tools are still loading. Please try again.');
+    const pdf=createDutySlip(dutyBooking,trip);
+    const name=String(dutyBooking.bookingId || dutyBooking.name || 'Booking').replace(/[<>:"/\\|?*\x00-\x1F]/g,'-').slice(0,90);
+    pdf.save('Duty Slip - '+name+'.pdf');
+    message.textContent='Duty slip PDF downloaded.';
+  } catch(error) {message.textContent=error.message || 'Could not download this slip.';}
+});
+</script>
+
 </body>
 </html>
