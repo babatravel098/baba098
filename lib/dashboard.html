@@ -103,7 +103,18 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 .nepal-actions button, .nepal-followup button { margin: 0; }
 #nepalToursCount { color: #08685f; font-weight: 700; }
 </style>
-</head>
+<style>
+#gstHotelPanel{display:none}#gstModal.hotel-mode #gstHotelPanel{display:block}
+#gstModal.hotel-mode #gstHotelPanel>summary{pointer-events:none}
+#gstModal.hotel-mode #gstHotelPanel>p,#gstModal.hotel-mode #gstHotelPanel>button,
+#gstModal.hotel-mode #gstTravelPanel,#gstModal.hotel-mode div:has(>table>#invoiceItemsTable),
+#gstModal.hotel-mode button[onclick="addInvoiceRow()"],#gstModal.hotel-mode .rounded-lg:has(#gstPackageChoice),
+#gstModal.hotel-mode p:has(+div>table>#invoiceItemsTable),#gstModal.hotel-mode label:has(>#invTaxRate),
+#gstModal.hotel-mode label:has(>#invDriverNight),#gstModal.hotel-mode label:has(>#invTollTax),
+#gstModal.hotel-mode label:has(>#invParking),#gstModal.hotel-mode label:has(>#invChallan),
+#gstModal.hotel-mode div.flex:has(>label>#invDriverNight),#gstModal.hotel-mode div.flex:has(>label>#invTollTax),
+#gstModal.hotel-mode div.flex:has(>label>#invParking),#gstModal.hotel-mode div.flex:has(>label>#invChallan){display:none}
+</style></head>
 <body class="bg-slate-100 font-sans">
 
     <!-- Advanced GST Invoice Generator Modal (Vyapar Style) -->
@@ -6788,6 +6799,7 @@ function addRowData(name,hsn,description,km,qty,price,unit='Service') {
 }
 function removeRow(button){button.closest('tr').remove();calculateInvoiceTotals();}
 function gstReadForm() {
+ if(gstValue('gstHotel_billKind')==='hotel')gstHotelApply(true);
  const items=Array.from(gstControl('invoiceItemsTable').querySelectorAll('.item-row')).map(row=>{
   const value=key=>row.querySelector('.item-'+key).value.trim();
   return {name:value('name'),hsn:value('hsn'),description:value('desc'),km:value('km'),qty:Number(value('qty')),price:Number(value('price')),unit:value('unit')};
@@ -7136,19 +7148,22 @@ function openHotelBill() {
  gstControl('gstHotelPanel').open=true;
  gstControl('modalTitle').textContent='Create Hotel Bill - Baba Tour & Travels';
  gstControl('gstHotelTax').value='';
- gstFeedback('Enter guest and stay details, choose GST rate, then Apply hotel details to bill.');
+ gstFeedback('Enter guest and stay details, choose GST rate, then Save invoice or Download PDF. Amount updates automatically.');
 }
 const gstHotelKeys=['billKind','hotelAddress','hotelPhone','guestName','roomType','roomNumbers','hotelRooms','hotelNights','hotelRate'];
 function gstHotelSet(travel={}) {
  for(const [id,key] of [['gstHotelName','hotel'],['gstHotelCheckIn','start'],['gstHotelCheckOut','end'],['gstHotelGuests','pax'],['gstHotelMeal','meal']])gstControl(id).value=travel[key]||'';
  for(const key of gstHotelKeys)gstControl('gstHotel_'+key).value=travel[key]||'';
  gstControl('gstHotelPanel').open=travel.billKind==='hotel';
+ gstControl('gstModal').classList.toggle('hotel-mode',travel.billKind==='hotel');
+ gstControl('gstHotelSac').value=travel.hotelSac||'9963';
 }
 function gstHotelRead(travel) {
  for(const key of gstHotelKeys)travel[key]=gstValue('gstHotel_'+key);
+ travel.hotelSac=gstValue('gstHotelSac');
  return travel;
 }
-function gstHotelApply() {
+function gstHotelApply(silent=false) {
  try {
   const hotel=gstValue('gstHotelName'),start=gstValue('gstHotelCheckIn'),end=gstValue('gstHotelCheckOut');
   if(!hotel)throw Error('Enter the hotel name.');
@@ -7165,11 +7180,15 @@ function gstHotelApply() {
   gstControl('gstHotel_billKind').value='hotel';
   gstControl('gstTravel_title').value='Hotel stay booking';
   gstControl('invTaxRate').value=gstValue('gstHotelTax');
-  gstControl('invoiceItemsTable').replaceChildren();
-  addRowData('Hotel stay - '+hotel,gstValue('gstHotelSac'),rooms+' room(s) x '+nights+' night(s) | Rate per room per night', '',rooms*nights,rate,'Room-night');
-  calculateInvoiceTotals();
-  gstFeedback('Hotel details applied. Room amount: '+gstFormat(rooms*nights*rate)+'. Review guest, GST and payment details before saving.');
- }catch(error){gstFeedback(error.message,true);}
+  const row=gstControl('invoiceItemsTable').querySelector('.item-row');
+  if(!row)throw Error('Reopen the Hotel Bill form.');
+  const values={name:'Hotel stay - '+hotel,hsn:gstValue('gstHotelSac'),desc:rooms+' room(s) x '+nights+' night(s) | Rate per room per night',km:'',qty:rooms*nights,price:rate,unit:'Room-night'};
+  const unit=row.querySelector('.item-unit');if(!Array.from(unit.options).some(o=>o.value==='Room-night'))unit.add(new Option('Room-night','Room-night'));
+  for(const [key,value] of Object.entries(values))row.querySelector('.item-'+key).value=value;
+  for(const other of Array.from(gstControl('invoiceItemsTable').querySelectorAll('.item-row')).slice(1))other.remove();
+  if(!silent)calculateInvoiceTotals();
+  if(!silent)gstFeedback('Hotel details applied. Room amount: '+gstFormat(rooms*nights*rate)+'. Review guest, GST and payment details before saving.');
+ }catch(error){if(silent)throw error;gstFeedback(error.message,true);}
 }
 
 for(const id of ['invState','invBillState']) {const select=gstControl(id);for(const state of gstStates){const option=document.createElement('option');option.value=state;option.textContent=state;select.append(option);}}
