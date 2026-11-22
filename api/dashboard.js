@@ -9,10 +9,10 @@ const sheetId = '1I6cFI9mU3z8EPc5cRxNZy25cj3E4sO6xVnXHBFqUQsE';
 const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbw4OfLzT9WCE4eQXPblPO1pu1br4U716qqIID_IBn3nsGjfBaE4etem0coCpY1tWUl5/exec';
 const google = new OAuth2Client(clientId);
 const readActions = new Map([
-  ['tour-health', 'health'], ['tour-packages', 'listPackages'], ['tour-quotations', 'listQuotations'], ['tour-photos', 'listPhotos'], ['tour-photo', 'getPhoto'], ['tour-hotels', 'listHotels'], ['tour-vehicles', 'listVehicles']
+  ['gst-invoices', 'listGstInvoices'], ['tour-health', 'health'], ['tour-packages', 'listPackages'], ['tour-quotations', 'listQuotations'], ['tour-photos', 'listPhotos'], ['tour-photo', 'getPhoto'], ['tour-hotels', 'listHotels'], ['tour-vehicles', 'listVehicles']
 ]);
 const writeActions = new Map([
-  ['save-tour-package', 'savePackage'], ['save-tour-quotation', 'saveQuotation'],
+  ['save-gst-invoice', 'saveGstInvoice'], ['cancel-gst-invoice', 'cancelGstInvoice'], ['save-tour-package', 'savePackage'], ['save-tour-quotation', 'saveQuotation'],
   ['set-tour-quotation-status', 'setQuotationStatus'], ['save-tour-photo', 'savePhoto'], ['save-tour-hotel', 'saveHotel'], ['save-tour-vehicle', 'saveVehicle'], ['delete-tour-package', 'deletePackage'], ['delete-tour-photo', 'deletePhoto']
 ]);
 
@@ -146,6 +146,7 @@ async function deleteBooking(req, res) {
 }
 
 async function handleTourStorage(req, res, action) {
+  if (['listGstInvoices','saveGstInvoice','cancelGstInvoice'].includes(action)) return handleGstStorage(req,res,action);
   const url = process.env.TOUR_API_URL;
   const secret = process.env.TOUR_API_SECRET;
   if (!url || !secret) return sendJson(res, 503, {error: 'Tour API variables are missing.'});
@@ -264,6 +265,120 @@ async function handleTourStorage(req, res, action) {
   }
 }
 
+
+async function handleGstStorage(req,res,action) {
+ if(req.method==='POST'&&!isDashboardOrigin(req))return sendJson(res,403,{error:'Open billing from the CRM dashboard.'});
+ const secret=process.env.TOUR_API_SECRET, url=process.env.TOUR_API_URL;
+ if(!secret||!url)return sendJson(res,503,{error:'Shared storage is not configured.'});
+ const body=req.body||{};
+ const payload={action,secret};
+ if(action==='saveGstInvoice') {
+  if(!body.invoice||typeof body.invoice!=='object'||JSON.stringify(body.invoice).length>40000)return sendJson(res,400,{error:'Invoice details are required and must be under 40 KB.'});
+  payload.invoice=body.invoice;
+ }
+ if(action==='cancelGstInvoice')Object.assign(payload,{id:body.id,version:body.version,reason:body.reason});
+ try {
+  const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)});
+  const result=response.ok?await response.json():null;
+  if(!result?.ok) {
+   const message=typeof result?.error==='string'?result.error:'Could not confirm invoice save. Keep this form open and retry.';
+   return sendJson(res,502,{error:message});
+  }
+  if(action==='listGstInvoices') {
+   if(!Array.isArray(result.invoices))throw Error('Invalid list');
+   return sendJson(res,200,{ok:true,invoices:result.invoices});
+  }
+  const id=action==='saveGstInvoice'?body.invoice.id:body.id;
+  if(result.invoice?.id!==id||!result.invoice.invoiceNo||!result.invoice.version)throw Error('Invalid response');
+  return sendJson(res,200,{ok:true,invoice:result.invoice});
+ } catch {return sendJson(res,502,{error:'Could not confirm invoice save. Keep this form open and retry with the same invoice.'});}
+}
+
+// Authenticated Appyflow lookup. Secret stays server-side and is sent in the POST body.
+const gstLookupCache = new Map();
+const gstLookupPending = new Map();
+const gstLookupBudget = {start: 0, count: 0};
+async function lookupGstin(req,res) {
+ if(!isDashboardOrigin(req))return sendJson(res,403,{error:'Use GST lookup from the CRM dashboard.'});
+ const gstin=typeof req.body?.gstin==='string'?req.body.gstin.trim().toUpperCase():'';
+ if(!/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstin))return sendJson(res,400,{error:'Enter a valid 15-character GSTIN.'});
+ const secret=process.env.APPYFLOW_GST_API_SECRET?.trim();
+ if(!secret)return sendJson(res,503,{error:'GST lookup key is not configured for this deployment.'});
+ const cacheKey=crypto.createHash('sha256').update(secret).digest('hex').slice(0,16)+':'+gstin;
+ const cached=gstLookupCache.get(cacheKey);
+ if(cached&&cached.expires>Date.now())return sendJson(res,200,{ok:true,customer:cached.customer,cached:true});
+ try {
+  let pending=gstLookupPending.get(cacheKey);
+  if(!pending) {
+   const now=Date.now();
+   if(now-gstLookupBudget.start>60000){gstLookupBudget.start=now;gstLookupBudget.count=0;}
+   if(gstLookupBudget.count>=10)return sendJson(res,429,{error:'Too many GST lookups. Wait one minute before retrying.'});
+   gstLookupBudget.count++;
+   pending=fetchGstCustomer(gstin,secret);
+   gstLookupPending.set(cacheKey,pending);
+  }
+  const customer=await pending;
+  if(gstLookupCache.size>=64)gstLookupCache.delete(gstLookupCache.keys().next().value);
+  gstLookupCache.set(cacheKey,{customer,expires:Date.now()+15*60*1000});
+  return sendJson(res,200,{ok:true,customer,cached:false});
+ }catch(error){return sendJson(res,error.gstStatus||502,{error:error.gstMessage||'GST lookup is unavailable. Retry later or enter the verified details manually.'});}
+ finally{gstLookupPending.delete(cacheKey);}
+}
+function gstLookupFailure(status,message){const error=new Error('GST lookup failed');error.gstStatus=status;error.gstMessage=message;return error;}
+async function fetchGstCustomer(gstin,secret) {
+ const response=await fetch('https://appyflow.in/api/verifyGST',{
+  method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gstNo:gstin,key_secret:secret}),signal:AbortSignal.timeout(15000),redirect:'error'
+ });
+ if(response.status===401||response.status===403)throw gstLookupFailure(502,'GST lookup credentials were rejected. Check the Vercel key.');
+ if(response.status===429)throw gstLookupFailure(429,'GST lookup limit reached. Retry later.');
+ if(!response.ok)throw gstLookupFailure(502,'GST provider is unavailable. Retry later.');
+ const result=await response.json();
+ if(result?.error) {
+  const message=String(result.message||'').toLowerCase();
+  if(/credit|balance|quota|recharge|limit/.test(message))throw gstLookupFailure(503,'GST lookup credits are unavailable. Check your Appyflow dashboard.');
+  if(/key|secret|unauthor/.test(message))throw gstLookupFailure(502,'GST lookup credentials were rejected. Check the Vercel key.');
+  if(/not found|invalid gst|no record/.test(message))throw gstLookupFailure(404,'No taxpayer details were found for this GSTIN.');
+  throw gstLookupFailure(502,'GST provider could not verify this GSTIN. Check the number or retry later.');
+ }
+ const info=gstTaxpayerInfo(result);
+ const returnedGstin=typeof info?.gstin==='string'?info.gstin.trim().toUpperCase():'';
+ if(!returnedGstin)throw gstLookupFailure(502,'GST provider did not return a taxpayer GSTIN. No details were filled. Please retry later or check with Appyflow support.');
+ if(returnedGstin!==gstin) {
+  const safeNumber=/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(returnedGstin)?' Requested '+gstin+'; provider returned '+returnedGstin+'.':'';
+  throw gstLookupFailure(502,'GST provider returned mismatched details.'+safeNumber+' Nothing was filled. Please check with Appyflow support.');
+ }
+ const clean=value=>typeof value==='string'?value.trim().slice(0,300):'';
+ const legalName=clean(info.lgnm),tradeName=clean(info.tradeNam),address=info.pradr?.addr;
+ if(!legalName&&!tradeName)throw gstLookupFailure(502,'GST provider returned incomplete customer details.');
+ let formattedAddress='';
+ if(address&&typeof address==='object') {
+  const pieces=[address.bno,address.flno,address.bnm,address.st,address.loc,address.city,address.dst,address.stcd,address.pncd].map(clean).filter(Boolean);
+  formattedAddress=Array.from(new Set(pieces)).join(', ');
+ }
+ return {gstin,legalName,tradeName,customerName:legalName||tradeName,customerAddress:formattedAddress.slice(0,500),stateCode:gstin.slice(0,2),stateName:clean(address?.stcd),status:clean(info.sts)||'Not provided',registrationDate:clean(info.rgdt),taxpayerType:clean(info.dty),source:'Appyflow',fetchedAt:new Date().toISOString()};
+}
+
+// Accept only bounded response envelopes. Identity always comes from the taxpayer record.
+function gstTaxpayerInfo(result) {
+ const decode=value=>{
+  if(typeof value!=='string')return value;
+  if(value.length>200000)return null;
+  try{return JSON.parse(value);}catch{return null;}
+ };
+ let current=decode(result);
+ for(let depth=0;depth<4;depth++) {
+  if(!current||typeof current!=='object'||Array.isArray(current))return null;
+  const info=decode(current.taxpayerInfo);
+  if(info&&typeof info==='object'&&!Array.isArray(info))return info;
+  if(typeof current.gstin==='string'&&(typeof current.lgnm==='string'||typeof current.tradeNam==='string'))return current;
+  // Only unwrap one unambiguous conventional envelope; never search arbitrary objects.
+  const envelopes=['data','result','response'].filter(key=>current[key]!=null);
+  if(envelopes.length!==1)return null;
+  current=decode(current[envelopes[0]]);
+ }
+ return null;
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (!['GET', 'POST'].includes(req.method)) {
@@ -279,8 +394,9 @@ module.exports = async (req, res) => {
   const wantsDelete = req.method === 'POST' && action === 'delete';
   const tourAction = req.method === 'GET' ? readActions.get(data) : writeActions.get(action);
   const wantsUpdate = req.method === 'POST' && action === 'update-booking';
+  const wantsGstLookup = req.method === 'POST' && action === 'lookup-gstin';
   const isLogin = req.method === 'POST' && !action;
-  if (req.method === 'POST' && !isLogin && !wantsDelete && !wantsUpdate && !tourAction) return sendJson(res, 400, {error: 'Unknown action.'});
+  if (req.method === 'POST' && !isLogin && !wantsDelete && !wantsUpdate && !wantsGstLookup && !tourAction) return sendJson(res, 400, {error: 'Unknown action.'});
   const credential = isLogin ? req.body?.credential
     : /(?:^|;\s*)baba_google=([^;]+)/.exec(req.headers.cookie || '')?.[1];
 
@@ -295,10 +411,11 @@ module.exports = async (req, res) => {
       setDailyCookie(res);
     }
   } catch {
-    if (wantsBookings || wantsDelete || wantsUpdate || tourAction) return sendJson(res, 401, {error: 'Please sign in again. Your unsaved form is still open.'});
+    if (wantsBookings || wantsDelete || wantsUpdate || wantsGstLookup || tourAction) return sendJson(res, 401, {error: 'Please sign in again. Your unsaved form is still open.'});
     return res.redirect(303, '/?login=denied');
   }
   if (isLogin) return res.redirect(303, '/api/dashboard');
+  if (wantsGstLookup) return lookupGstin(req,res);
   if (wantsUpdate) return updateBooking(req, res);
   if (wantsDelete) return deleteBooking(req, res);
   if (tourAction) return handleTourStorage(req, res, tourAction);
