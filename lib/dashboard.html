@@ -1011,6 +1011,7 @@ function fetchBookings() {
 
         function renderTable() {
             document.getElementById('gstReportsListButton')?.classList.toggle('hidden', currentTab !== 'gst');
+            document.getElementById('gstReturnsReportBar')?.classList.toggle('hidden', currentTab !== 'gst');
             if (currentTab === 'gst') return gstRenderInvoiceList();
             renderOperations();
             document.getElementById('opsFilter').classList.toggle('hidden', !operationsFilter);
@@ -4193,6 +4194,7 @@ function addNepalBookingActions(row, booking, dialog) {
 <dialog id="gstReportsDialog" class="rounded-xl p-5 max-w-2xl w-full"><h2 class="text-xl font-bold">Billing Reports</h2><p id="gstReportRange" class="my-3"></p><p class="text-sm my-3">Reports use invoice dates. Received figures are cumulative, not a dated payment cashbook. Cancelled invoices are excluded from sales totals. These are accounting review exports, not GST return upload files.</p><div class="grid grid-cols-2 gap-2"><button type="button" onclick="gstAdvancedReport('sales')" class="border rounded p-3">Sales Register</button><button type="button" onclick="gstAdvancedReport('items')" class="border rounded p-3">Item Details</button><button type="button" onclick="gstAdvancedReport('monthly')" class="border rounded p-3">Monthly Sales</button><button type="button" onclick="gstAdvancedReport('gst')" class="border rounded p-3">GST Summary for Review</button><button type="button" onclick="gstAdvancedReport('party')" class="border rounded p-3">Party Summary</button><button type="button" onclick="gstAdvancedReport('ledger')" class="border rounded p-3">Customer Invoice Ledger</button><button type="button" onclick="gstAdvancedReport('outstanding')" class="border rounded p-3">Outstanding Invoices</button><button type="button" onclick="gstAdvancedReport('payments')" class="border rounded p-3">Received / Balance Summary</button><button type="button" onclick="gstAdvancedReport('hsn')" class="border rounded p-3">SAC Gross Item Summary</button><button type="button" onclick="gstAdvancedReport('cancelled')" class="border rounded p-3">Cancelled Invoices</button></div><button type="button" onclick="this.closest('dialog').close()" class="border rounded px-3 py-2 mt-4">Close</button></dialog>
 <dialog id="gstCancellationDialog" class="rounded-xl p-5 max-w-lg w-full" aria-labelledby="gstCancellationTitle"><form id="gstCancellationForm"><h2 id="gstCancellationTitle" class="text-xl font-bold text-red-800">Cancel invoice</h2><p id="gstCancellationDetails" class="my-3"></p><label class="block text-sm">Cancellation reason<textarea id="gstCancellationReason" maxlength="500" rows="3" class="block w-full border rounded p-2 mt-1"></textarea></label><p id="gstCancellationMessage" role="status" class="my-3"></p><div class="flex gap-2"><button id="gstCancellationConfirm" type="submit" class="rounded bg-red-700 text-white px-4 py-2">Confirm cancellation</button><button type="button" onclick="closeGstCancellation()" class="rounded border px-4 py-2">Close</button></div></form></dialog>
 <dialog id="gstLookupPreviewDialog" class="rounded-xl p-5 max-w-xl w-full" aria-labelledby="gstLookupPreviewTitle"><h2 id="gstLookupPreviewTitle" class="text-xl font-bold">GST Customer Details</h2><h3 id="gstLookupPreviewName" class="font-bold my-3"></h3><p id="gstLookupPreviewTrade"></p><p id="gstLookupPreviewAddress" class="my-3"></p><p id="gstLookupPreviewStatus" class="font-semibold my-3"></p><p id="gstLookupPreviewSource" class="text-sm"></p><p id="gstLookupPreviewMessage" role="status" class="my-3"></p><div class="flex gap-2"><button id="gstLookupApplyButton" type="button" onclick="applyGstLookupCustomer()" class="rounded bg-teal-700 text-white px-4 py-2">Use these customer details</button><button type="button" onclick="this.closest('dialog').close()" class="rounded border px-4 py-2">Close</button></div></dialog>
+<dialog id="gstReturnDialog" class="rounded-xl p-5 max-w-3xl w-full"><h2 id="gstReturnTitle" class="text-xl font-bold"></h2><p id="gstReturnExplanation" class="my-3"></p><div id="gstReturnDates" class="flex gap-3"><label class="block text-sm">From<input id="gstReturnFrom" type="date" value=""  class="block w-full border rounded p-2 mt-1"></label><label class="block text-sm">To<input id="gstReturnTo" type="date" value=""  class="block w-full border rounded p-2 mt-1"></label></div><label id="gstReturnYearLabel" class="block my-3">Financial year<select id="gstReturnYear" class="border rounded p-2"></select></label><div class="flex flex-wrap gap-2 my-3"><button id="gstReturnDownload" type="button" onclick="gstDownloadReturn()" class="bg-teal-700 text-white rounded p-3"></button><button id="gstReturnItems" type="button" onclick="gstReturnItemsDownload()" class="border rounded p-3">Download item details</button><button type="button" onclick="gstInvoiceBackup()" class="border rounded p-3">Download invoice backup (JSON)</button><a href="https://services.gst.gov.in/services/login" target="_blank" rel="noopener noreferrer" class="border rounded p-3">Open GST Portal</a><a href="https://docs.google.com/spreadsheets/d/1j8-8ql-90HKWIqu93mZqw49IcWPlQCdUPiayIF3BBI8/edit" target="_blank" rel="noopener noreferrer" class="border rounded p-3">Open saved GST Sheet</a></div><p id="gstReturnMessage" role="status" class="my-3"></p><button type="button" onclick="this.closest('dialog').close()" class="border rounded p-2">Close</button></dialog>
 <script>
 // Shared invoice validation and arithmetic: embedded unchanged in the browser and Apps Script.
 function gstMoney(value, label) {
@@ -6950,7 +6952,9 @@ function gstRenderInvoiceList() {
  const tbody=document.getElementById('bookingTableBody');
  if(!gstControl('gstReportsListButton')) {
   const reportButton=document.createElement('button');reportButton.id='gstReportsListButton';reportButton.type='button';reportButton.textContent='Billing Reports';reportButton.className='rounded border px-3 py-2 my-2';reportButton.onclick=openGstReports;
-  document.getElementById('bookingTableBody').closest('table').parentElement.before(reportButton);
+  const reportBar=document.createElement('div');reportBar.className='flex flex-wrap gap-2 my-2';reportBar.append(reportButton);
+  for(const [kind,label] of [['1','GSTR-1'],['2','GSTR-2 / 2B'],['9','GSTR-9']]){const button=document.createElement('button');button.type='button';button.className='border rounded p-2';button.textContent=label;button.onclick=()=>openGstReturn(kind);reportBar.append(button);}
+  reportBar.id='gstReturnsReportBar';document.getElementById('bookingTableBody').closest('table').parentElement.before(reportBar);
  }
  const header=document.getElementById('tableHeaderRow');
  if(header)header.innerHTML='<th class="p-2">Invoice / Date</th><th class="p-2">Customer</th><th class="p-2">Place of supply</th><th class="p-2">Amounts</th><th class="p-2">Status</th><th class="p-2">Actions</th>';
@@ -7208,6 +7212,78 @@ function gstHotelBillableNights(start,startTime,end,endTime) {
  const finish=Date.parse(end)/86400000+minutes(endTime)/1440;
  if(finish<=begin)throw Error('Check-out must be after check-in.');
  return Math.max(1,Math.ceil(finish-.5)-Math.floor(begin-.5));
+}
+
+
+function gstReturnRecords(kind) {
+ if(kind==='9') {
+  const fy=gstValue('gstReturnYear');
+  if(!/^\d{4}-\d{4}$/.test(fy))throw Error('Choose the financial year.');
+  return allGstInvoicesData.filter(inv=>{try{return gstFinancialYear(inv.date||operationsDay(inv.timestamp))===fy;}catch{return false;}});
+ }
+ const from=gstValue('gstReturnFrom'),to=gstValue('gstReturnTo');gstDay(from);gstDay(to);
+ if(to<from)throw Error('Check the report dates.');
+ return allGstInvoicesData.filter(inv=>{const day=inv.date||operationsDay(inv.timestamp);return day>=from&&day<=to;});
+}
+function openGstReturn(kind) {
+ const panel=gstControl('gstReturnDialog');panel.dataset.kind=kind;
+ gstControl('gstReturnTitle').textContent=kind==='1'?'GSTR-1 - Sales working report':kind==='2'?'GSTR-2 / GSTR-2B - Purchase and ITC records':'GSTR-9 - Annual sales working report';
+ gstControl('gstReturnDates').hidden=kind==='9';gstControl('gstReturnYearLabel').hidden=kind!=='9';
+ const today=operationsDay();gstControl('gstReturnFrom').value=gstValue('filterFromDate')||today.slice(0,7)+'-01';gstControl('gstReturnTo').value=gstValue('filterToDate')||today;
+ const years=new Set([gstFinancialYear(today)]);for(const inv of allGstInvoicesData)try{years.add(gstFinancialYear(inv.date||operationsDay(inv.timestamp)));}catch{}
+ gstControl('gstReturnYear').replaceChildren(...Array.from(years).sort().reverse().map(fy=>new Option(fy,fy)));
+ gstControl('gstReturnExplanation').textContent=kind==='1'?'Download saved invoice details, customer and hotel data, tax totals and cancellations for your accountant. This is a sales working report, not a complete GSTR-1 or GST portal upload file. Advances, credit/debit notes, amendments, exports and other businesses must be reconciled separately.':kind==='2'?'GSTR-2 filing is suspended. GSTR-2B is a supplier-based ITC statement downloaded after login to the GST portal. This CRM currently stores sales invoices; purchase bills and portal statements are not connected. No purchase or ITC totals will be invented.': 'Download the selected financial year of saved sales invoices and monthly totals. Purchases, ITC, filed returns, tax paid, amendments and other annual-return details are not available here. This is an incomplete annual sales working report, not a complete GSTR-9.';
+ gstControl('gstReturnDownload').textContent=kind==='2'?'Download purchase / ITC checklist':'Download accountant working report (CSV)';
+ gstControl('gstReturnItems').hidden=kind==='2';
+ gstControl('gstReturnMessage').textContent='Invoices remain saved in Google Sheet: GSTInvoices. Edit and cancellation history: GSTInvoiceAudit. Download a JSON backup for an extra copy.';
+ if(!panel.open)panel.showModal();
+}
+function gstReturnRows(kind,records,period) {
+ const rows=[['CRM ACCOUNTANT WORKING REPORT - NOT A FILED RETURN OR PORTAL UPLOAD'],['Report',kind==='1'?'GSTR-1 sales working':'GSTR-9 annual sales working'],['Period',period],['Generated',new Date().toISOString()],['Coverage','Saved CRM invoices only; reconcile with all books and filed returns.'],['Missing','Purchases; ITC; tax payments; advances tax register; credit/debit notes; amendments; export/SEZ classifications; other sales outside CRM.'],[]];
+ rows.push(['Invoice','Date','Status','Include in active sales','Source','Customer','Customer GSTIN','Customer Phone','Billing Address','Place of Supply','Supplier GSTIN','Bill Type','Hotel','Items','SAC Codes','Tax Rate %','Reverse Charge','Taxable Amount','CGST','SGST','IGST','Invoice Total','Received to Date','Balance','Check-in','Check-in time','Check-out','Check-out time','Rooms','Nights','Room type','Meal Plan','Cancellation Reason','Review']);
+ const groups=new Map();
+ for(const inv of records) {
+  const t=inv.totals||inv,travel=inv.travel||{},active=inv.status!=='Cancelled',legacy=!inv.totals;
+  const amount=key=>Number.isFinite(Number(t[key]))?Number(t[key]):'';
+  rows.push([inv.invoiceNo,inv.date||inv.timestamp,inv.status||'Legacy',active?'Yes':'No',inv.source||'shared',inv.customerName,inv.clientGstin,inv.phone,inv.customerAddress,inv.state,inv.company?.gstin||'',travel.billKind==='hotel'?'Hotel Bill':'GST Invoice',travel.hotel,(inv.items||[]).map(i=>i.name).join(' | '),Array.from(new Set((inv.items||[]).map(i=>i.hsn))).join(' | '),inv.taxRate??'',inv.reverseCharge?'Yes':'No',amount('taxableAmt'),amount('cgst'),amount('sgst'),amount('igst'),amount('grandTotal'),amount('received'),amount('balance'),travel.start,travel.checkInTime,travel.end,travel.checkOutTime,travel.hotelRooms,travel.hotelNights,travel.roomType,travel.meal,inv.cancellationReason,legacy?'Legacy summary: original item details unavailable':inv.taxRate===0?'Review nil/exempt/non-GST classification':inv.reverseCharge?'Review outward reverse-charge treatment':'Review with accountant']);
+  if(active) {
+   const month=String(inv.date||operationsDay(inv.timestamp)).slice(0,7),key=month+' | '+(inv.clientGstin?'Registered':'Unregistered');
+   const g=groups.get(key)||{key,count:0,taxableAmt:0,cgst:0,sgst:0,igst:0,grandTotal:0};g.count++;
+   for(const field of ['taxableAmt','cgst','sgst','igst','grandTotal'])g[field]+=Number(t[field])||0;groups.set(key,g);
+  }
+ }
+ rows.push([],['ACTIVE SALES SUMMARY - CANCELLED INVOICES EXCLUDED'],['Month / Customer Type','Invoice Count','Taxable Amount','CGST','SGST','IGST','Invoice Total']);
+ for(const g of Array.from(groups.values()).sort((a,b)=>a.key.localeCompare(b.key)))rows.push([g.key,g.count,...['taxableAmt','cgst','sgst','igst','grandTotal'].map(k=>Math.round(g[k]*100)/100)]);
+ rows.push([],['Required reconciliation','Availability'],['Purchase register / ITC','NOT AVAILABLE IN CRM'],['Tax paid through cash / ITC (filed GSTR-3B)','NOT AVAILABLE IN CRM'],['Credit/debit notes and amendments','NOT CAPTURED IN THIS REPORT'],['Advance tax liability and adjustments','NOT CAPTURED: received amount is cumulative payment, not advance tax liability'],['Official return filing / acknowledgement','NOT PERFORMED BY THIS DOWNLOAD']);
+ return rows;
+}
+function gstDownloadReturn() {
+ try {
+  const kind=gstControl('gstReturnDialog').dataset.kind;
+  if(kind==='2') {
+   gstDownloadReportCsv('GSTR-2B-Purchase-ITC-Checklist',[
+    ['PURCHASE / ITC CHECKLIST - NO PURCHASE OR ITC DATA CONNECTED'],['Status','NOT A GSTR-2B STATEMENT OR FILED RETURN'],
+    ['Step','Action'],['1','Login to https://services.gst.gov.in/services/login'],['2','Services > Returns > Returns Dashboard > choose period > GSTR-2B > Download Excel / JSON'],['3','Collect supplier purchase invoices and credit/debit notes'],['4','Reconcile supplier GSTIN, invoice number, date, taxable value and tax amounts'],['5','Have your accountant check ITC eligibility, reversals and filed GSTR-3B'],['CRM data','Sales invoices are in GSTInvoices. Purchase and ITC records are not saved by this screen.'],[],
+    ['PURCHASE REGISTER TEMPLATE - BLANK; NOT SAVED OR IMPORTED BY CRM'],['Supplier','Supplier GSTIN','Supplier Invoice','Invoice Date','Taxable Value','CGST','SGST','IGST','Cess','Invoice Total','ITC Eligibility (review)','GSTR-2B Matched (review)']
+   ]);return;
+  }
+  const records=gstReturnRecords(kind);if(!records.length)throw Error('No saved invoices in this period.');
+  const period=kind==='9'?gstValue('gstReturnYear'):gstValue('gstReturnFrom')+' to '+gstValue('gstReturnTo');
+  gstDownloadReportCsv('GSTR-'+kind+'-Accountant-Working-'+period.replace(/ /g,'_'),gstReturnRows(kind,records,period));
+  gstControl('gstReturnMessage').textContent='Working report downloaded. Hotel and other saved GST invoices are included. Reconcile missing records with your accountant before filing.';
+ }catch(error){gstControl('gstReturnMessage').textContent=error.message;}
+}
+function gstReturnItemsDownload() {
+ try {
+  const records=gstReturnRecords(gstControl('gstReturnDialog').dataset.kind);
+  const rows=[['ITEM WORKING REPORT - ORIGINAL GROSS ITEM AMOUNTS; INVOICE DISCOUNTS / TAXES IN MAIN REPORT'],['Invoice','Date','Status','Customer','GSTIN','Phone','Address','Hotel','Item','SAC','Quantity','Unit','Rate','Gross Item Amount']];
+  for(const inv of records)for(const item of inv.items||[])rows.push([inv.invoiceNo,inv.date,inv.status,inv.customerName,inv.clientGstin,inv.phone,inv.customerAddress,inv.travel?.hotel,item.name,item.hsn,item.qty,item.unit,item.price,item.amount]);
+  if(rows.length===2)throw Error('No original item records in this period.');gstDownloadReportCsv('GST-Return-Item-Working',rows);
+ }catch(error){gstControl('gstReturnMessage').textContent=error.message;}
+}
+function gstInvoiceBackup() {
+ const data={format:'Baba CRM invoice backup',version:1,exportedAt:new Date().toISOString(),scope:'All currently loaded GST invoice records. Audit history remains in GSTInvoiceAudit, not included in this file.',invoices:allGstInvoicesData};
+ const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='Baba-CRM-GST-Invoice-Backup-'+operationsDay()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 
 for(const id of ['invState','invBillState']) {const select=gstControl(id);for(const state of gstStates){const option=document.createElement('option');option.value=state;option.textContent=state;select.append(option);}}
