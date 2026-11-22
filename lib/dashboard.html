@@ -6582,7 +6582,7 @@ const gstInvoiceAssets = {"stamp":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgA
 function gstCreatePdf(invoice) {
  const pdf=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
  const t=gstCompute(invoice),company=invoice.company||gstCompanyDefault;
- const brandRed='#C92316',gray='#808080',ink='#111111';
+ const brandRed='#963466',gray='#808080',ink='#111111';
  const left=12,right=198,width=186,mid=105,limit=282;
  let pageNo=0;
  const date=invoice.date.split('-').reverse().join('-');
@@ -6903,10 +6903,13 @@ function gstExportRows(lineItems=false) {
  const from=gstControl('filterFromDate').value,to=gstControl('filterToDate').value;
  const selected=allGstInvoicesData.filter(inv=>{const day=inv.date||operationsDay(inv.timestamp);return(!from||day>=from)&&(!to||day<=to);});
  const rows=lineItems?[['Invoice','Date','Status','Customer','GSTIN','Place of supply','Item','SAC','Description','KM','Quantity','Unit','Rate','Amount']]:[['Invoice','Date','Status','Customer','GSTIN','Place of supply','Subtotal','Discount','Taxable','Rate %','CGST','SGST','IGST','Separate charges','Round off','Total','Received','Balance','Payment mode','Source']];
+ const detailHeaders=['Bill Type','Hotel','Customer Phone','Customer Address','Check-in Date','Check-in Time','Check-out Date','Check-out Time','Rooms','Billable Nights','Room Type','Room Numbers','Meal Plan'];
+ rows[0].push(...detailHeaders);
+ const recordDetails=inv=>[inv.travel?.billKind==='hotel'?'Hotel Bill':'GST Invoice',inv.travel?.hotel||'',inv.phone||'',inv.customerAddress||'',inv.travel?.start||'',inv.travel?.checkInTime||'',inv.travel?.end||'',inv.travel?.checkOutTime||'',inv.travel?.hotelRooms||'',inv.travel?.hotelNights||'',inv.travel?.roomType||'',inv.travel?.roomNumbers||'',inv.travel?.meal||''];
  for(const inv of selected) {
   const t=inv.totals||inv;
-  if(lineItems)for(const item of inv.items||[])rows.push([inv.invoiceNo,inv.date,inv.status,inv.customerName,inv.clientGstin,inv.state,item.name,item.hsn,item.description,item.km,item.qty,item.unit,item.price,item.amount]);
-  else rows.push([inv.invoiceNo,inv.date||inv.timestamp,inv.status||'Legacy',inv.customerName,inv.clientGstin,inv.state,t.subTotal??'',t.discount??'',t.taxableAmt,inv.taxRate??'',t.cgst,t.sgst,t.igst,t.separateCharges??'',t.roundOffAmount??'',t.grandTotal,t.received??'',t.balance??'',inv.paymentMode||'',inv.source]);
+  if(lineItems)for(const item of inv.items||[])rows.push([inv.invoiceNo,inv.date,inv.status,inv.customerName,inv.clientGstin,inv.state,item.name,item.hsn,item.description,item.km,item.qty,item.unit,item.price,item.amount,...recordDetails(inv)]);
+  else rows.push([inv.invoiceNo,inv.date||inv.timestamp,inv.status||'Legacy',inv.customerName,inv.clientGstin,inv.state,t.subTotal??'',t.discount??'',t.taxableAmt,inv.taxRate??'',t.cgst,t.sgst,t.igst,t.separateCharges??'',t.roundOffAmount??'',t.grandTotal,t.received??'',t.balance??'',inv.paymentMode||'',inv.source,...recordDetails(inv)]);
  }
  if(rows.length===1){alert('No records available for this report. Older invoices have no saved item details.');return;}
  const csv=rows.map(row=>row.map(value=>{let text=String(value??'');if(/^[\s]*[=+@-]/.test(text))text="'"+text;return '"'+text.replace(/"/g,'""')+'"';}).join(',')).join('\r\n');
@@ -6955,12 +6958,12 @@ function gstRenderInvoiceList() {
  const from=gstControl('filterFromDate').value,to=gstControl('filterToDate').value;
  const selected=allGstInvoicesData.filter(inv=>{
   const date=inv.date||operationsDay(inv.timestamp);
-  return (!from||date>=from)&&(!to||date<=to)&&matchesSearch(inv.invoiceNo,inv.customerName,inv.clientGstin);
+  return (!from||date>=from)&&(!to||date<=to)&&matchesSearch(inv.invoiceNo,inv.customerName,inv.clientGstin,inv.travel?.hotel,...(inv.items||[]).map(item=>item.name));
  });
  for(const invoice of selected) {
   const tr=document.createElement('tr');tr.className='border-b';
   const t=invoice.totals||invoice;
-  const data=[invoice.invoiceNo+'\n'+(invoice.date||invoice.timestamp||''),invoice.customerName+'\nGSTIN: '+(invoice.clientGstin||'Unregistered'),invoice.state,'Taxable: '+gstFormat(Number(t.taxableAmt)||0)+'\nTotal: '+gstFormat(Number(t.grandTotal)||0)+(t.balance!==undefined?'\nBalance: '+gstFormat(t.balance):''),invoice.status||'Legacy record'];
+  const data=[invoice.invoiceNo+'\n'+(invoice.date||invoice.timestamp||''),invoice.customerName+'\nGSTIN: '+(invoice.clientGstin||'Unregistered')+(invoice.travel?.billKind==='hotel'?'\nHotel Bill: '+(invoice.travel.hotel||''):''),invoice.state,'Taxable: '+gstFormat(Number(t.taxableAmt)||0)+'\nTotal: '+gstFormat(Number(t.grandTotal)||0)+(t.balance!==undefined?'\nBalance: '+gstFormat(t.balance):''),invoice.status||'Legacy record'];
   for(const value of data){const td=document.createElement('td');td.className='p-2 whitespace-pre-line align-top';td.textContent=value;tr.append(td);}
   const td=document.createElement('td');td.className='p-2';
   const button=(label,action)=>{const b=document.createElement('button');b.type='button';b.className='block rounded border px-2 py-1 my-1 text-sm';b.textContent=label;b.onclick=action;td.append(b);};
