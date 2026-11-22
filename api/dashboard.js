@@ -157,6 +157,12 @@ async function handleFleetRegister(req,res,action) {
     const {id,revision,entry}=req.body||{};
     if(typeof id!=='string'||!/^[a-f0-9-]{36}$/i.test(id)||typeof revision!=='string'||revision.length>80||
        !entry||typeof entry!=='object'||Array.isArray(entry)||JSON.stringify(entry).length>5000)return sendJson(res,400,{error:'Invalid fleet entry.'});
+    if(entry.kind==='Vehicle'){
+      const hasDate=Boolean(entry.serviceDate),hasKm=entry.serviceKm!=null&&entry.serviceKm!=='';
+      if(hasDate!==hasKm)return sendJson(res,400,{error:'For a previous service, enter both the service date and the odometer reading.'});
+      if(hasDate&&entry.serviceDate>entry.date)return sendJson(res,400,{error:'A service after tracking began belongs in Record service.'});
+      if(hasKm&&Number(entry.serviceKm)>Number(entry.km))return sendJson(res,400,{error:'Last service odometer exceeds opening km. Check both readings. For service done after opening, use Record service.'});
+    }
     Object.assign(payload,{id,revision,entry});
   }else{
     payload.reg=new URL(req.url,'https://crm.invalid').searchParams.get('reg')||'';
@@ -164,9 +170,12 @@ async function handleFleetRegister(req,res,action) {
   }
   try{
     const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)});
-    const result=response.ok?await response.json():null;
+    if(!response.ok)return sendJson(res,502,{error:'Apps Script returned HTTP '+response.status+'. Refresh the register to check the entry.'});
+    const result=await response.json();
     if(result?.ok!==true){
       if(typeof result?.error==='string'&&result.error.startsWith('Fleet: ')&&result.error.length<=220)return sendJson(res,409,{error:result.error.slice(7)});
+      if(result?.error==='Unknown action')return sendJson(res,502,{error:'The configured Apps Script deployment does not recognize the fleet action. Check its deployed version.'});
+      if(result?.error==='Unauthorized')return sendJson(res,502,{error:'Apps Script rejected the CRM connection. Check the deployment settings.'});
       throw Error('Unconfirmed');
     }
     if(write){
