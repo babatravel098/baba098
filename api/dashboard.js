@@ -12,7 +12,7 @@ const readActions = new Map([
   ['gst-invoices', 'listGstInvoices'], ['tour-health', 'health'], ['tour-packages', 'listPackages'], ['tour-quotations', 'listQuotations'], ['tour-photos', 'listPhotos'], ['tour-photo', 'getPhoto'], ['tour-hotels', 'listHotels'], ['tour-vehicles', 'listVehicles']
 ]);
 const writeActions = new Map([
-  ['save-booking-payment', 'saveBookingPayment'], ['save-gst-invoice', 'saveGstInvoice'], ['cancel-gst-invoice', 'cancelGstInvoice'], ['save-tour-package', 'savePackage'], ['save-tour-quotation', 'saveQuotation'],
+  ['save-quotation-followup','setQuotationFollowup'], ['save-booking-payment', 'saveBookingPayment'], ['save-gst-invoice', 'saveGstInvoice'], ['cancel-gst-invoice', 'cancelGstInvoice'], ['save-tour-package', 'savePackage'], ['save-tour-quotation', 'saveQuotation'],
   ['set-tour-quotation-status', 'setQuotationStatus'], ['save-tour-photo', 'savePhoto'], ['save-tour-hotel', 'saveHotel'], ['save-tour-vehicle', 'saveVehicle'], ['delete-tour-package', 'deletePackage'], ['delete-tour-photo', 'deletePhoto']
 ]);
 
@@ -159,6 +159,7 @@ async function handleTourStorage(req, res, action) {
   }
 
   const payload = {action, secret};
+  if(action==='setQuotationFollowup'){payload.id=req.body?.id;payload.followup=req.body?.followup;}
   const deleting = action === 'deletePackage' || action === 'deletePhoto';
   if (deleting) {
     const id = req.body?.id;
@@ -219,7 +220,7 @@ async function handleTourStorage(req, res, action) {
     const result = response.ok ? await response.json() : null;
     if (result?.ok !== true) {
       const errors = new Map([
-        ['Invalid item ID', 400], ['Photo is in use by a saved package or quotation', 409], ['Invalid hotel', 400], ['Invalid vehicle', 400], ['Invalid photo', 400], ['Photo not found', 404], ['Invalid package', 400], ['Package is too large', 400],
+        ['Invalid follow-up',400], ['Invalid item ID', 400], ['Photo is in use by a saved package or quotation', 409], ['Invalid hotel', 400], ['Invalid vehicle', 400], ['Invalid photo', 400], ['Photo not found', 404], ['Invalid package', 400], ['Package is too large', 400],
         ['Invalid quotation', 400], ['Quotation is too large', 400],
         ['Invalid quotation status', 400], ['Quotation not found', 404],
         ['Quotation is no longer pending', 409]
