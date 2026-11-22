@@ -6571,7 +6571,7 @@ const gstInvoiceAssets = {"stamp":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgA
 function gstCreatePdf(invoice) {
  const pdf=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
  const t=gstCompute(invoice),company=invoice.company||gstCompanyDefault;
- const magenta='#963466',gray='#808080',ink='#111111';
+ const brandRed='#C92316',gray='#808080',ink='#111111';
  const left=12,right=198,width=186,mid=105,limit=282;
  let pageNo=0;
  const date=invoice.date.split('-').reverse().join('-');
@@ -6579,7 +6579,7 @@ function gstCreatePdf(invoice) {
  function lines(text,w,size=9,bold=false){font(size,bold);return String(text||'').trim()?pdf.splitTextToSize(String(text),w):[];}
  function box(x,y,w,h){pdf.setDrawColor(gray).setLineWidth(.3).rect(x,y,w,h);}
  function text(value,x,y,size=9,bold=false,align='left'){font(size,bold);pdf.text(String(value||''),x,y,{align});}
- function strip(x,y,w,label,align='left'){pdf.setFillColor(magenta).rect(x,y,w,5.5,'F');font(9,true,'#FFFFFF');pdf.text(label,align==='right'?x+w-1.3:x+1.3,y+3.8,{align});}
+ function strip(x,y,w,label,align='left'){pdf.setFillColor(brandRed).rect(x,y,w,5.5,'F');font(9,true,'#FFFFFF');pdf.text(label,align==='right'?x+w-1.3:x+1.3,y+3.8,{align});}
  function rule(x1,y1,x2,y2){pdf.setDrawColor(gray).setLineWidth(.3).line(x1,y1,x2,y2);}
  function currency(amount,x,y,bold=false,size=9){
   const value=Math.abs(amount).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -6594,7 +6594,7 @@ function gstCreatePdf(invoice) {
  function header(continued=false){
   if(pageNo++)pdf.addPage();
   text('Tax Invoice'+(continued?' - Continued':''),105,10,11,true,'center');
-  if(invoice.preview){font(7,true,magenta);pdf.text('LAYOUT PREVIEW - SAMPLE DATA',left,5);}
+  if(invoice.preview){font(7,true,brandRed);pdf.text('LAYOUT PREVIEW - SAMPLE DATA',left,5);}
   const addressLines=lines(company.address||'',145,8);
   const headerHeight=Math.max(29,22+addressLines.length*3.3);
   box(left,14,width,headerHeight);
