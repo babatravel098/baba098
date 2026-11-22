@@ -7436,6 +7436,24 @@ document.getElementById('dutyForm').addEventListener('submit',event=>{
   const types={Daily:'Daily collection / parked',Reading:'Odometer reading',Start:'Start driver duty',Advance:'Pay driver advance',End:'End driver duty',Service:'Record service',Remark:'Update pending work'};
   const money=n=>'₹'+Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
   let list=[],days=[],history=[],today='',reg='',adding=false,serial=0,saving=false,loading=false,lastRequest=null;
+  const registrationKey='fleet-registration-v1';
+  let draft;
+  try{draft=JSON.parse(sessionStorage.getItem(registrationKey));}catch{}
+  function keepDraft(value){
+    draft=value;
+    try{if(value)sessionStorage.setItem(registrationKey,JSON.stringify(value));else sessionStorage.removeItem(registrationKey);}catch{}
+  }
+  function rememberForm(){
+    if(adding&&!saving&&form.elements.reg){
+      keepDraft({fields:Object.fromEntries(new FormData(form)),request:lastRequest});
+    }
+  }
+  form.addEventListener('input',rememberForm);
+  function registrationMatches(v,e){
+    return v && v.reg===String(e.reg).toUpperCase().replace(/[\s-]/g,'') && v.start===e.date &&
+      v.model===(e.model||'').trim() && v.openingKm===Number(e.km) && v.serviceDate===(e.serviceDate||'') &&
+      (e.serviceDate?v.serviceKm===Number(e.serviceKm):v.serviceKm==='') && v.pending===(e.note||'').trim();
+  }
   const selected=()=>list.find(v=>v.reg===reg);
   function node(tag,text,cls){const n=document.createElement(tag);if(text!=null)n.textContent=text;if(cls)n.className=cls;return n;}
   function action(text,callback,active){const b=node('button',text,active?'primary':'');b.type='button';b.onclick=callback;return b;}
@@ -7456,9 +7474,14 @@ document.getElementById('dutyForm').addEventListener('submit',event=>{
       if(seq!==serial)return;
       list=r.vehicles;today=r.today;tile();
       if(show && box.open){
+        if(!target&&draft?.fields){
+          const match=list.find(v=>registrationMatches(v,draft.fields));
+          if(match&&draft.request){keepDraft(null);adding=false;return await refresh(match.reg,true);}
+          adding=true;
+        }
         if(!target&&list.length&&!adding)return await refresh(list[0].reg,true);
         reg=target;days=r.days||[];history=r.history||[];adding=adding||!list.length;
-        render();msg('');
+        render();msg(adding&&draft?'Registration form restored. Check the details before saving.':'');
       }
       return true;
     }catch(error){
@@ -7512,7 +7535,9 @@ document.getElementById('dutyForm').addEventListener('submit',event=>{
     const date=field('date',adding?'Start tracking from':'Entry date','date',isDaily?(v.firstMissing||today):today,true);
     if(adding){
       field('reg','Vehicle number','text','',true);field('model','Vehicle / model');field('km','Opening odometer (km)','number','',true);
-      field('serviceDate','Last service date (if known)','date');field('serviceKm','Last service odometer','number');field('note','Work pending for next service','note');return;
+      field('serviceDate','Last service date (if known)','date');field('serviceKm','Last service odometer','number');field('note','Work pending for next service','note');
+      if(draft?.fields){for(const [k,v] of Object.entries(draft.fields)){const input=form.elements.namedItem(k);if(input)input.value=v;}lastRequest=draft.request||null;}
+      return;
     }
     if(isDaily){
       const status=field('status','Vehicle status','select','Running'),end=field('end','Parked through (inclusive)','date',date.value);
@@ -7549,15 +7574,33 @@ document.getElementById('dutyForm').addEventListener('submit',event=>{
     event.preventDefault();if(saving||loading)return;
     const entry=Object.fromEntries(new FormData(form));entry.kind=adding?'Vehicle':el('fleetType').value;
     entry.reg=adding?String(entry.reg).toUpperCase().replace(/[\s-]/g,''):reg;
+    if(adding){
+      if(Boolean(entry.serviceDate)!==Boolean(entry.serviceKm))return msg('Enter both last service date and km, or leave both empty.');
+      if(entry.serviceDate&&(entry.serviceDate>entry.date||Number(entry.serviceKm)>Number(entry.km)))return msg('Last service must be on or before the opening date and km. Use Record service for a later reading.');
+    }
     if(entry.kind==='Daily')entry.replace=days.some(row=>row[0]===entry.date);
     const revision=adding?'':selected().revision,key=JSON.stringify([entry,revision]);
     if(!lastRequest||lastRequest.key!==key)lastRequest={key,id:crypto.randomUUID()};
+    if(adding)keepDraft({fields:entry,request:lastRequest});
     const id=lastRequest.id;saving=true;el('fleetSave').disabled=true;
     const controls=[...form.elements].filter(e=>e!==el('fleetSave')&&!e.disabled);
     controls.forEach(e=>e.disabled=true);msg('Saving to Fleet Sheet…');
     try{
-      const result=await tourPackageRequest('action=save-fleet-entry',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entry,id,revision})});
-      if(result.id!==id||result.reg!==entry.reg)throw Error('Save not confirmed. Retry the same entry.');
+      let saveError='';
+      try{
+        const result=await tourPackageRequest('action=save-fleet-entry',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entry,id,revision})});
+        if(result.id!==id||result.reg!==entry.reg)throw Error('Save response did not match this entry.');
+      }catch(error){if(entry.kind!=='Vehicle')throw error;saveError=error.message;}
+      if(entry.kind==='Vehicle'){
+        const check=await tourPackageRequest('data=fleet-register&reg='+encodeURIComponent(entry.reg));
+        const found=check.vehicles.find(v=>v.reg===entry.reg);
+        if(!registrationMatches(found,entry)){
+          const reason=found?'Vehicle number exists with different details. Review the saved vehicle.':'Vehicle row not found in Fleet Sheet.';
+          throw Error(reason+(saveError?' '+saveError:'')+' Your form has been retained.');
+        }
+        list=check.vehicles;today=check.today;days=check.days;history=check.history;reg=entry.reg;adding=false;lastRequest=null;keepDraft(null);
+        tile();render();msg('Saved to Fleet Sheet. Verified '+reg+'.');return;
+      }
       adding=false;lastRequest=null;
       const refreshed=await refresh(entry.reg,true);
       msg(refreshed?'Saved to Fleet Sheet.':'Entry saved. Refresh to reload the register.');
