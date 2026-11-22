@@ -235,6 +235,16 @@ async function handleTourStorage(req, res, action) {
       if (result.id !== payload.id) return sendJson(res, 502, {error: 'Delete could not be confirmed.'});
       return sendJson(res, 200, {ok: true, id: result.id});
     }
+    if (action === 'setQuotationFollowup') {
+      const saved = result.followup;
+      const requested = payload.followup;
+      if (!saved || !requested || typeof result.id !== 'string' || result.id !== payload.id ||
+          saved.date !== requested.date || saved.note !== requested.note || saved.status !== requested.status) {
+        return sendJson(res, 502, {error: 'Could not confirm this follow-up. Refresh and check the quotation.'});
+      }
+      const {date, note, status, updatedAt} = saved;
+      return sendJson(res, 200, {ok: true, id: result.id, followup: {date, note, status, updatedAt}});
+    }
     const listKey = action === 'listPackages' ? 'packages' : action === 'listQuotations' ? 'quotations' : action === 'listPhotos' ? 'photos' : action === 'listHotels' ? 'hotels' : action === 'listVehicles' ? 'vehicles' : null;
     if (action === 'getPhoto') {
       const photo = result.photo;
