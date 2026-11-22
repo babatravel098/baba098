@@ -12,7 +12,7 @@ const readActions = new Map([
   ['gst-invoices', 'listGstInvoices'], ['tour-health', 'health'], ['tour-packages', 'listPackages'], ['tour-quotations', 'listQuotations'], ['tour-photos', 'listPhotos'], ['tour-photo', 'getPhoto'], ['tour-hotels', 'listHotels'], ['tour-vehicles', 'listVehicles']
 ]);
 const writeActions = new Map([
-  ['save-gst-invoice', 'saveGstInvoice'], ['cancel-gst-invoice', 'cancelGstInvoice'], ['save-tour-package', 'savePackage'], ['save-tour-quotation', 'saveQuotation'],
+  ['save-booking-payment', 'saveBookingPayment'], ['save-gst-invoice', 'saveGstInvoice'], ['cancel-gst-invoice', 'cancelGstInvoice'], ['save-tour-package', 'savePackage'], ['save-tour-quotation', 'saveQuotation'],
   ['set-tour-quotation-status', 'setQuotationStatus'], ['save-tour-photo', 'savePhoto'], ['save-tour-hotel', 'saveHotel'], ['save-tour-vehicle', 'saveVehicle'], ['delete-tour-package', 'deletePackage'], ['delete-tour-photo', 'deletePhoto']
 ]);
 
@@ -146,6 +146,7 @@ async function deleteBooking(req, res) {
 }
 
 async function handleTourStorage(req, res, action) {
+  if(action==='saveBookingPayment')return handleBookingPayment(req,res);
   if (['listGstInvoices','saveGstInvoice','cancelGstInvoice'].includes(action)) return handleGstStorage(req,res,action);
   const url = process.env.TOUR_API_URL;
   const secret = process.env.TOUR_API_SECRET;
@@ -379,6 +380,23 @@ function gstTaxpayerInfo(result) {
  return null;
 }
 
+
+async function handleBookingPayment(req,res) {
+ if(!isDashboardOrigin(req))return sendJson(res,403,{error:'Use Add Payment from the CRM dashboard.'});
+ const body=req.body||{};
+ if(!body.payment||typeof body.payment!=='object'||JSON.stringify(body).length>4000)return sendJson(res,400,{error:'Invalid payment request.'});
+ const url=process.env.TOUR_API_URL,secret=process.env.TOUR_API_SECRET;
+ if(!url||!secret||!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url))return sendJson(res,503,{error:'Payment storage is not configured.'});
+ try {
+  const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'saveBookingPayment',secret,booking_id:body.booking_id,payment:body.payment,expectedReceived:body.expectedReceived,expectedTotal:body.expectedTotal}),signal:AbortSignal.timeout(25000)});
+  const result=response.ok?await response.json():null;
+  const known=['Invalid payment request','Invalid payment amount','Invalid payment date','Invalid payment details','Booking payment tabs not found','Booking payment headers differ','Booking could not be uniquely identified','Payment ID already used for different details','Booking payments changed. Refresh and review before saving','Payment exceeds the remaining booking balance'];
+  if(result?.ok!==true)return sendJson(res,known.includes(result?.error)?409:502,{error:known.includes(result?.error)?result.error:'Could not confirm payment save. Keep this form open and retry the same payment. Check Apps Script deployment and booking Sheet access.'});
+  if(result.payment_id!==body.payment.id||result.booking_id!==body.booking_id||!Number.isSafeInteger(result.received))throw Error('Unconfirmed');
+  res.setHeader('Cache-Control','no-store');return sendJson(res,200,result);
+ }catch{return sendJson(res,502,{error:'Could not confirm payment save. Keep this form open and retry the same payment; do not create another payment.'});}
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (!['GET', 'POST'].includes(req.method)) {
@@ -420,6 +438,7 @@ module.exports = async (req, res) => {
   if (wantsDelete) return deleteBooking(req, res);
   if (tourAction) return handleTourStorage(req, res, tourAction);
   if (wantsBookings) {
+    res.setHeader('Cache-Control','no-store');
     try {
       const valueRanges = await readBookingRanges(['Bookings!A1:R', 'Payments!A1:I']);
       return sendJson(res, 200, {valueRanges, bookingVersions: Object.fromEntries((valueRanges[0]?.values || []).slice(1).map(row => [row[0], bookingVersion(row)]))});
