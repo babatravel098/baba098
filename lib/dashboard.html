@@ -427,9 +427,9 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 </div></form></dialog>
 
 <dialog id="paymentDialog" aria-labelledby="paymentTitle" style="width:min(880px,95vw);max-height:90vh;border:0;border-radius:16px;padding:24px">
-<h2 id="paymentTitle" class="text-xl font-bold text-blue-900">Add Payment &amp; History · Draft Preview</h2>
+<h2 id="paymentTitle" class="text-xl font-bold text-blue-900">Add Payment &amp; History</h2>
 <p id="paymentCustomer" class="mt-2 font-semibold"></p>
-<p class="my-3 text-sm text-slate-600">Payments are stored in this browser on this website. This preview uses the Google Sheet total and advance. Booking edit drafts can be reviewed through Edit Booking. Sheet sync will be connected later.</p>
+<p class="my-3 text-sm text-slate-600">Payments are saved in the booking Google Sheet and available across browsers. Old browser drafts require review before saving to Sheet.</p>
 <div id="paymentSummary" class="p-3 bg-indigo-50 rounded-lg font-semibold leading-7"></div>
 <p id="paymentConflict" class="my-3 text-amber-800" role="status"></p>
 <form id="paymentDraftForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-4">
@@ -438,10 +438,10 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <label class="text-sm">Payment mode<select id="paymentMode" class="block w-full border p-2 rounded-lg mt-1"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Card</option><option>Cheque</option><option>Other</option></select></label>
 <label class="text-sm">Reference / UTR (optional)<input id="paymentReference" maxlength="100" class="block w-full border p-2 rounded-lg mt-1"></label>
 <label class="text-sm sm:col-span-2">Note (optional)<input id="paymentNote" maxlength="300" class="block w-full border p-2 rounded-lg mt-1"></label>
-<button id="paymentSave" class="rounded-lg bg-indigo-700 text-white px-4 py-2 disabled:opacity-50" type="submit">Save Payment Draft</button>
+<button id="paymentSave" class="rounded-lg bg-indigo-700 text-white px-4 py-2 disabled:opacity-50" type="submit">Save Payment</button>
 </form>
 <p id="paymentMessage" role="status" class="my-3 text-sm text-blue-800"></p>
-<h3 class="font-semibold my-2">Draft payment history</h3>
+<h3 class="font-semibold my-2">Saved payments and old browser drafts</h3>
 <div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead><tr><th class="p-2">Date</th><th class="p-2">Amount</th><th class="p-2">Mode</th><th class="p-2">Reference</th><th class="p-2">Note</th><th class="p-2">Action</th></tr></thead><tbody id="paymentHistory"></tbody></table></div>
 <button type="button" onclick="if (!paymentSaving) document.getElementById('paymentDialog').close()" class="rounded-lg border px-4 py-2 mt-4">Close</button>
 </dialog>
@@ -613,16 +613,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
             return ['year', 'month', 'day'].map(key => parts.find(part => part.type === key).value).join('-');
         }
 
-        function bookingBalance(booking) {
-            const sheetBalance = (Number(booking.total) || 0) - (Number(booking.advance) || 0);
-            try {
-                const summary = paymentSummary(booking, readPaymentDrafts(booking));
-                // A changed Sheet amount may already include a browser payment.
-                return Math.max(0, summary.changed ? sheetBalance : summary.balance / 100);
-            } catch {
-                return Math.max(0, sheetBalance);
-            }
-        }
+        function bookingBalance(booking) { return Math.max(0,(Number(booking.total)||0)-(Number(booking.advance)||0)); }
 
         function isPickupToday(booking) {
             return operationsDay(booking.startDate ?? '') === operationsDay()
@@ -865,7 +856,7 @@ function openEntry(type) {
 
         async function readPrivateCrmBookings() {
     const response = await fetch('/api/dashboard?data=bookings', {
-        credentials: 'same-origin'
+        credentials: 'same-origin', cache: 'no-store'
     });
     if (response.status === 401) {
         throw new Error('CRM session expired. Please sign in again.');
@@ -888,7 +879,7 @@ function openEntry(type) {
         '<':'‹', '>':'›', '&':'＆', '"':'＂', "'":'’', '\u0060':'ʼ'
     })[c]);
     return bookings.slice(1).filter(row => /^(BK-|LEGACY-)/.test(row[0])).map(row => ({
-        version: bookingVersions[row[0]], bookingId: safe(row[0]), timestamp: safe(row[0]), name: safe(row[2]),
+        payments: payments.slice(1).filter(p=>p[1]===row[0]).map(p=>({id:String(p[0]),date:String(p[2]).slice(0,10),amount:Math.round(money(p[3])*100),mode:String(p[5]||''),reference:String(p[6]||''),note:String(p[7]||'')})), version: bookingVersions[row[0]], bookingId: safe(row[0]), timestamp: safe(row[0]), name: safe(row[2]),
         phone: safe(row[3]), address: safe(row[4]), staff: safe(row[5]),
         pickup: safe(row[6]), drop: safe(row[7]), tourRoute: safe(row[8]),
         startDate: safe(row[9]), endDate: safe(row[10]), vehicle: safe(row[11]),
@@ -1795,180 +1786,95 @@ document.getElementById('discardBookingDraft').addEventListener('click', () => {
 
 
 
-let paymentBooking = null;
-let paymentSaving = false;
-const paymentModes = ['Cash', 'UPI', 'Bank Transfer', 'Card', 'Cheque', 'Other'];
-
-function paymentStorageKey(booking) {
-    return 'baba_payment_drafts_v1:' + JSON.stringify([SCRIPT_URL, String(booking.phone ?? ''), String(booking.timestamp ?? '')]);
+let paymentBooking=null,paymentSaving=false,paymentLoadRevision=0;
+const paymentModes=['Cash','UPI','Bank Transfer','Card','Cheque','Other'];
+function paymentStorageKey(b){return 'baba_payment_drafts_v1:'+JSON.stringify([SCRIPT_URL,String(b.phone??''),String(b.timestamp??'')]);}
+function paymentPaise(value){const n=Number(value);if(!Number.isFinite(n)||n<0||n>1000000000)throw Error('Check the amount.');return Math.round(n*100);}
+function paymentMoney(n){return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR'}).format(n/100);}
+function readPaymentDrafts(b){const raw=localStorage.getItem(paymentStorageKey(b));if(!raw)return {version:1,total:paymentPaise(b.total),advance:paymentPaise(b.advance),entries:[]};const data=JSON.parse(raw);if(data.version!==1||!Array.isArray(data.entries)||data.entries.some(e=>!e||typeof e.id!=='string'||!Number.isSafeInteger(e.amount)||e.amount<=0))throw Error('Old browser drafts could not be read. They have been retained.');return data;}
+function paymentSummary(b,data){const total=paymentPaise(b.total),advance=paymentPaise(b.advance),draftTotal=data.entries.reduce((s,e)=>s+e.amount,0);return {total,advance,draftTotal,balance:total-advance,changed:data.total!==total||data.advance!==advance};}
+function paymentPendingKey(){return 'baba_payment_pending_v2:'+paymentBooking.bookingId;}
+function paymentPending(){const raw=localStorage.getItem(paymentPendingKey());return raw?JSON.parse(raw):null;}
+function addPaymentButton(row,b){const button=document.createElement('button');button.type='button';button.className='block w-full rounded bg-indigo-100 text-indigo-800 px-2 py-1 font-semibold';button.textContent='Add Payment / History';button.onclick=()=>openPayments(b);row.lastElementChild.prepend(button);}
+async function paymentReload(){
+ const rows=await readPrivateCrmBookings();
+ const fresh=rows.find(b=>b.bookingId===paymentBooking.bookingId);if(!fresh)throw Error('Booking not found. Refresh the list.');
+ allBookingsData=rows;paymentBooking=fresh;renderTable();renderOperations();
 }
-
-function paymentPaise(value) {
-    const number = Number(value);
-    if (!Number.isFinite(number) || number < 0 || number > 1000000000) throw new Error('Invalid amount.');
-    return Math.round(number * 100);
+async function openPayments(b){
+ if(paymentSaving)return;
+ paymentBooking=b;const revision=++paymentLoadRevision;
+ document.getElementById('paymentDraftForm').reset();document.getElementById('paymentDate').value=operationsDay();
+ document.getElementById('paymentCustomer').textContent=b.name+' - '+b.phone;
+ document.getElementById('paymentMessage').textContent='Loading saved payments from Sheet...';
+ const dialog=document.getElementById('paymentDialog');if(!dialog.open)dialog.showModal();
+ document.getElementById('paymentSave').disabled=true;
+ try{await paymentReload();if(revision!==paymentLoadRevision)return;renderPaymentHistory();document.getElementById('paymentMessage').textContent='Payment history loaded from Google Sheet.';}
+ catch(error){document.getElementById('paymentMessage').textContent=error.message;}
 }
-
-function paymentMoney(paise) {
-    return new Intl.NumberFormat('en-IN', {style:'currency', currency:'INR'}).format(paise / 100);
+function renderPaymentHistory(){
+ const body=document.getElementById('paymentHistory');body.replaceChildren();const save=document.getElementById('paymentSave');save.disabled=true;
+ try{
+  const data=readPaymentDrafts(paymentBooking),summary=paymentSummary(paymentBooking,data),pending=paymentPending();
+  document.getElementById('paymentSummary').textContent='Total '+paymentMoney(summary.total)+' | Received '+paymentMoney(summary.advance)+' | Balance '+paymentMoney(summary.balance);
+  document.getElementById('paymentConflict').textContent=pending?'A payment is awaiting confirmation. Retry the same payment before entering another.':data.entries.length?'Old browser drafts below are NOT in the Sheet balance. Review each one before Save to Sheet. If it was already recorded elsewhere, discard that draft.':'';
+  const append=(entry,draft)=>{
+   const row=document.createElement('tr');
+   for(const v of [entry.date,paymentMoney(entry.amount),entry.mode,entry.reference||'-',entry.note||'-']){const td=document.createElement('td');td.className='p-2 border-b';td.textContent=v;row.append(td);}
+   const actions=document.createElement('td');actions.className='p-2';
+   if(draft){
+    const sync=document.createElement('button');sync.type='button';sync.textContent='Save to Sheet';sync.className='border rounded p-2';sync.disabled=paymentSaving||summary.changed||!!pending;sync.onclick=()=>syncPaymentDraft(entry.id);actions.append(sync);
+    const discard=document.createElement('button');discard.type='button';discard.textContent='Discard browser draft';discard.className='p-2 text-red-700';discard.disabled=paymentSaving||!!pending;discard.onclick=()=>discardPaymentDraft(entry.id);actions.append(discard);
+   }else actions.textContent='Saved in Sheet';row.append(actions);body.append(row);
+  };
+  for(const entry of paymentBooking.payments||[])append(entry,false);
+  for(const entry of data.entries)append({...entry,note:'Browser draft: '+(entry.note||'')},true);
+  if(summary.changed&&data.entries.length)document.getElementById('paymentConflict').textContent+=' Sheet total or received amount changed since these drafts. Review the saved history; do not enter the same payment again.';
+  for(const el of document.getElementById('paymentDraftForm').querySelectorAll('input,select'))el.disabled=paymentSaving||!!pending;
+  if(pending){const p=pending.payment;document.getElementById('paymentAmount').value=p.amount/100;document.getElementById('paymentDate').value=p.date;document.getElementById('paymentMode').value=p.mode;document.getElementById('paymentReference').value=p.reference;document.getElementById('paymentNote').value=p.note;}
+  save.textContent=pending?'Retry Save Payment':'Save Payment';save.disabled=paymentSaving||(!pending&&(summary.balance<=0||data.entries.length>0));
+ }catch(error){document.getElementById('paymentMessage').textContent=error.message;}
 }
-
-function readPaymentDrafts(booking) {
-    const raw = localStorage.getItem(paymentStorageKey(booking));
-    if (!raw) return {version:1, total:paymentPaise(booking.total), advance:paymentPaise(booking.advance), entries:[]};
-    const data = JSON.parse(raw);
-    if (data.version !== 1 || !Number.isSafeInteger(data.total) || !Number.isSafeInteger(data.advance) || !Array.isArray(data.entries)
-        || data.entries.some(entry => !entry || typeof entry.id !== 'string' || !Number.isSafeInteger(entry.amount) || entry.amount <= 0
-            || typeof entry.date !== 'string' || !paymentModes.includes(entry.mode))) {
-        throw new Error('Saved payment drafts could not be read. Browser data has been retained.');
-    }
-    return data;
+async function paymentSend(pending){
+ localStorage.setItem(paymentPendingKey(),JSON.stringify(pending));
+ const response=await fetch('/api/dashboard?action=save-booking-payment',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(pending)});
+ const result=await response.json();
+ if(!response.ok||!result.ok){if(response.status===409)localStorage.removeItem(paymentPendingKey());throw Error(result.error||'Could not confirm payment. Retry the same payment.');}
+ if(result.payment_id!==pending.payment.id||result.booking_id!==paymentBooking.bookingId)throw Error('Payment confirmation did not match. Retry the same payment.');
+ if(pending.sourceDraft){const data=readPaymentDrafts(paymentBooking);data.entries=data.entries.filter(e=>e.id!==pending.sourceDraft);data.advance=result.received;data.total=result.total;localStorage.setItem(paymentStorageKey(paymentBooking),JSON.stringify(data));}
+ localStorage.removeItem(paymentPendingKey());
+ for(const b of allBookingsData)if(b.bookingId===paymentBooking.bookingId)b.advance=result.received/100;
+ paymentBooking.advance=result.received/100;
+ const entry=pending.payment;if(!(paymentBooking.payments||[]).some(p=>p.id===entry.id))paymentBooking.payments=[...(paymentBooking.payments||[]),entry];
+ renderTable();renderOperations();
+ try{await paymentReload();document.getElementById('paymentMessage').textContent='Payment saved to Google Sheet. Balance updated.';}
+ catch{document.getElementById('paymentMessage').textContent='Payment saved to Google Sheet. List refresh failed; refresh the page. Do not add this payment again.';}
 }
-
-function paymentSummary(booking, data) {
-    const total = paymentPaise(booking.total);
-    const advance = paymentPaise(booking.advance);
-    const draftTotal = data.entries.reduce((sum, entry) => sum + entry.amount, 0);
-    return {total, advance, draftTotal, balance:total - advance - draftTotal,
-        changed:data.entries.length > 0 && (data.total !== total || data.advance !== advance)};
+function paymentRequest(entry,sourceDraft){return {booking_id:paymentBooking.bookingId,payment:{id:'CRM-PAY-'+entry.id.replace(/^CRM-PAY-/,''),amount:entry.amount,date:entry.date,mode:entry.mode,reference:entry.reference||'',note:entry.note||''},expectedReceived:paymentPaise(paymentBooking.advance),expectedTotal:paymentPaise(paymentBooking.total),...(sourceDraft?{sourceDraft}: {})};}
+async function syncPaymentDraft(id){
+ if(paymentSaving||!confirm('Save this old browser payment to Google Sheet? Confirm it has not already been recorded.'))return;
+ paymentSaving=true;
+ try{const data=readPaymentDrafts(paymentBooking);if(paymentSummary(paymentBooking,data).changed)throw Error('Sheet changed. Review the saved payments first.');const entry=data.entries.find(e=>e.id===id);if(!entry)throw Error('Draft not found.');renderPaymentHistory();await paymentSend(paymentRequest(entry,id));}
+ catch(error){document.getElementById('paymentMessage').textContent=error.message;}finally{paymentSaving=false;renderPaymentHistory();}
 }
-
-function addPaymentButton(row, booking) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'block w-full rounded bg-indigo-100 text-indigo-800 px-2 py-1 font-semibold';
-    button.textContent = 'Add Payment / History';
-    button.addEventListener('click', () => openPayments(booking));
-    row.lastElementChild.prepend(button);
-}
-
-function openPayments(booking) {
-    paymentBooking = booking;
-    document.getElementById('paymentCustomer').textContent = String(booking.name || '') + ' · ' + String(booking.phone || '');
-    document.getElementById('paymentDraftForm').reset();
-    document.getElementById('paymentDate').value = operationsDay();
-    document.getElementById('paymentMessage').textContent = '';
-    renderPaymentHistory();
-    document.getElementById('paymentDialog').showModal();
-}
-
-function renderPaymentHistory() {
-    const save = document.getElementById('paymentSave');
-    save.disabled = true;
-    const body = document.getElementById('paymentHistory');
-    body.replaceChildren();
-    try {
-        const data = readPaymentDrafts(paymentBooking);
-        const summary = paymentSummary(paymentBooking, data);
-        document.getElementById('paymentSummary').textContent =
-            'Sheet total ' + paymentMoney(summary.total) + ' · Sheet advance ' + paymentMoney(summary.advance)
-            + ' · Draft payments ' + paymentMoney(summary.draftTotal) + ' · Draft balance ' + paymentMoney(summary.balance);
-        document.getElementById('paymentConflict').textContent = summary.changed
-            ? 'Sheet total or advance changed since these drafts were entered. Review and discard outdated drafts before adding another payment.' : '';
-        for (const entry of data.entries) {
-            const row = document.createElement('tr');
-            for (const value of [entry.date, paymentMoney(entry.amount), entry.mode, entry.reference || '—', entry.note || '—']) {
-                const cell = document.createElement('td');
-                cell.className = 'p-2 border-b align-top';
-                cell.textContent = value;
-                row.appendChild(cell);
-            }
-            const cell = document.createElement('td');
-            const remove = document.createElement('button');
-            remove.type = 'button';
-            remove.textContent = 'Discard';
-            remove.className = 'p-2 text-red-700 underline';
-            remove.addEventListener('click', () => discardPaymentDraft(entry.id));
-            cell.appendChild(remove);
-            row.appendChild(cell);
-            body.appendChild(row);
-        }
-        if (!data.entries.length) {
-            const row = document.createElement('tr');
-            const cell = document.createElement('td');
-            cell.colSpan = 6;
-            cell.textContent = 'No draft payments added. Existing Sheet advance is included in the summary above.';
-            cell.className = 'p-3 text-slate-500';
-            row.appendChild(cell);
-            body.appendChild(row);
-        }
-        save.disabled = paymentSaving || summary.changed || summary.balance <= 0;
-    } catch (error) {
-        document.getElementById('paymentMessage').textContent = error.message;
-    }
-}
-
-async function withPaymentLock(action) {
-    // Serialize payment changes across tabs of the same website.
-    if (navigator.locks) return navigator.locks.request(paymentStorageKey(paymentBooking), action);
-    return action();
-}
-
-document.getElementById('paymentDraftForm').addEventListener('submit', async event => {
-    event.preventDefault();
-    if (paymentSaving) return;
-    paymentSaving = true;
-    document.getElementById('paymentSave').disabled = true;
-    try {
-        const amountText = document.getElementById('paymentAmount').value.trim();
-        if (!/^\d+(\.\d{1,2})?$/.test(amountText)) throw new Error('Enter an amount with at most two decimal places.');
-        const amount = paymentPaise(amountText);
-        const date = document.getElementById('paymentDate').value;
-        const mode = document.getElementById('paymentMode').value;
-        if (!date || date > operationsDay()) throw new Error('Choose today or an earlier payment date.');
-        if (!paymentModes.includes(mode)) throw new Error('Choose a payment mode.');
-        if (!paymentBooking.phone || !paymentBooking.timestamp) throw new Error('Booking mobile and timestamp are required.');
-        await withPaymentLock(() => {
-            const data = readPaymentDrafts(paymentBooking);
-            const summary = paymentSummary(paymentBooking, data);
-            if (summary.changed) throw new Error('Review drafts because the Sheet amount changed.');
-            if (amount <= 0 || amount > summary.balance) throw new Error('Payment must be greater than zero and within the draft balance.');
-            data.entries.push({id:crypto.randomUUID(), amount, date, mode,
-                reference:document.getElementById('paymentReference').value.trim(),
-                note:document.getElementById('paymentNote').value.trim(), createdAt:new Date().toISOString()});
-            data.total = summary.total;
-            data.advance = summary.advance;
-            localStorage.setItem(paymentStorageKey(paymentBooking), JSON.stringify(data));
-        });
-        event.target.reset();
-        document.getElementById('paymentDate').value = operationsDay();
-        document.getElementById('paymentMessage').textContent = 'Payment saved in this browser. Dashboard balance updated. Google Sheet sync is pending.';
-        renderTable();
-        renderOperations();
-    } catch (error) {
-        document.getElementById('paymentMessage').textContent = 'Payment draft could not be saved. ' + error.message;
-    } finally {
-        paymentSaving = false;
-        renderPaymentHistory();
-    }
+document.getElementById('paymentDraftForm').addEventListener('submit',async event=>{
+ event.preventDefault();if(paymentSaving)return;paymentSaving=true;
+ try{
+  let pending=paymentPending();
+  if(!pending){
+   if(readPaymentDrafts(paymentBooking).entries.length)throw Error('Review the old browser drafts first.');
+   const amountText=document.getElementById('paymentAmount').value.trim();if(!/^\d+(\.\d{1,2})?$/.test(amountText))throw Error('Enter an amount with at most two decimal places.');
+   const entry={id:crypto.randomUUID(),amount:paymentPaise(amountText),date:document.getElementById('paymentDate').value,mode:document.getElementById('paymentMode').value,reference:document.getElementById('paymentReference').value.trim(),note:document.getElementById('paymentNote').value.trim()};
+   if(!entry.amount||entry.amount>paymentPaise(paymentBooking.total)-paymentPaise(paymentBooking.advance))throw Error('Payment must be within the remaining balance.');
+   if(!entry.date||entry.date>operationsDay())throw Error('Choose today or an earlier payment date.');
+   pending=paymentRequest(entry);
+  }
+  renderPaymentHistory();await paymentSend(pending);event.target.reset();document.getElementById('paymentDate').value=operationsDay();
+ }catch(error){document.getElementById('paymentMessage').textContent=error.message;}finally{paymentSaving=false;renderPaymentHistory();}
 });
-
-async function discardPaymentDraft(id) {
-    if (paymentSaving || !confirm('Discard this browser payment draft?')) return;
-    try {
-        await withPaymentLock(() => {
-            const data = readPaymentDrafts(paymentBooking);
-            data.entries = data.entries.filter(entry => entry.id !== id);
-            localStorage.setItem(paymentStorageKey(paymentBooking), JSON.stringify(data));
-        });
-        document.getElementById('paymentMessage').textContent = 'Payment draft discarded.';
-        renderTable();
-        renderOperations();
-    } catch (error) {
-        document.getElementById('paymentMessage').textContent = 'Could not discard draft. ' + error.message;
-    }
-    renderPaymentHistory();
-}
-
-window.addEventListener('storage', event => {
-    if (event.key?.startsWith('baba_payment_drafts_v1:')) {
-        renderTable();
-        renderOperations();
-    }
-    if (paymentBooking && event.key === paymentStorageKey(paymentBooking) && document.getElementById('paymentDialog').open) renderPaymentHistory();
-});
-
-document.getElementById("paymentDialog").addEventListener("cancel", event => { if (paymentSaving) event.preventDefault(); });
+async function discardPaymentDraft(id){if(paymentSaving||!confirm('Discard only this browser draft? Saved Sheet payments will remain.'))return;const data=readPaymentDrafts(paymentBooking);data.entries=data.entries.filter(e=>e.id!==id);localStorage.setItem(paymentStorageKey(paymentBooking),JSON.stringify(data));renderPaymentHistory();}
+window.addEventListener('storage',event=>{if(paymentBooking&&(event.key===paymentStorageKey(paymentBooking)||event.key===paymentPendingKey())&&document.getElementById('paymentDialog').open)renderPaymentHistory();});
+document.getElementById('paymentDialog').addEventListener('cancel',event=>{if(paymentSaving)event.preventDefault();});
 
 const bookingStatuses = ['Confirmed', 'Ongoing', 'Completed', 'Cancelled'];
 let statusBooking = null;
