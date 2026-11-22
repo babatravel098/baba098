@@ -9,9 +9,11 @@ const sheetId = '1I6cFI9mU3z8EPc5cRxNZy25cj3E4sO6xVnXHBFqUQsE';
 const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbw4OfLzT9WCE4eQXPblPO1pu1br4U716qqIID_IBn3nsGjfBaE4etem0coCpY1tWUl5/exec';
 const google = new OAuth2Client(clientId);
 const readActions = new Map([
+  ['fleet-register','fleetList'],
   ['gst-invoices', 'listGstInvoices'], ['tour-health', 'health'], ['tour-packages', 'listPackages'], ['tour-quotations', 'listQuotations'], ['tour-photos', 'listPhotos'], ['tour-photo', 'getPhoto'], ['tour-hotels', 'listHotels'], ['tour-vehicles', 'listVehicles']
 ]);
 const writeActions = new Map([
+  ['save-fleet-entry','fleetSave'],
   ['save-quotation-followup','setQuotationFollowup'], ['save-booking-payment', 'saveBookingPayment'], ['save-gst-invoice', 'saveGstInvoice'], ['cancel-gst-invoice', 'cancelGstInvoice'], ['save-tour-package', 'savePackage'], ['save-tour-quotation', 'saveQuotation'],
   ['set-tour-quotation-status', 'setQuotationStatus'], ['save-tour-photo', 'savePhoto'], ['save-tour-hotel', 'saveHotel'], ['save-tour-vehicle', 'saveVehicle'], ['delete-tour-package', 'deletePackage'], ['delete-tour-photo', 'deletePhoto']
 ]);
@@ -145,7 +147,55 @@ async function deleteBooking(req, res) {
   }
 }
 
+async function handleFleetRegister(req,res,action) {
+  const write=action==='fleetSave';
+  if(write&&!isDashboardOrigin(req))return sendJson(res,403,{error:'Save from the CRM dashboard.'});
+  const url=process.env.TOUR_API_URL,secret=process.env.TOUR_API_SECRET;
+  if(!secret||!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url||''))return sendJson(res,503,{error:'Check the Tour API deployment settings.'});
+  const payload={action,secret};
+  if(write){
+    const {id,revision,entry}=req.body||{};
+    if(typeof id!=='string'||!/^[a-f0-9-]{36}$/i.test(id)||typeof revision!=='string'||revision.length>80||
+       !entry||typeof entry!=='object'||Array.isArray(entry)||JSON.stringify(entry).length>5000)return sendJson(res,400,{error:'Invalid fleet entry.'});
+    if(entry.kind==='Vehicle'){
+      const hasDate=Boolean(entry.serviceDate),hasKm=entry.serviceKm!=null&&entry.serviceKm!=='';
+      if(hasDate!==hasKm)return sendJson(res,400,{error:'For a previous service, enter both the service date and the odometer reading.'});
+      if(hasDate&&entry.serviceDate>entry.date)return sendJson(res,400,{error:'A service after tracking began belongs in Record service.'});
+      if(hasKm&&Number(entry.serviceKm)>Number(entry.km))return sendJson(res,400,{error:'Last service odometer exceeds opening km. Check both readings. For service done after opening, use Record service.'});
+    }
+    Object.assign(payload,{id,revision,entry});
+  }else{
+    payload.reg=new URL(req.url,'https://crm.invalid').searchParams.get('reg')||'';
+    if(payload.reg&&!/^[A-Z0-9]{4,16}$/.test(payload.reg))return sendJson(res,400,{error:'Invalid vehicle number.'});
+  }
+  try{
+    const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)});
+    if(!response.ok)return sendJson(res,502,{error:'Apps Script returned HTTP '+response.status+'. Refresh the register to check the entry.'});
+    let result;
+    try{result=await response.json();}catch{
+      return sendJson(res,502,{error:'Apps Script did not return JSON. Check the web app deployment access and execution log.'});
+    }
+    if(result?.ok!==true){
+      if(typeof result?.error==='string'&&result.error.startsWith('Fleet: ')&&result.error.length<=220)return sendJson(res,409,{error:result.error.slice(7)});
+      if(result?.error==='Unknown action')return sendJson(res,502,{error:'The configured Apps Script deployment does not recognize the fleet action. Check its deployed version.'});
+      if(result?.error==='Unauthorized')return sendJson(res,502,{error:'Apps Script rejected the CRM connection. Check the deployment settings.'});
+      return sendJson(res,502,{error:'Apps Script did not complete the fleet action. Check the latest doPost execution.'});
+    }
+    if(write){
+      if(result.id!==payload.id||result.reg!==payload.entry.reg)return sendJson(res,502,{error:'Apps Script replied without matching save details. Check the vehicle in the register.'});
+      return sendJson(res,200,{ok:true,id:result.id,reg:result.reg});
+    }
+    if(!Array.isArray(result.vehicles)||!Array.isArray(result.history)||!Array.isArray(result.days)||!/^\d{4}-\d\d-\d\d$/.test(result.today))throw Error('Invalid list');
+    return sendJson(res,200,{ok:true,today:result.today,vehicles:result.vehicles,history:result.history,days:result.days});
+  }catch(error){
+    const timedOut=['AbortError','TimeoutError'].includes(error?.name);
+    return sendJson(res,timedOut?504:502,{error:timedOut?'Apps Script took too long to respond. Check the register before retrying.':
+      write?'Could not reach Apps Script to confirm the write. Check the register before retrying.':'Fleet Sheet could not be loaded. Check the Apps Script deployment.'});
+  }
+}
+
 async function handleTourStorage(req, res, action) {
+  if(action==='fleetList'||action==='fleetSave')return handleFleetRegister(req,res,action);
   if(action==='saveBookingPayment')return handleBookingPayment(req,res);
   if (['listGstInvoices','saveGstInvoice','cancelGstInvoice'].includes(action)) return handleGstStorage(req,res,action);
   const url = process.env.TOUR_API_URL;

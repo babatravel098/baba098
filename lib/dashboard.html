@@ -147,6 +147,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
                 <button type="button" onclick="openOperations('followups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Due follow-ups</span><strong id="opsFollowups" class="text-2xl text-blue-900">—</strong></button>
                 <button type="button" onclick="openOperations('collections')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Pending collections</span><strong id="opsCollections" class="text-2xl text-blue-900">—</strong></button>
             </div>
+<button type="button" id="fleetTile" class="w-full text-left bg-white border rounded-xl px-4 py-3"><strong>Vehicle Register</strong> · <b id="fleetSize">Loading…</b><span id="fleetAlerts" class="text-sm"></span></button>
             <div class="crm-actions flex flex-wrap gap-2">
                 <button type="button" onclick="openEntry('booking')" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">+ New Booking</button><a href="https://script.google.com/macros/s/AKfycbzXu77bmooy2cXFh7vCPr5BuGZ0N25ZknBdyo20agSCM5JzmnlIfWGReP1HX4O9RUmTsA/exec" target="_blank" rel="noopener noreferrer" class="inline-block px-4 py-2 rounded-lg bg-emerald-700 text-white font-bold">New Sheet Bookings</a>
                 <button type="button" onclick="openEntry('lead')" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">+ Add Lead</button>
@@ -7406,6 +7407,209 @@ document.getElementById('dutyForm').addEventListener('submit',event=>{
     message.textContent='Duty slip PDF downloaded.';
   } catch(error) {message.textContent=error.message || 'Could not download this slip.';}
 });
+</script>
+
+<style>
+#fleetBox{width:min(1040px,96vw);max-height:90vh;margin:auto;border:0;border-radius:14px;padding:0;color:#173943;background:white}
+#fleetBox::backdrop{background:rgba(14,36,47,.48)}
+#fleetBox header{position:sticky;top:0;background:#124b50;color:white;display:flex;justify-content:space-between;align-items:center;padding:16px 20px;z-index:1}
+#fleetBox h2{font-size:1.25rem;font-weight:bold} #fleetBox h3{font-weight:700;margin:12px 0 6px}
+#fleetBox button,#fleetBox select,#fleetBox input,#fleetBox textarea{border:1px solid #b8cbd0;border-radius:6px;padding:7px 10px;background:white;color:#143844}
+#fleetBox .primary{background:#096860;color:white;border-color:#096860} #fleetBox button:disabled{opacity:.55}
+#fleetBox .fleetbody{padding:16px 20px} #fleetBox .toolbar,#fleetCars{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+#fleetBox .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0}
+#fleetBox label{font-size:.86rem} #fleetBox label>*{display:block;width:100%;margin-top:3px}
+#fleetBox .summary{white-space:pre-line;padding:12px;background:#edf5f3;border-radius:8px} #fleetBox .warn{color:#8b4510;background:#fff4df;padding:7px 10px;border-radius:6px}
+#fleetBox table{width:100%;border-collapse:collapse;font-size:.84rem} #fleetBox td,#fleetBox th{padding:6px 9px;border-bottom:1px solid #dae4e5;text-align:left}
+#fleetBox th{background:#f0f5f5} #fleetBox .scroll{overflow:auto;max-height:230px} #fleetMsg{min-height:1.6em;color:#174e5b;margin:6px 0}
+#fleetTile.attention{background:#fff3d8;border-color:#df9e34} #fleetTile span{display:block}
+</style>
+<dialog id="fleetBox" aria-labelledby="fleetTitle"><header><h2 id="fleetTitle">Vehicle Register</h2><button type="button" id="fleetClose">Close</button></header>
+<div class="fleetbody"><div class="toolbar"><button type="button" id="fleetNew">+ Add vehicle</button><button type="button" id="fleetReload">Refresh</button>
+<a target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/1ymVv31rJtMT3pTnmApmyDplqHkmwPulnbNlXV1k3OLs/edit">Open Fleet Sheet</a></div>
+<div id="fleetCars"></div><div id="fleetInfo"></div><div id="fleetWarning"></div>
+<form id="fleetForm" hidden><label id="fleetTypeLabel">Entry type<select id="fleetType"></select></label><div class="fields" id="fleetFields"></div><button type="submit" id="fleetSave" class="primary">Save to Fleet Sheet</button></form>
+<p id="fleetMsg" role="status"></p><div id="fleetHistory"></div></div></dialog>
+<script>
+(()=>{
+  const el=id=>document.getElementById(id),box=el('fleetBox'),form=el('fleetForm');
+  const types={Daily:'Daily collection / parked',Reading:'Odometer reading',Start:'Start driver duty',Advance:'Pay driver advance',End:'End driver duty',Service:'Record service',Remark:'Update pending work'};
+  const money=n=>'₹'+Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  let list=[],days=[],history=[],today='',reg='',adding=false,serial=0,saving=false,loading=false,lastRequest=null;
+  const registrationKey='fleet-registration-v1';
+  let draft;
+  try{draft=JSON.parse(sessionStorage.getItem(registrationKey));}catch{}
+  function keepDraft(value){
+    draft=value;
+    try{if(value)sessionStorage.setItem(registrationKey,JSON.stringify(value));else sessionStorage.removeItem(registrationKey);}catch{}
+  }
+  function rememberForm(){
+    if(adding&&!saving&&form.elements.reg){
+      keepDraft({fields:Object.fromEntries(new FormData(form)),request:lastRequest});
+    }
+  }
+  form.addEventListener('input',rememberForm);
+  function registrationMatches(v,e){
+    return v && v.reg===String(e.reg).toUpperCase().replace(/[\s-]/g,'') && v.start===e.date &&
+      v.model===(e.model||'').trim() && v.openingKm===Number(e.km) && v.serviceDate===(e.serviceDate||'') &&
+      (e.serviceDate?v.serviceKm===Number(e.serviceKm):v.serviceKm==='') && v.pending===(e.note||'').trim();
+  }
+  const selected=()=>list.find(v=>v.reg===reg);
+  function node(tag,text,cls){const n=document.createElement(tag);if(text!=null)n.textContent=text;if(cls)n.className=cls;return n;}
+  function action(text,callback,active){const b=node('button',text,active?'primary':'');b.type='button';b.onclick=callback;return b;}
+  function msg(text){el('fleetMsg').textContent=text;}
+  function tile(){
+    const missing=list.reduce((n,v)=>n+v.missing,0),rd=list.filter(v=>v.readingDue).length,svc=list.filter(v=>v.serviceDue).length;
+    el('fleetSize').textContent=list.length+(list.length===1?' vehicle':' vehicles');
+    const outstanding=list.filter(v=>v.missing).map(v=>v.reg);
+    const names=outstanding.slice(0,3).join(', ')+(outstanding.length>3?' +'+(outstanding.length-3):'');
+    el('fleetAlerts').textContent=missing+' daily entries missing'+(names?' ('+names+')':'')+' · '+rd+' KM readings due · '+svc+' services due';
+    el('fleetTile').classList.toggle('attention',!!(missing||rd||svc));
+  }
+  async function refresh(target='',show=false){
+    const seq=++serial;loading=true;el('fleetSave').disabled=true;
+    if(show){msg('Loading Fleet Sheet…');form.hidden=true;}
+    try{
+      const r=await tourPackageRequest('data=fleet-register&reg='+encodeURIComponent(target));
+      if(seq!==serial)return;
+      list=r.vehicles;today=r.today;tile();
+      if(show && box.open){
+        if(!target&&draft?.fields){
+          const match=list.find(v=>registrationMatches(v,draft.fields));
+          if(match&&draft.request){keepDraft(null);adding=false;return await refresh(match.reg,true);}
+          adding=true;
+        }
+        if(!target&&list.length&&!adding)return await refresh(list[0].reg,true);
+        reg=target;days=r.days||[];history=r.history||[];adding=adding||!list.length;
+        render();msg(adding&&draft?'Registration form restored. Check the details before saving.':'');
+      }
+      return true;
+    }catch(error){
+      if(seq===serial){el('fleetAlerts').textContent='Fleet data unavailable · Open to retry';if(show)msg(error.message);}
+      return false;
+    }finally{if(seq===serial){loading=false;el('fleetSave').disabled=saving;}}
+  }
+  function choose(target){if(saving)return;adding=false;lastRequest=null;refresh(target,true);}
+  function render(){
+    const v=selected(),cars=el('fleetCars'),info=el('fleetInfo'),warn=el('fleetWarning');
+    cars.replaceChildren(...list.map(car=>action(car.reg+(car.missing||car.serviceDue||car.readingDue?' •':''),()=>choose(car.reg),!adding&&car.reg===reg)));
+    info.replaceChildren();warn.replaceChildren();el('fleetHistory').replaceChildren();form.hidden=false;el('fleetTypeLabel').hidden=adding;
+    if(adding){info.append(node('h3','Register a vehicle'));drawFields();return;}
+    if(!v){form.hidden=true;return;}
+    info.append(node('h3',[v.reg,v.model].filter(Boolean).join(' · ')));
+    const driver=v.driver?v.driver.name+(v.driver.mobile?' · '+v.driver.mobile:'')+' · Since '+v.driver.start+' at '+v.driver.startKm+' km · Office advances '+money(v.driver.advance):'No current driver';
+    info.append(node('div',[driver,'Tracking from '+v.start+' at '+v.openingKm+' km · Latest '+v.km+' km on '+v.kmDay+' · Next reading '+v.nextReading,
+      v.serviceDate?'Last service '+v.serviceDate+' at '+v.serviceKm+' km · Next '+v.nextDate+' or '+v.nextKm+' km':'Last service not recorded',
+      'Service expenditure '+money(v.serviceCost)+' · Pending work: '+(v.pending||'None'),
+      'All dates · Cash '+money(v.totals[0])+' · Online '+money(v.totals[1])+' · Petrol '+money(v.totals[2])+' · CNG '+money(v.totals[3])+' · Net '+money(v.totals[4])].join('\n'),'summary'));
+    const warnings=[v.missing?v.missing+' missing daily entries, first '+v.firstMissing:'',v.readingDue?'Odometer reading due':'',v.serviceDue?'Service due'+(v.pending?' · '+v.pending:''):''].filter(Boolean);
+    if(warnings.length)warn.append(node('p',warnings.join(' | '),'warn'));
+    const type=el('fleetType');type.replaceChildren();
+    for(const [key,label] of Object.entries(types)){
+      if((key==='Start'&&v.driver)||(['Advance','End'].includes(key)&&!v.driver))continue;
+      type.add(new Option(label,key));
+    }
+    drawFields();table('Daily account', ['Date','Status','Cash','Online','Petrol','CNG','Net','Remark'],days.map(r=>[r[0],r[1],...r.slice(2,7).map(money),r[7]]));
+    table('Driver, KM and service history',['Date','Entry','Details'],history);
+  }
+  function table(title,headers,rows){
+    if(!rows.length)return;
+    const container=el('fleetHistory'),scroll=node('div',null,'scroll'),t=node('table'),head=t.createTHead().insertRow();
+    for(const h of headers)head.append(node('th',h));
+    const body=t.createTBody();
+    for(const row of rows){const tr=body.insertRow();for(const val of row)tr.insertCell().textContent=val;}
+    scroll.append(t);container.append(node('h3',title),scroll);
+  }
+  function field(key,label,type='text',value='',required=false){
+    const wrap=node('label',label),input=document.createElement(type==='note'?'textarea':type==='select'?'select':'input');
+    if(input.tagName==='INPUT')input.type=type;
+    if(type==='number'){input.min='0';input.step=['km','serviceKm'].includes(key)?'0.1':'0.01';}
+    if(type==='date')input.max=today;
+    input.name=key;input.required=required;input.maxLength=type==='note'?600:100;
+    if(type==='select')for(const opt of ['Running','Parked'])input.add(new Option(opt,opt));
+    input.value=value;wrap.append(input);el('fleetFields').append(wrap);return input;
+  }
+  function drawFields(){
+    el('fleetFields').replaceChildren();lastRequest=null;msg('');
+    const kind=adding?'Vehicle':el('fleetType').value,v=selected(),isDaily=kind==='Daily';
+    const date=field('date',adding?'Start tracking from':'Entry date','date',isDaily?(v.firstMissing||today):today,true);
+    if(adding){
+      field('reg','Vehicle number','text','',true);field('model','Vehicle / model');field('km','Opening odometer (km)','number','',true);
+      field('serviceDate','Last service date (if known)','date');field('serviceKm','Last service odometer','number');field('note','Work pending for next service','note');
+      if(draft?.fields){for(const [k,v] of Object.entries(draft.fields)){const input=form.elements.namedItem(k);if(input)input.value=v;}lastRequest=draft.request||null;}
+      return;
+    }
+    if(isDaily){
+      const status=field('status','Vehicle status','select','Running'),end=field('end','Parked through (inclusive)','date',date.value);
+      const inputs=['Cash received','Online received','Petrol cost','CNG cost'].map((label,i)=>field(['cash','online','petrol','cng'][i],label+' (₹)','number','0'));
+      const note=field('note','Remark','note'),net=node('p');el('fleetFields').append(net);
+      function update(){
+        const parked=status.value==='Parked';end.closest('label').hidden=!parked;end.disabled=!parked;end.min=date.value;
+        for(const input of inputs){input.disabled=parked;input.closest('label').hidden=parked;}
+        const [c,o,p,g]=inputs.map(n=>Number(n.value)||0);
+        net.textContent=parked?'Parked days count as recorded.':'Net after fuel '+money((Math.round(c*100)+Math.round(o*100)-Math.round(p*100)-Math.round(g*100))/100);
+      }
+      function loadDay(){
+        const row=days.find(r=>r[0]===date.value);status.value=row?.[1]||'Running';end.value=date.value;
+        inputs.forEach((input,i)=>input.value=row?row[i+2]:0);note.value=row?.[7]||'';
+        el('fleetSave').textContent=row?'Save corrected day':'Save to Fleet Sheet';update();
+      }
+      date.addEventListener('change',loadDay);status.onchange=update;inputs.forEach(i=>i.oninput=update);loadDay();return;
+    }
+    el('fleetSave').textContent='Save to Fleet Sheet';
+    if(kind==='Start'){field('driver','Driver name','text','',true);field('mobile','Driver mobile','tel');}
+    if(['Start','End','Service','Reading'].includes(kind))field('km',kind==='Start'?'Joining km':kind==='End'?'Leaving km':'Odometer (km)','number','',true);
+    if(['Start','Advance'].includes(kind))field('advance','Advance paid by office (₹)','number',kind==='Start'?'0':'',true);
+    if(kind==='Service'){field('cost','Service cost (₹)','number','',true);field('work','Service work completed','note','',true);}
+    const pending=['Service','Remark'].includes(kind);
+    field('note',pending?'Work still pending for next service (clear when done)':'Remark','note',pending?v.pending:'');
+  }
+  el('fleetTile').onclick=()=>{if(!box.open)box.showModal();adding=false;refresh(reg,true);};
+  el('fleetReload').onclick=()=>{if(!saving)refresh(reg,true);};
+  el('fleetNew').onclick=()=>{if(saving||loading)return;adding=true;el('fleetSave').textContent='Save to Fleet Sheet';render();};
+  el('fleetClose').onclick=()=>{if(!saving)box.close();};
+  box.addEventListener('cancel',e=>{if(saving)e.preventDefault();});
+  el('fleetType').onchange=drawFields;
+  form.onsubmit=async event=>{
+    event.preventDefault();if(saving||loading)return;
+    const entry=Object.fromEntries(new FormData(form));entry.kind=adding?'Vehicle':el('fleetType').value;
+    entry.reg=adding?String(entry.reg).toUpperCase().replace(/[\s-]/g,''):reg;
+    if(adding){
+      if(Boolean(entry.serviceDate)!==Boolean(entry.serviceKm))return msg('Enter both last service date and km, or leave both empty.');
+      if(entry.serviceDate&&(entry.serviceDate>entry.date||Number(entry.serviceKm)>Number(entry.km)))return msg('Last service must be on or before the opening date and km. Use Record service for a later reading.');
+    }
+    if(entry.kind==='Daily')entry.replace=days.some(row=>row[0]===entry.date);
+    const revision=adding?'':selected().revision,key=JSON.stringify([entry,revision]);
+    if(!lastRequest||lastRequest.key!==key)lastRequest={key,id:crypto.randomUUID()};
+    if(adding)keepDraft({fields:entry,request:lastRequest});
+    const id=lastRequest.id;saving=true;el('fleetSave').disabled=true;
+    const controls=[...form.elements].filter(e=>e!==el('fleetSave')&&!e.disabled);
+    controls.forEach(e=>e.disabled=true);msg('Saving to Fleet Sheet…');
+    try{
+      let saveError='';
+      try{
+        const result=await tourPackageRequest('action=save-fleet-entry',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entry,id,revision})});
+        if(result.id!==id||result.reg!==entry.reg)throw Error('Save response did not match this entry.');
+      }catch(error){if(entry.kind!=='Vehicle')throw error;saveError=error.message;}
+      if(entry.kind==='Vehicle'){
+        const check=await tourPackageRequest('data=fleet-register&reg='+encodeURIComponent(entry.reg));
+        const found=check.vehicles.find(v=>v.reg===entry.reg);
+        if(!registrationMatches(found,entry)){
+          const reason=found?'Vehicle number exists with different details. Review the saved vehicle.':'Vehicle row not found in Fleet Sheet.';
+          throw Error(reason+(saveError?' '+saveError:'')+' Your form has been retained.');
+        }
+        list=check.vehicles;today=check.today;days=check.days;history=check.history;reg=entry.reg;adding=false;lastRequest=null;keepDraft(null);
+        tile();render();msg('Saved to Fleet Sheet. Verified '+reg+'.');return;
+      }
+      adding=false;lastRequest=null;
+      const refreshed=await refresh(entry.reg,true);
+      msg(refreshed?'Saved to Fleet Sheet.':'Entry saved. Refresh to reload the register.');
+    }catch(error){msg(error.message);}
+    finally{saving=false;controls.forEach(e=>e.disabled=false);el('fleetSave').disabled=loading;}
+  };
+  refresh();window.addEventListener('focus',()=>{if(!box.open)refresh();});
+  setInterval(()=>{if(!document.hidden&&!box.open&&!loading)refresh();},300000);
+})();
 </script>
 
 </body>
