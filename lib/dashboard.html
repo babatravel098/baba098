@@ -628,7 +628,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
         function renderOperations() {
             const pending = allBookingsData.reduce((sum, booking) => sum + Math.max(0, bookingBalance(booking)), 0);
             document.getElementById('opsPickups').textContent = bookingsLoaded ? allBookingsData.filter(isPickupToday).length : '—';
-            document.getElementById('opsFollowups').textContent = leadsLoaded ? allLeadsData.filter(isFollowupDue).length : '—';
+            document.getElementById('opsFollowups').textContent = (leadsLoaded || quoteFollowupsLoaded) ? dashboardFollowups().filter(isFollowupDue).length + (quoteFollowupsError ? ' !' : '') : '-';
             document.getElementById('opsCollections').textContent = bookingsLoaded
                 ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(pending)
                 : '—';
@@ -751,6 +751,7 @@ function openEntry(type) {
         }
 
         function fetchLeads() {
+            void refreshQuoteFollowups();
             const tbody = document.getElementById('bookingTableBody');
             if(currentTab === 'leads') {
                 tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400">Loading leads from cloud...</td></tr>`;
@@ -1019,15 +1020,16 @@ function fetchBookings() {
                     <th class="p-2">Status (Changeable)</th>
                     <th class="p-2">Quick Action</th>
                 `;
-                if(allLeadsData.length === 0) {
+                if(dashboardFollowups().length === 0) {
                     tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400">No leads or inquiries found.</td></tr>`;
                     return;
                 }
-                const visibleLeads = allLeadsData.filter(lead =>
+                const visibleLeads = dashboardFollowups().filter(lead =>
                     matchesSearch(lead.name, lead.phone, lead.details, lead.status)
                     && (operationsFilter !== 'followups' || isFollowupDue(lead)));
                 if (!visibleLeads.length) tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-500">No matching leads.</td></tr>';
                 visibleLeads.forEach(l => {
+                    if(l.quoteId){const row=document.createElement('tr');renderQuoteFollowupRow(row,l);tbody.appendChild(row);return;}
                     const row = document.createElement('tr');
                     row.className = "border-b hover:bg-slate-50";
                     let waText = `Hello ${l.name},\n\nThank you for contacting Baba Tour & Travels, Gorakhpur regarding your travel inquiry. We would love to assist you with the best vehicle options, comfortable rides, and affordable package rates for your upcoming journey!\n\nPlease let us know your travel dates and requirements so we can share the best quotation with you.\n\nBest Regards,\nBaba Tour & Travels\nRailway Station Road, Gorakhpur\nGSTIN: 09AARPU5006D1ZI`;
@@ -2246,6 +2248,7 @@ function loadQuote(id) {
   syncQuoteRoute();
   updateRoomAllocationSummary();
   activeQuoteId=id;
+  document.getElementById('quoteFollowupTime').value=q.followup?.date?.length===10?q.followup.date+'T10:00':q.followup?.date||'';
   document.getElementById('quoteMessage').textContent='Saved quotation loaded';
  } catch(error) { document.getElementById('quoteMessage').textContent=error.message; }
 }
@@ -2258,7 +2261,7 @@ function quoteValues() {
     form.reportValidity();
     throw Error('Complete required fields.');
  }
- const q={id:activeQuoteId};
+ const q={id:activeQuoteId,...(sharedQuotations.get(activeQuoteId)?.followup?{followup:sharedQuotations.get(activeQuoteId).followup}:{})};
  for(const key of quoteFieldNames) q[key]=form.elements.namedItem(key).value.trim();
  if(!q.customer || q.end<q.start) throw Error('Check customer name and travel dates.');
  if(!Number.isInteger(Number(q.pax)) || Number(q.pax)<1 || !Number.isFinite(Number(q.amount)) || Number(q.amount)<0) throw Error('Check passengers and amount.');
@@ -2603,34 +2606,6 @@ async function syncTourQuotationStatus(id, status, bookingReference = '') {
     }
     const quote = sharedQuotations.get(id);
     if (quote) sharedQuotations.set(id, {...quote, status, bookingReference});
-}
-
-async function saveQuoteFollowup() {
-    const message = document.getElementById('quoteActionMessage');
-    const form = document.getElementById('quoteForm');
-    const name = form.elements.namedItem('customer').value.trim();
-    const phone = form.elements.namedItem('phone').value.trim();
-    const followup = document.getElementById('quoteFollowupTime').value;
-    if (!name || !phone || !followup) {
-        message.textContent = 'Enter customer name, mobile and follow-up date and time.';
-        return;
-    }
-    const button = form.querySelector('[onclick="saveQuoteFollowup()"]');
-    button.disabled = true;
-    try {
-        const params = new URLSearchParams({
-            action: 'addLead', leadId: String(Date.now()), name, phone, followup,
-            details: form.elements.namedItem('title').value.trim() || 'Tour quotation follow-up',
-            status: 'Pending', timestamp: new Date().toLocaleString()
-        });
-        await fetch(LEADS_SCRIPT_URL + '?' + params, {mode:'no-cors'});
-        message.textContent = 'Follow-up request sent. Check Leads & Follow-ups before sending again.';
-        setTimeout(fetchLeads, 1800);
-    } catch {
-        message.textContent = 'Could not send follow-up. Check the lead list before retrying.';
-    } finally {
-        button.disabled = false;
-    }
 }
 
 async function quoteToBookingForm() {
@@ -3985,18 +3960,21 @@ async function openNepalTours() {
         const followupKey = 'baba_nepal_followup:' + quote.id;
         try {
             const followup = JSON.parse(localStorage.getItem(followupKey) || '{}');
-            date.value = followup.date || '';
-            note.value = followup.note || '';
+            date.value = (quote.followup || followup).date?.slice(0,10) || '';
+            note.value = (quote.followup || followup).note || '';
         } catch {}
         const save = document.createElement('button');
         save.type = 'button';
         save.className = 'mx-2 rounded border p-2';
         save.textContent = 'Save follow-up';
-        save.onclick = () => {
+        save.onclick = async () => {
+            save.disabled=true;
             try {
-                localStorage.setItem(followupKey, JSON.stringify({date:date.value,note:note.value}));
-                save.textContent = 'Follow-up saved';
-            } catch { save.textContent = 'Could not save follow-up'; }
+                await saveSharedQuoteFollowup(quote.id,date.value,note.value);
+                save.textContent='Saved to Sheet and dashboard';
+                localStorage.removeItem(followupKey);
+            } catch(error){save.textContent='Retry save';alert(error.message);}
+            finally{save.disabled=false;}
         };
         const open = document.createElement('button');
         open.type = 'button';
@@ -7191,6 +7169,46 @@ function gstInvoiceBackup() {
  const data={format:'Baba CRM invoice backup',version:1,exportedAt:new Date().toISOString(),scope:'All currently loaded GST invoice records. Audit history remains in GSTInvoiceAudit, not included in this file.',invoices:allGstInvoicesData};
  const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='Baba-CRM-GST-Invoice-Backup-'+operationsDay()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
+
+let quoteFollowupsLoaded=false,quoteFollowupsError='';
+function dashboardFollowups(){
+ const quotations=Array.from(sharedQuotations.values()).filter(q=>q.followup?.date&&q.status!=='Cancelled').map(q=>({id:'QFU_'+q.id,quoteId:q.id,name:q.customer||'',phone:q.phone||'',details:[q.title,q.followup.note].filter(Boolean).join(' | '),followup:q.followup.date,status:q.followup.status||'Pending'}));
+ return [...allLeadsData,...quotations];
+}
+async function refreshQuoteFollowups(){
+ try{await loadSharedQuotations();quoteFollowupsLoaded=true;quoteFollowupsError='';}
+ catch{quoteFollowupsError='Tour follow-ups could not load. Refresh to retry.';}
+ renderOperations();if(currentTab==='leads')renderTable();
+}
+async function saveSharedQuoteFollowup(id,date,note,status='Pending'){
+ const result=await tourPackageRequest('action=save-quotation-followup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,followup:{date,note,status}})});
+ if(!result.followup||result.id!==id)throw Error('Follow-up save was not confirmed.');
+ const q=sharedQuotations.get(id);if(q)sharedQuotations.set(id,{...q,followup:result.followup});
+ quoteFollowupsLoaded=true;renderOperations();if(currentTab==='leads')renderTable();
+ return result.followup;
+}
+async function saveQuoteFollowup(){
+ const message=document.getElementById('quoteActionMessage'),form=document.getElementById('quoteForm'),button=form.querySelector('[onclick="saveQuoteFollowup()"]');
+ if(quotationSaving)return;button.disabled=true;
+ try{
+  const date=document.getElementById('quoteFollowupTime').value;if(!date)throw Error('Choose a follow-up date and time.');
+  if(!sharedQuotations.has(activeQuoteId)){
+   const q=quoteValues();await tourPackageRequest('action=save-tour-quotation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({quotation:q})});sharedQuotations.set(q.id,q);refreshQuotes();
+  }
+  await saveSharedQuoteFollowup(activeQuoteId,date,sharedQuotations.get(activeQuoteId)?.followup?.note||'');
+  message.textContent='Follow-up saved to Sheet and dashboard.';
+ }catch(error){message.textContent=error.message;}finally{button.disabled=false;}
+}
+function renderQuoteFollowupRow(row,lead){
+ const cell=text=>{const td=document.createElement('td');td.className='p-2 whitespace-pre-line';td.textContent=text;row.append(td);return td;};
+ cell(lead.name+'\n'+lead.phone);cell('Tour / Itinerary\n'+lead.details);cell(lead.followup.replace('T',' '));
+ const statusCell=cell(''),select=document.createElement('select');
+ for(const text of ['Pending','Called','Converted','Dropped'])select.add(new Option(text,text));select.value=lead.status;
+ select.onchange=async()=>{select.disabled=true;try{await saveSharedQuoteFollowup(lead.quoteId,lead.followup,sharedQuotations.get(lead.quoteId)?.followup?.note||'',select.value);}catch(error){alert(error.message);select.value=lead.status;}finally{select.disabled=false;}};statusCell.append(select);
+ const actions=cell(''),open=document.createElement('button');open.type='button';open.className='border rounded p-2';open.textContent='Open quotation';open.onclick=()=>{openQuotes();loadQuote(lead.quoteId);};actions.append(open);
+ const wa=document.createElement('a');wa.textContent='WhatsApp';wa.className='block text-green-700 p-2';const digits=String(lead.phone).replace(/\D/g,'');wa.href='https://wa.me/'+(digits.length===10?'91':'')+digits+'?text='+encodeCustomerWhatsAppMessage('Hello '+lead.name+', following up on your '+(sharedQuotations.get(lead.quoteId)?.title||'tour quotation')+'. Please let us know if you need any changes.');wa.target='_blank';wa.rel='noopener noreferrer';actions.append(wa);
+}
+void refreshQuoteFollowups();
 
 for(const id of ['invState','invBillState']) {const select=gstControl(id);for(const state of gstStates){const option=document.createElement('option');option.value=state;option.textContent=state;select.append(option);}}
 gstControl('gstModal').addEventListener('input',calculateInvoiceTotals);
