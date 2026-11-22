@@ -171,21 +171,26 @@ async function handleFleetRegister(req,res,action) {
   try{
     const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)});
     if(!response.ok)return sendJson(res,502,{error:'Apps Script returned HTTP '+response.status+'. Refresh the register to check the entry.'});
-    const result=await response.json();
+    let result;
+    try{result=await response.json();}catch{
+      return sendJson(res,502,{error:'Apps Script did not return JSON. Check the web app deployment access and execution log.'});
+    }
     if(result?.ok!==true){
       if(typeof result?.error==='string'&&result.error.startsWith('Fleet: ')&&result.error.length<=220)return sendJson(res,409,{error:result.error.slice(7)});
       if(result?.error==='Unknown action')return sendJson(res,502,{error:'The configured Apps Script deployment does not recognize the fleet action. Check its deployed version.'});
       if(result?.error==='Unauthorized')return sendJson(res,502,{error:'Apps Script rejected the CRM connection. Check the deployment settings.'});
-      throw Error('Unconfirmed');
+      return sendJson(res,502,{error:'Apps Script did not complete the fleet action. Check the latest doPost execution.'});
     }
     if(write){
-      if(result.id!==payload.id||result.reg!==payload.entry.reg)throw Error('Unconfirmed');
+      if(result.id!==payload.id||result.reg!==payload.entry.reg)return sendJson(res,502,{error:'Apps Script replied without matching save details. Check the vehicle in the register.'});
       return sendJson(res,200,{ok:true,id:result.id,reg:result.reg});
     }
     if(!Array.isArray(result.vehicles)||!Array.isArray(result.history)||!Array.isArray(result.days)||!/^\d{4}-\d\d-\d\d$/.test(result.today))throw Error('Invalid list');
     return sendJson(res,200,{ok:true,today:result.today,vehicles:result.vehicles,history:result.history,days:result.days});
-  }catch{
-    return sendJson(res,502,{error:write?'Fleet save not confirmed. Retry the same entry.':'Fleet Sheet could not be loaded. Check the Apps Script deployment.'});
+  }catch(error){
+    const timedOut=['AbortError','TimeoutError'].includes(error?.name);
+    return sendJson(res,timedOut?504:502,{error:timedOut?'Apps Script took too long to respond. Check the register before retrying.':
+      write?'Could not reach Apps Script to confirm the write. Check the register before retrying.':'Fleet Sheet could not be loaded. Check the Apps Script deployment.'});
   }
 }
 
