@@ -340,8 +340,13 @@ async function fetchGstCustomer(gstin,secret) {
   if(/not found|invalid gst|no record/.test(message))throw gstLookupFailure(404,'No taxpayer details were found for this GSTIN.');
   throw gstLookupFailure(502,'GST provider could not verify this GSTIN. Check the number or retry later.');
  }
- const info=result?.taxpayerInfo;
- if(!info||String(info.gstin||'').toUpperCase()!==gstin)throw gstLookupFailure(502,'GST provider returned mismatched details. Nothing was filled.');
+ const info=gstTaxpayerInfo(result);
+ const returnedGstin=typeof info?.gstin==='string'?info.gstin.trim().toUpperCase():'';
+ if(!returnedGstin)throw gstLookupFailure(502,'GST provider did not return a taxpayer GSTIN. No details were filled. Please retry later or check with Appyflow support.');
+ if(returnedGstin!==gstin) {
+  const safeNumber=/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(returnedGstin)?' Requested '+gstin+'; provider returned '+returnedGstin+'.':'';
+  throw gstLookupFailure(502,'GST provider returned mismatched details.'+safeNumber+' Nothing was filled. Please check with Appyflow support.');
+ }
  const clean=value=>typeof value==='string'?value.trim().slice(0,300):'';
  const legalName=clean(info.lgnm),tradeName=clean(info.tradeNam),address=info.pradr?.addr;
  if(!legalName&&!tradeName)throw gstLookupFailure(502,'GST provider returned incomplete customer details.');
@@ -351,6 +356,27 @@ async function fetchGstCustomer(gstin,secret) {
   formattedAddress=Array.from(new Set(pieces)).join(', ');
  }
  return {gstin,legalName,tradeName,customerName:legalName||tradeName,customerAddress:formattedAddress.slice(0,500),stateCode:gstin.slice(0,2),stateName:clean(address?.stcd),status:clean(info.sts)||'Not provided',registrationDate:clean(info.rgdt),taxpayerType:clean(info.dty),source:'Appyflow',fetchedAt:new Date().toISOString()};
+}
+
+// Accept only bounded response envelopes. Identity always comes from the taxpayer record.
+function gstTaxpayerInfo(result) {
+ const decode=value=>{
+  if(typeof value!=='string')return value;
+  if(value.length>200000)return null;
+  try{return JSON.parse(value);}catch{return null;}
+ };
+ let current=decode(result);
+ for(let depth=0;depth<4;depth++) {
+  if(!current||typeof current!=='object'||Array.isArray(current))return null;
+  const info=decode(current.taxpayerInfo);
+  if(info&&typeof info==='object'&&!Array.isArray(info))return info;
+  if(typeof current.gstin==='string'&&(typeof current.lgnm==='string'||typeof current.tradeNam==='string'))return current;
+  // Only unwrap one unambiguous conventional envelope; never search arbitrary objects.
+  const envelopes=['data','result','response'].filter(key=>current[key]!=null);
+  if(envelopes.length!==1)return null;
+  current=decode(current[envelopes[0]]);
+ }
+ return null;
 }
 
 module.exports = async (req, res) => {
