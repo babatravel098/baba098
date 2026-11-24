@@ -141,11 +141,12 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
             </div>
         </header>
 
-        <div class="crm-layout"><nav class="crm-nav" aria-label="CRM navigation"><h2>Workspace</h2><button type="button" onclick="openOfficeHub()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-building" aria-hidden="true"></i> Office Operations</button><button type="button" onclick="openBookingReport()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-chart-column" aria-hidden="true"></i> Booking Reports</button><button type="button" onclick="openQuotes()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-route" aria-hidden="true"></i> Quotations / Itinerary</button>
+        <div class="crm-layout"><nav class="crm-nav" aria-label="CRM navigation"><h2>Workspace</h2><button type="button" onclick="openSocialInbox()" class="rounded-lg border px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-inbox" aria-hidden="true"></i> All Enquiries</button><button type="button" onclick="openOfficeHub()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-building" aria-hidden="true"></i> Office Operations</button><button type="button" onclick="openBookingReport()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-chart-column" aria-hidden="true"></i> Booking Reports</button><button type="button" onclick="openQuotes()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-route" aria-hidden="true"></i> Quotations / Itinerary</button>
 <button type="button" onclick="openCustomers()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-users" aria-hidden="true"></i> Customers / History</button></nav><main class="crm-workspace space-y-5"><section id="upcomingPickups" role="status" aria-live="polite" hidden class="rounded-xl border border-teal-200 bg-teal-50 p-4"><h2 class="font-bold text-teal-900">Pickups in the next 7 days</h2><ul id="upcomingPickupList" class="mt-2 grid gap-2 text-sm"></ul></section><h1 class="crm-title">Travel Operations</h1>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" aria-label="Daily operations">
                 <button type="button" onclick="openOperations('pickups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Today's pickups</span><strong id="opsPickups" class="text-2xl text-blue-900">—</strong></button>
                 <button type="button" onclick="openOperations('followups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Due follow-ups</span><strong id="opsFollowups" class="text-2xl text-blue-900">—</strong></button>
+<button type="button" onclick="openSocialInbox(&quot;due&quot;)" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">All channels</span><strong class="text-lg text-blue-900">Due enquiries</strong></button>
                 <button type="button" onclick="openOperations('scheduled')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Upcoming follow-ups</span><strong id="opsScheduled" class="text-2xl text-blue-900">–</strong><small id="opsNextContact" class="block text-slate-600"></small></button>
                 <button type="button" onclick="openOperations('collections')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Pending collections</span><strong id="opsCollections" class="text-2xl text-blue-900">—</strong></button>
             </div>
@@ -8338,6 +8339,254 @@ document.getElementById('dutyForm').addEventListener('submit',event=>{
   refresh();window.addEventListener('focus',()=>{if(!box.open)refresh();});
   setInterval(()=>{if(!document.hidden&&!box.open&&!loading)refresh();},300000);
 })();
+</script>
+
+<style>
+#crmSocial {width:min(1080px,96vw); max-height:90vh; border:0; border-radius:18px; padding:0; background:#f3f8fa; color:#173346;}
+#crmSocial::backdrop {background:#112b3c99;}
+#crmSocial header {display:flex; justify-content:space-between; align-items:center; padding:16px 22px; background:#103f48; color:white;}
+#crmSocial h2 {font-size:1.35rem;font-weight:750;}
+#crmSocial h3 {font-size:1.1rem;font-weight:750;margin:.25rem 0;}
+#crmSocial .socialBody {padding:16px 22px;}
+#crmSocial .socialFilters {display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; align-items:center;}
+#crmSocial .socialLayout {display:grid; grid-template-columns:minmax(200px,1fr) minmax(0,2fr); gap:12px;}
+#crmSocial .socialPanel {background:white; border:1px solid #ccdde2;border-radius:12px;padding:12px;min-width:0;}
+#crmSocial .socialList,#crmSocial .socialThread {max-height:380px;overflow:auto;}
+#crmSocial .socialList button {display:block;width:100%;text-align:left; white-space:normal; margin-bottom:7px;}
+#crmSocial .socialList button[aria-pressed=true] {background:#ddf5ee; border-color:#14756b;}
+#crmSocial button,#crmSocial input,#crmSocial select,#crmSocial textarea,#crmSocial .socialAction {border:1px solid #bccfd6;border-radius:7px;padding:7px 10px;}
+#crmSocial button,#crmSocial .socialAction {background:white;color:#174855;}
+#crmSocial button[data-primary] {background:#096860;color:white;border-color:#096860;}
+#crmSocial button:disabled {opacity:.5;}
+#crmSocial label {display:block;margin:5px 0;}
+#crmSocial textarea {display:block;width:100%;resize:vertical;}
+#crmSocial .socialBubble {white-space:pre-wrap; overflow-wrap:anywhere; background:#eff5f7; padding:8px; border-radius:8px;margin:4px 0;}
+#crmSocial .socialBubble[data-outgoing] {background:#e0f7ed; margin-left:12%;}
+#crmSocial small {display:block;color:#456475;}
+#crmSocial #socialNotice {min-height:1.5em;}
+@media (max-width:680px){#crmSocial .socialLayout {grid-template-columns:1fr} #crmSocial .socialList{max-height:175px}}
+</style>
+<dialog id="crmSocial" aria-labelledby="socialTitle">
+  <header><h2 id="socialTitle">All Enquiries</h2><button type="button" onclick="this.closest('dialog').close()">Close</button></header>
+  <div class="socialBody">
+    <div class="socialFilters">
+      <input id="socialSearch" type="search" aria-label="Search enquiries" placeholder="Name, number or campaign">
+      <select id="socialFilter" aria-label="Filter enquiries"><option value="all">All enquiries</option><option value="due">Due follow-ups</option><option value="upcoming">Upcoming follow-ups</option><option>New</option><option>Contacted</option><option>Quote Sent</option><option>Booked</option><option>Closed</option></select>
+      <select id="socialChannel" aria-label="Enquiry source"><option value="">All sources</option><option>WhatsApp</option><option>Messenger</option><option>Instagram</option><option>Meta Instant Form</option><option>Existing CRM</option><option>Manual</option></select>
+      <button id="socialRefresh" type="button">Refresh</button><button id="socialNew" type="button" data-primary>New enquiry</button>
+    </div>
+    <p id="socialSummary"></p><details><summary>Campaign results</summary><ul id="socialCampaigns"></ul></details>
+    <p id="socialNotice" role="status" aria-live="polite"></p>
+    <div class="socialLayout">
+      <div class="socialPanel socialList" id="socialList" aria-label="Enquiry list"></div>
+      <div class="socialPanel">
+        <p id="socialEmpty">Choose an enquiry to see its follow-up and messages.</p>
+        <div id="socialDetail" hidden>
+          <h3 id="socialLeadTitle"></h3><p id="socialSourceInfo"></p>
+          <div class="socialFilters"><a class="socialAction" id="socialCall">Call</a><a class="socialAction" id="socialWa" target="_blank" rel="noopener">Open WhatsApp</a></div>
+          <form id="socialLeadForm">
+            <div id="socialIdentity" hidden><label>Name <input id="socialName" maxlength="100"></label><label>Phone <input id="socialPhone" type="tel" maxlength="40"></label></div>
+            <div class="socialFilters"><label>Status <select id="socialStage"><option>New</option><option>Contacted</option><option>Quote Sent</option><option>Booked</option><option>Closed</option></select></label><label>Next follow-up (India time) <input id="socialDue" type="datetime-local"></label></div>
+            <label>Follow-up note <textarea id="socialNote" rows="2" maxlength="500"></textarea></label>
+            <div class="socialFilters"><button data-primary type="submit">Save follow-up</button><button id="socialDone" type="button">Done</button><button id="socialReschedule" type="button">Reschedule</button></div>
+          </form>
+          <small id="socialReminder"></small>
+          <h3>Conversation</h3><div class="socialThread" id="socialThread"></div>
+          <form id="socialReplyForm" hidden><label>Reply <textarea id="socialReplyText" rows="2" maxlength="1000" required></textarea></label><button data-primary type="submit">Send reply</button></form>
+        </div>
+      </div>
+    </div>
+  </div>
+</dialog>
+<script>
+const socialUi = {leads:[], selected:null, request:0, inboxRequest:0};
+const socialById = id => document.getElementById(id);
+const socialNotice = text => {socialById('socialNotice').textContent = text;};
+const socialTerminal = lead => ['Booked','Closed'].includes(lead.stage);
+const socialDate = value => value ? new Date(value+19800000).toISOString().slice(0,16) : '';
+function socialDateValue(value) {
+  if (!value) return 0;
+  const date = String(value);
+  const exact = date.length === 10 ? date+'T09:00' : date;
+  const time = Date.parse(exact.length === 16 ? exact+'+05:30' : exact);
+  return Number.isFinite(time) ? time : 0;
+}
+async function socialRequest(query, body) {
+  const response = await fetch('/api/dashboard?'+query, body ? {
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'
+  } : {cache:'no-store'});
+  const result = await response.json();
+  if (!response.ok || !result.ok) throw new Error(result.error || 'The CRM could not confirm this request.');
+  return result;
+}
+function socialLegacy() {
+  const source = typeof dashboardFollowups === 'function' ? dashboardFollowups() : [];
+  return source.flatMap(lead => {
+    const key = String(lead.id || lead.leadId || '');
+    if (!key || !/^[\w.-]{1,280}$/.test(key)) return [];
+    const stage = {Pending:'New',Called:'Contacted',Converted:'Booked',Confirmed:'Booked',Cancelled:'Closed',Done:'Closed',Lost:'Closed'}[lead.status] || 'New';
+    const due = socialDateValue(lead.followup);
+    return [{id:'legacy:'+key,name:lead.name,phone:lead.phone,lastMessage:lead.details,
+      channel:'Existing CRM',stage,due:socialTerminal({stage})?0:due, suggestedDue:due}];
+  });
+}
+async function openSocialInbox(filter='all') {
+  if (!socialById('crmSocial').open) socialById('crmSocial').showModal();
+  socialById('socialFilter').value = filter;
+  await reloadSocialInbox();
+}
+async function reloadSocialInbox() {
+  const revision = ++socialUi.inboxRequest;
+  socialNotice('Loading enquiries…');
+  try {
+    const result = await socialRequest('data=social-inbox');
+    if (revision !== socialUi.inboxRequest) return;
+    const merged = new Map(socialLegacy().map(l=>[l.id,l]));
+    result.leads.forEach(l=>merged.set(l.id,{...merged.get(l.id),...l}));
+    socialUi.leads = [...merged.values()];
+    socialUi.calendar = result.calendarEnabled;
+    socialUi.whatsapp = result.whatsappReminderEnabled;
+    socialRenderList();
+    socialNotice('');
+  } catch(error) { if (revision === socialUi.inboxRequest) socialNotice(error.message); }
+}
+function socialRenderList() {
+  const filter = socialById('socialFilter').value;
+  const search = socialById('socialSearch').value.toLowerCase().trim();
+  const channel = socialById('socialChannel').value;
+  const list = socialById('socialList');
+  const available = socialUi.leads.filter(l=>!channel||l.channel===channel);
+  const due = l=>!!l.due && l.due<=Date.now() && !socialTerminal(l);
+  const upcoming = l=>l.due>Date.now() && !socialTerminal(l);
+  const matching = available.filter(l=>(filter==='all'||(filter==='due'?due(l):filter==='upcoming'?upcoming(l):filter===l.stage)) &&
+    [l.name,l.phone,l.channel,l.campaign,l.ad,l.lastMessage].join(' ').toLowerCase().includes(search));
+  if (filter==='due'||filter==='upcoming') matching.sort((a,b)=>a.due-b.due);
+  socialById('socialSummary').textContent = available.length+' enquiries · '+available.filter(due).length+' due · '+available.filter(l=>l.stage==='Booked').length+' booked';
+  const campaigns = new Map();
+  for (const lead of available.filter(l=>l.campaign || l.ad)) {
+    const key = [lead.campaign,lead.ad].filter(Boolean).join(' / ');
+    const count = campaigns.get(key) || {leads:0,booked:0};
+    count.leads++;
+    if(lead.stage==='Booked') count.booked++;
+    campaigns.set(key,count);
+  }
+  const campaignList = socialById('socialCampaigns');
+  campaignList.replaceChildren();
+  for (const [name,count] of campaigns) {
+    const row = document.createElement('li');
+    row.textContent = name+' · '+count.leads+' enquiries · '+count.booked+' booked';
+    campaignList.append(row);
+  }
+  if(!campaigns.size) campaignList.textContent = 'Campaign information will appear with attributed enquiries.';
+  list.replaceChildren();
+  for (const lead of matching) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = lead.name || lead.phone || lead.channel+' enquiry';
+    button.setAttribute('aria-pressed',String(socialUi.selected?.id===lead.id));
+    const meta = document.createElement('small');
+    meta.textContent = [lead.channel,lead.stage,due(lead)?'Due':lead.due?socialDate(lead.due).replace('T',' '):''].filter(Boolean).join(' · ');
+    button.append(meta);
+    button.onclick = () => selectSocialLead(lead);
+    list.append(button);
+  }
+  if (!matching.length) list.textContent = 'No matching enquiries.';
+}
+async function selectSocialLead(lead) {
+  socialUi.selected = lead;
+  const revision = ++socialUi.request;
+  socialRenderList();
+  socialById('socialEmpty').hidden = true;
+  socialById('socialDetail').hidden = false;
+  socialById('socialLeadTitle').textContent = lead.name || lead.phone || lead.channel+' enquiry';
+  socialById('socialSourceInfo').textContent = [lead.channel,lead.platform,lead.campaign,lead.ad].filter(Boolean).join(' · ');
+  const number = String(lead.phone || '').replace(/\D/g,'');
+  const dial = number.length === 10 ? '91'+number : number;
+  socialById('socialCall').hidden = !dial;
+  socialById('socialWa').hidden = !dial;
+  socialById('socialCall').href = 'tel:+'+dial;
+  socialById('socialWa').href = 'https://wa.me/'+dial;
+  const editable = /^(manual|legacy):/.test(lead.id);
+  socialById('socialIdentity').hidden = !editable;
+  socialById('socialName').value = lead.name || '';
+  socialById('socialPhone').value = lead.phone || '';
+  socialById('socialStage').value = lead.stage;
+  socialById('socialDue').value = socialDate(lead.due);
+  socialById('socialNote').value = lead.note || '';
+  socialById('socialReminder').textContent = [socialUi.calendar?'Calendar enabled':'Calendar setup pending',
+    socialUi.whatsapp?'WhatsApp reminders enabled':'WhatsApp reminder setup pending',lead.reminderStatus||''].filter(Boolean).join(' · ');
+  socialById('socialReplyText').value = '';
+  socialById('socialReplyForm').hidden = true;
+  const thread = socialById('socialThread');
+  thread.textContent = lead.lastMessage || 'No messages yet.';
+  if (editable) return;
+  try {
+    const result = await socialRequest('action=social-messages',{thread:lead.id});
+    if (revision !== socialUi.request) return;
+    thread.replaceChildren();
+    for(const message of result.messages) {
+      const bubble = document.createElement('p');
+      bubble.className = 'socialBubble';
+      if (message.outgoing) bubble.dataset.outgoing = '';
+      const when = document.createElement('small');
+      when.textContent = socialDate(message.at).replace('T',' ')+' · '+(message.outgoing?(message.delivery||'Sent by CRM'):lead.channel);
+      bubble.append(when,document.createTextNode(message.text));
+      thread.append(bubble);
+    }
+    const canReply = Boolean(lead.peer && lead.lastInbound && Date.now()-lead.lastInbound<86400000);
+    socialById('socialReplyForm').hidden = !canReply;
+    if (lead.peer && !canReply) thread.append(document.createTextNode('The 24-hour reply window has closed.'));
+    thread.scrollTop = thread.scrollHeight;
+  } catch(error) { if(revision===socialUi.request) socialNotice(error.message); }
+}
+async function socialSaveForm(done=false) {
+  const selected = socialUi.selected;
+  if (!selected) return;
+  const name = socialById('socialName').value.trim(), phone = socialById('socialPhone').value.trim();
+  if (selected.id.startsWith('manual:') && !name && !phone) return socialNotice('Enter the name or phone number.');
+  const dueValue = socialById('socialDue').value;
+  const due = done ? 0 : socialDateValue(dueValue);
+  const stage = socialById('socialStage').value;
+  const send = socialById('socialLeadForm').querySelector('button[type=submit]');
+  send.disabled = true;
+  socialById('socialDone').disabled = true;
+  try {
+    await socialRequest('action=social-save-lead',{lead:{id:selected.id,name,phone,stage,due,
+      note:socialById('socialNote').value,lastMessage:selected.lastMessage||''}});
+    await reloadSocialInbox();
+    if (socialUi.selected?.id === selected.id) {
+      const refreshed=socialUi.leads.find(l=>l.id===selected.id);
+      if (refreshed) await selectSocialLead(refreshed);
+    }
+    socialNotice(done?'Follow-up marked done.':'Follow-up saved.');
+  } catch(error) { socialNotice(error.message); }
+  finally { send.disabled=false;socialById('socialDone').disabled=false; }
+}
+for (const id of ['socialSearch','socialFilter','socialChannel']) socialById(id).oninput = socialRenderList;
+socialById('socialRefresh').onclick = reloadSocialInbox;
+socialById('socialNew').onclick = () => selectSocialLead({id:'manual:'+crypto.randomUUID(),channel:'Manual',stage:'New'});
+socialById('socialLeadForm').onsubmit = e => {e.preventDefault();void socialSaveForm();};
+socialById('socialDone').onclick = () => socialSaveForm(true);
+socialById('socialReschedule').onclick = () => socialById('socialDue').focus();
+let pendingSocialReply;
+socialById('socialReplyForm').onsubmit = async e => {
+  e.preventDefault();
+  const selected = socialUi.selected;
+  const text = socialById('socialReplyText').value.trim();
+  if (!selected || !text) return;
+  if (!pendingSocialReply || pendingSocialReply.thread!==selected.id || pendingSocialReply.text!==text) {
+    pendingSocialReply = {thread:selected.id,text,replyId:crypto.randomUUID()};
+  }
+  const button = e.currentTarget.querySelector('button');
+  button.disabled = true;
+  try {
+    await socialRequest('action=social-reply',pendingSocialReply);
+    pendingSocialReply = null;
+    if (socialUi.selected?.id===selected.id) await selectSocialLead(selected);
+    socialNotice('Reply accepted by Meta.');
+  } catch(error) {socialNotice(error.message);}
+  finally {button.disabled=false;}
+};
 </script>
 
 </body>
