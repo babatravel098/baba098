@@ -136,18 +136,20 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
                 <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Operations v10</span>
                 <button onclick="openFreshGstModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">📄 Create Fresh GST Invoice</button> <button type="button" onclick="openHotelBill()" class="bg-red-700 text-white px-3 py-2 rounded text-sm">Hotel Bill</button>
                 
+                <button type="button" onclick="logoutAllDevices()" class="bg-red-800 hover:bg-red-900 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">Logout all devices</button>
                 <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🚪 Logout</button>
             </div>
         </header>
 
         <div class="crm-layout"><nav class="crm-nav" aria-label="CRM navigation"><h2>Workspace</h2><button type="button" onclick="openOfficeHub()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-building" aria-hidden="true"></i> Office Operations</button><button type="button" onclick="openBookingReport()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-chart-column" aria-hidden="true"></i> Booking Reports</button><button type="button" onclick="openQuotes()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-route" aria-hidden="true"></i> Quotations / Itinerary</button>
 <button type="button" onclick="openCustomers()" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-users" aria-hidden="true"></i> Customers / History</button></nav><main class="crm-workspace space-y-5"><section id="upcomingPickups" role="status" aria-live="polite" hidden class="rounded-xl border border-teal-200 bg-teal-50 p-4"><h2 class="font-bold text-teal-900">Pickups in the next 7 days</h2><ul id="upcomingPickupList" class="mt-2 grid gap-2 text-sm"></ul></section><h1 class="crm-title">Travel Operations</h1>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" aria-label="Daily operations">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" aria-label="Daily operations">
                 <button type="button" onclick="openOperations('pickups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Today's pickups</span><strong id="opsPickups" class="text-2xl text-blue-900">—</strong></button>
                 <button type="button" onclick="openOperations('followups')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Due follow-ups</span><strong id="opsFollowups" class="text-2xl text-blue-900">—</strong></button>
+                <button type="button" onclick="openOperations('scheduled')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Upcoming follow-ups</span><strong id="opsScheduled" class="text-2xl text-blue-900">–</strong><small id="opsNextContact" class="block text-slate-600"></small></button>
                 <button type="button" onclick="openOperations('collections')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Pending collections</span><strong id="opsCollections" class="text-2xl text-blue-900">—</strong></button>
             </div>
-<button type="button" id="fleetTile" class="w-full text-left bg-white border rounded-xl px-4 py-3"><strong>Vehicle Register</strong> · <b id="fleetSize">Loading…</b><span id="fleetAlerts" class="text-sm"></span></button>
+<div id="fleetShortcuts"><button type="button" id="fleetTile" data-section="collections"><strong>Vehicle payments</strong><span id="fleetSize"></span><small id="fleetAlerts"></small></button><button type="button" data-section="drivers"><strong>Driver &amp; salary</strong></button><button type="button" data-section="service"><strong>Service &amp; KM</strong><small id="fleetServiceAlert"></small></button><button type="button" data-section="office"><strong>Office staff &amp; salary</strong></button></div>
             <div class="crm-actions flex flex-wrap gap-2">
                 <button type="button" onclick="openEntry('booking')" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">+ New Booking</button><a href="https://script.google.com/macros/s/AKfycbzXu77bmooy2cXFh7vCPr5BuGZ0N25ZknBdyo20agSCM5JzmnlIfWGReP1HX4O9RUmTsA/exec" target="_blank" rel="noopener noreferrer" class="inline-block px-4 py-2 rounded-lg bg-emerald-700 text-white font-bold">New Sheet Bookings</a>
                 <button type="button" onclick="openEntry('lead')" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">+ Add Lead</button>
@@ -481,12 +483,14 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 </div><label class="block">Package title<input name="title" maxlength="200" class="block w-full rounded border p-2" placeholder="Enter the name to save this package"></label><div class="flex flex-wrap gap-2"><button type="button" id="loadNepalPackage" class="rounded bg-teal-800 px-3 py-2 text-white">Load package</button>
 <button type="button" id="saveNepalPackage" class="rounded border px-3 py-2">Save as package</button><button type="button" id="deleteSharedTourPackage" class="rounded border border-red-300 px-3 py-2 text-red-700" onclick="deleteSelectedTourPackage()">Delete saved package</button>
 </div>
+<section id="nightPanel" hidden><h3 class="font-bold">Night-wise hotels</h3><p class="text-sm">Choose or type a city and hotel for each night. Adjust route and activities in Trip days when changing a destination.</p><datalist id="overnightCityOptions"></datalist><div id="nightStays" class="grid gap-2"></div></section>
 <div class="flex flex-wrap gap-3">
 <label>Kathmandu hotel <select id="nepalKathmandu" class="block rounded border p-2"></select></label>
 <label>Pokhara hotel <select id="nepalPokhara" class="block rounded border p-2"></select></label>
 <label>Janakpur hotel <select id="nepalJanakpur" class="block rounded border p-2"></select></label><label>Muktinath / Jomsom hotel <select id="nepalJomsom" class="block rounded border p-2"></select></label><label>Chitwan hotel <select id="nepalChitwan" class="block rounded border p-2"></select></label><label>Vehicle <select id="nepalVehicle" class="block rounded border p-2"></select></label>
 <label>Meal plan <select id="nepalMeal" class="block rounded border p-2"><option value="">Select meal plan</option><option>EP - Room only</option><option>BB - Breakfast</option><option>MAP - Breakfast and one main meal</option><option>AP - Breakfast, lunch and dinner</option></select></label>
 </div>
+
 <details class="border rounded p-3"><summary>Add hotel to library</summary>
 <div class="flex flex-wrap items-end gap-2">
 <label>City<select id="quoteHotelCity" class="block border rounded p-2"><option>Kathmandu</option><option>Pokhara</option><option>Janakpur</option><option>Jomsom</option><option>Chitwan</option></select></label>
@@ -598,7 +602,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
         let leadsLoaded = false;
         const operationsLabels = {
             pickups: "Today's pickups",
-            followups: 'Due follow-ups',
+            followups: 'Due follow-ups', scheduled: 'Upcoming follow-ups',
             collections: 'Pending collections', ongoing: 'Ongoing bookings', cancelled: 'Cancelled bookings'
         };
         const operationsDate = new Intl.DateTimeFormat('en-CA', {
@@ -626,7 +630,17 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
             return day && day <= operationsDay() && ['Pending', 'Called'].includes(lead.status);
         }
 
+        function isUpcomingFollowup(lead) {
+            return ['Pending','Called'].includes(lead.status) && operationsDay(lead.followup ?? '') > operationsDay();
+        }
+        function followupOrder(a,b) {
+            const key = item => operationsDay(item.followup)+' '+String(item.followup || '').slice(11,16);
+            return key(a).localeCompare(key(b));
+        }
         function renderOperations() {
+            const upcoming = dashboardFollowups().filter(isUpcomingFollowup).sort(followupOrder);
+            document.getElementById('opsScheduled').textContent = (leadsLoaded || quoteFollowupsLoaded) ? upcoming.length : '–';
+            document.getElementById('opsNextContact').textContent = upcoming[0] ? [operationsDay(upcoming[0].followup),upcoming[0].name].filter(Boolean).join(' · ') : '';
             const pending = allBookingsData.reduce((sum, booking) => sum + Math.max(0, bookingBalance(booking)), 0);
             document.getElementById('opsPickups').textContent = bookingsLoaded ? allBookingsData.filter(isPickupToday).length : '—';
             document.getElementById('opsFollowups').textContent = (leadsLoaded || quoteFollowupsLoaded) ? dashboardFollowups().filter(isFollowupDue).length + (quoteFollowupsError ? ' !' : '') : '-';
@@ -636,7 +650,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
         }
 
         function openOperations(filter) {
-            switchTab(filter === 'followups' ? 'leads' : 'new');
+            switchTab(['followups','scheduled'].includes(filter) ? 'leads' : 'new');
             operationsFilter = filter;
             renderTable();
         }
@@ -662,7 +676,27 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
     fetchLeads();
     loadLastInvoiceNumber();
 };
-function handleLogout() { const form = document.createElement('form'); form.method = 'POST'; form.action = '/api/logout'; document.body.appendChild(form); form.submit(); }
+function handleLogout() { const form = document.createElement('form'); form.method = 'POST'; form.action = '/api/logout'; document.body.appendChild(form); form.submit(); }async function logoutAllDevices() {
+  if(!confirm('Sign out of Baba Tour & Travels CRM on every computer? Every user will need to sign in again with the authorised email.'))return;
+  const button=document.querySelector('[onclick="logoutAllDevices()"]');
+  if(button){button.disabled=true;button.textContent='Signing out…';}
+  try {
+    const response=await fetch('/api/dashboard?action=logout-all',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},cache:'no-store',body:'{}'});
+    if(!response.ok)throw Error();
+    window.location.replace('/');
+  } catch {
+    if(button){button.disabled=false;button.textContent='Logout all devices';}
+    alert('All-device sign-out could not be confirmed. Check your connection and try again.');
+  }
+}
+async function refreshGlobalCrmSession() {
+  try {
+    const response=await fetch('/api/dashboard?data=session-status',{credentials:'same-origin',cache:'no-store'});
+    if(response.status===401)window.location.replace('/');
+  } catch {}
+}
+refreshGlobalCrmSession();
+window.setInterval(refreshGlobalCrmSession,60000);
 function openEntry(type) {
             switchForm(type);
             document.getElementById('crmEntry').scrollIntoView({ block: 'nearest' });
@@ -769,7 +803,8 @@ function openEntry(type) {
             .catch(err => {
                 console.error("Error fetching leads:", err);
                 if(currentTab === 'leads') {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-red-500">Could not load leads.</td></tr>`;
+                    renderTable();
+                    const warning = tbody.insertRow().insertCell();warning.colSpan=5;warning.textContent='Lead sheet could not load. Refresh to retry.';
                 }
             });
         }
@@ -1027,7 +1062,9 @@ function fetchBookings() {
                 }
                 const visibleLeads = dashboardFollowups().filter(lead =>
                     matchesSearch(lead.name, lead.phone, lead.details, lead.status)
-                    && (operationsFilter !== 'followups' || isFollowupDue(lead)));
+                    && (operationsFilter !== 'followups' || isFollowupDue(lead))
+                    && (operationsFilter !== 'scheduled' || isUpcomingFollowup(lead)));
+                if(['scheduled','followups'].includes(operationsFilter))visibleLeads.sort(followupOrder);
                 if (!visibleLeads.length) tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-500">No matching leads.</td></tr>';
                 visibleLeads.forEach(l => {
                     if(l.quoteId){const row=document.createElement('tr');renderQuoteFollowupRow(row,l);tbody.appendChild(row);return;}
@@ -3611,6 +3648,7 @@ function appendQuoteHotel({city, name, category}) {
     const value = name + ' (' + category + ')';
     if (select && ![...select.options].some(option => option.value === value)) {
         select.add(new Option(value, value));
+        drawNightStays();
     }
 }
 
@@ -3680,22 +3718,24 @@ quoteControl('applyNepalOptions').addEventListener('click', () => {
     if (vehicle) nepalValue('vehicle').value = vehicle;
     const hotels = {Kathmandu:kathmandu, Pokhara:pokhara, Janakpur:janakpur, Jomsom:jomsom, Chitwan:chitwan};
     const selectedHotels = Object.entries(hotels).filter(([,hotel]) => hotel && !hotel.startsWith('Enter a '));
-    const overnightCities = new Set([...quoteControl('tripDays').children].map(card => card.querySelector('[data-day="stay"]').value.split(':')[0]));
-    const routeHotels = selectedHotels.filter(([city]) => overnightCities.has(city));
-    nepalValue('hotel').value = routeHotels.map(([city,hotel]) => city + ': ' + hotel).join('\n');
+    const changing = activeTourOption;
     for (const card of quoteControl('tripDays').children) {
         const stay = card.querySelector('[data-day="stay"]');
-        const city = stay.value.split(':')[0];
-        const hotel = selectedHotels.find(([name]) => name === city)?.[1];
+        const city = stayParts(stay.value).city;
+        const hotel = selectedHotels.find(([name]) => name.toLowerCase() === city.toLowerCase() && (!changing || changing==='nepal'+name))?.[1];
         if (hotel) stay.value = city + ': ' + hotel;
-        if (meal && stay.value) card.querySelector('[data-day="meals"]').value = meal;
+        if (meal && stay.value && (!changing || changing==='nepalMeal')) card.querySelector('[data-day="meals"]').value = meal;
     }
     const base = nepalOptionsDomestic ? nepalBase.filter(item => item !== 'Nepal road taxes') : nepalBase;
     nepalValue('inclusions').value = [...base,...extras.map(value => value === 'Selected hotel meal plan' && meal ? meal : value)].join('\n');
+    if ((!changing || changing.startsWith('nepal') && !['nepalExtras','nepalVehicle','nepalMeal'].includes(changing)) && [...quoteControl('tripDays').children].some(card=>stayParts(card.querySelector('[data-day="stay"]').value).hotel))updateHotelSummary();
+    drawNightStays();
     nepalStatus('Selected options applied to the quotation.');
 });
-for (const id of nepalFields) quoteControl(id).addEventListener('change', () => quoteControl('applyNepalOptions').click());
-quoteControl('nepalExtras').addEventListener('change', () => quoteControl('applyNepalOptions').click());
+let activeTourOption='';
+for (const id of [...nepalFields,'nepalExtras']) quoteControl(id).addEventListener('change', () => {
+    activeTourOption=id;try{quoteControl('applyNepalOptions').click();}finally{activeTourOption='';}
+});
 quoteControl('loadNepalPackage').addEventListener('click', () => {
     const selected = quoteControl('nepalPackage').value;
     const pack = [...nepalPackages, ...sharedTourPackages].find(p => p.id === selected);
@@ -3754,14 +3794,71 @@ quoteControl('saveNepalPackage').addEventListener('click', async event => {
         button.disabled = false;
     }
 });
+// The existing day.stay field is also used by saved quotations and the PDF.
+const overnightCities = ['Kathmandu','Pokhara','Chitwan','Janakpur','Jomsom','Lumbini','Ayodhya','Varanasi','Prayagraj','Vindhyachal'];
+function stayParts(value) {
+    const parts = value.trim().split(':');
+    return {city:parts.shift().trim(), hotel:parts.join(':').trim()};
+}
+function hotelChoices(city) {
+    const known = overnightCities.find(name => name.toLowerCase() === city.toLowerCase());
+    const hotelSelect = known && quoteControl('nepal' + known);
+    return hotelSelect ? Array.from(hotelSelect.options, opt => opt.value).filter(Boolean) : [];
+}
+function updateHotelSummary() {
+    const stays = Array.from(quoteControl('tripDays').querySelectorAll('[data-day="stay"]'), input => input.value.trim());
+    nepalValue('hotel').value = Array.from(new Set(stays.filter(value => stayParts(value).hotel))).join('\n');
+}
+function updateCityHotelControls(cards) {
+    const cities=new Set(cards.map(card=>stayParts(card.querySelector('[data-day="stay"]').value).city.toLowerCase()));
+    for(const id of nepalFields.filter(id=>!['nepalVehicle','nepalMeal'].includes(id))){
+        quoteControl(id).closest('label').hidden=cards.length>0&&!cities.has(id.slice(5).toLowerCase());
+    }
+}
+function drawNightStays() {
+    const area = quoteControl('nightStays'), cards = [...quoteControl('tripDays').children];
+    area.replaceChildren();
+    for (const [index, card] of cards.entries()) {
+        const stay = card.querySelector('[data-day="stay"]');
+        if (index === cards.length-1 && !stay.value) continue;
+        const {city,hotel} = stayParts(stay.value);
+        const row = document.createElement('div');
+        row.className = 'grid gap-2 sm:grid-cols-2 rounded border p-2';
+        const title = document.createElement('strong');
+        title.className = 'sm:col-span-2';
+        title.textContent = 'Night ' + (index+1) + (card.querySelector('[data-day="title"]').value ? ' · '+card.querySelector('[data-day="title"]').value : '');
+        row.append(title);
+        function input(label,value,list) {
+            const wrap = document.createElement('label'), control = document.createElement('input');
+            wrap.textContent = label; control.value = value; control.setAttribute('list',list);
+            control.className = 'block w-full rounded border p-2'; wrap.append(control);row.append(wrap);return control;
+        }
+        const cityInput=input('Overnight city',city,'overnightCityOptions');
+        const list=document.createElement('datalist');list.id='nightHotelOptions'+index;
+        const hotelInput=input('Hotel (choose or type)',hotel,list.id);
+        hotelInput.disabled=!city;
+        const fillHotels=()=>list.replaceChildren(...hotelChoices(cityInput.value.trim()).map(value=>new Option(value,value)));
+        function storeStay() {
+            const city=cityInput.value.trim(), hotel=hotelInput.value.trim();
+            stay.value=city+(city&&hotel?': '+hotel:'');updateHotelSummary();
+        }
+        cityInput.oninput=()=>{
+            if (cityInput.value.trim().toLowerCase()!==stayParts(stay.value).city.toLowerCase())hotelInput.value='';
+            hotelInput.disabled=!cityInput.value.trim();fillHotels();storeStay();
+        };
+        cityInput.onchange=()=>updateCityHotelControls(cards);
+        hotelInput.oninput=storeStay;
+        fillHotels();row.append(list);area.append(row);
+    }
+    updateCityHotelControls(cards);
+    quoteControl('nightPanel').hidden=!area.children.length;
+}
+quoteControl('overnightCityOptions').replaceChildren(...overnightCities.map(city=>new Option(city,city)));
+
+
 function syncQuoteRoute(fillEnd = false) {
     const cards = [...quoteControl('tripDays').children];
-    const cities = new Set(cards.map(card => card.querySelector('[data-day="stay"]').value.trim().split(':')[0].toLowerCase()));
-    for (const city of ['Kathmandu','Pokhara','Janakpur','Jomsom','Chitwan']) {
-        const control = quoteControl('nepal' + city);
-        control.closest('label').hidden = cards.length > 0 && !cities.has(city.toLowerCase());
-        if (control.closest('label').hidden) control.value = '';
-    }
+    drawNightStays();
     const start = nepalValue('start'), end = nepalValue('end');
     const hint = quoteControl('quoteDateHint');
     end.setCustomValidity('');
@@ -3783,9 +3880,9 @@ function syncQuoteRoute(fillEnd = false) {
 nepalValue('start').addEventListener('change', () => syncQuoteRoute(true));
 nepalValue('end').addEventListener('input', () => syncQuoteRoute());
 quoteControl('tripDays').addEventListener('input', event => {
-    if (event.target.matches('[data-day="stay"]')) syncQuoteRoute();
+    if (event.target.matches('[data-day="stay"]')) {updateHotelSummary();drawNightStays();} if (event.target.matches('[data-day="title"]')) drawNightStays();
 });
-new MutationObserver(() => syncQuoteRoute()).observe(quoteControl('tripDays'), {childList:true});
+new MutationObserver(() => { syncQuoteRoute(); }).observe(quoteControl('tripDays'), {childList:true});
 refreshNepalPackages();
 </script>
 <script>
@@ -3974,7 +4071,11 @@ async function openNepalTours() {
         save.onclick = async () => {
             save.disabled=true;
             try {
-                await saveSharedQuoteFollowup(quote.id,date.value,note.value);
+                if (!date.value) throw Error('Choose the next follow-up date.');
+                const previous=sharedQuotations.get(quote.id)?.followup?.date||'';
+                const savedDate=previous.slice(0,10)===date.value ? previous : date.value;
+                await saveSharedQuoteFollowup(quote.id,savedDate,note.value);
+                viewFollowup.hidden=false;
                 save.textContent='Saved to Sheet and dashboard';
                 localStorage.removeItem(followupKey);
             } catch(error){save.textContent='Retry save';alert(error.message);}
@@ -3997,7 +4098,17 @@ async function openNepalTours() {
         const dateLabel = document.createElement('label');
         dateLabel.textContent = 'Next follow-up ';
         dateLabel.append(date);
-        followupPanel.append(note, dateLabel, save);
+        const viewFollowup = nepalAction('View on dashboard', () => {
+            const followup=sharedQuotations.get(quote.id)?.followup;
+            if(!followup?.date)return;
+            dialog.close();
+            if(['Pending','Called'].includes(followup.status))openOperations(isUpcomingFollowup({status:followup.status,followup:followup.date})?'scheduled':'followups');
+            else switchTab('leads');
+            document.getElementById('crmSearch').value=quote.customer||quote.phone||'';
+            renderTable();document.getElementById('tableHeaderRow').scrollIntoView({block:'center'});
+        });
+        viewFollowup.hidden=!quote.followup?.date;
+        followupPanel.append(note, dateLabel, save, viewFollowup);
         const actions = document.createElement('div');
         actions.className = 'nepal-actions';
         actions.append(open);
@@ -6914,7 +7025,7 @@ async function gstLoadPackageChoices() {
   for(const quote of sharedQuotations.values())select.add(new Option([quote.customer,quote.title,quote.start].filter(Boolean).join(' | '),quote.id));
   const vehicles=Array.from(quoteControl('nepalVehicle').options||[]).map(option=>option.value).filter(Boolean);
   gstControl('gstVehicleSuggestions').replaceChildren(...vehicles.map(value=>new Option(value,value)));
-  const hotels=Array.from(quoteControl('nepalKathmandu').options||[]).map(option=>option.value).filter(Boolean);
+  const hotels=[...new Set(overnightCities.flatMap(hotelChoices))];
   gstControl('gstHotelSuggestions').replaceChildren(...hotels.map(value=>new Option(value,value)));
  }catch(error){gstFeedback('Saved packages could not load. You can still enter the bill manually.',true);}
 }
@@ -7188,6 +7299,7 @@ async function refreshQuoteFollowups(){
 async function saveSharedQuoteFollowup(id,date,note,status='Pending'){
  const result=await tourPackageRequest('action=save-quotation-followup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,followup:{date,note,status}})});
  if(!result.followup||result.id!==id)throw Error('Follow-up save was not confirmed.');
+ ++quotationRevision;
  const q=sharedQuotations.get(id);if(q)sharedQuotations.set(id,{...q,followup:result.followup});
  quoteFollowupsLoaded=true;renderOperations();if(currentTab==='leads')renderTable();
  return result.followup;
@@ -7198,7 +7310,7 @@ async function saveQuoteFollowup(){
  try{
   const date=document.getElementById('quoteFollowupTime').value;if(!date)throw Error('Choose a follow-up date and time.');
   if(!sharedQuotations.has(activeQuoteId)){
-   const q=quoteValues();await tourPackageRequest('action=save-tour-quotation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({quotation:q})});sharedQuotations.set(q.id,q);refreshQuotes();
+   const q=quoteValues();await saveSharedQuotation(q);
   }
   await saveSharedQuoteFollowup(activeQuoteId,date,sharedQuotations.get(activeQuoteId)?.followup?.note||'');
   message.textContent='Follow-up saved to Sheet and dashboard.';
@@ -7424,18 +7536,29 @@ document.getElementById('dutyForm').addEventListener('submit',event=>{
 #fleetBox th{background:#f0f5f5} #fleetBox .scroll{overflow:auto;max-height:230px} #fleetMsg{min-height:1.6em;color:#174e5b;margin:6px 0}
 #fleetTile.attention{background:#fff3d8;border-color:#df9e34} #fleetTile span{display:block}
 </style>
+<style>
+#fleetShortcuts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+#fleetShortcuts button{background:white;border:1px solid #b6cbd0;border-radius:10px;padding:12px 14px;text-align:left;color:#164d50}
+#fleetShortcuts button.attention{background:#fff4dd} #fleetShortcuts small,#fleetShortcuts span{display:block;font-size:.8rem}
+#fleetBox [hidden]{display:none!important}
+#fleetBox #fleetSections,#fleetTasks,#payTasks,#payFilters{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+#fleetBox #payFilters{align-items:end} #payFilters label{min-width:150px}
+#payArea{border-top:1px solid #c7d9d7;margin-top:15px;padding-top:6px}
+</style>
 <dialog id="fleetBox" aria-labelledby="fleetTitle"><header><h2 id="fleetTitle">Vehicle Register</h2><button type="button" id="fleetClose">Close</button></header>
 <div class="fleetbody"><div class="toolbar"><button type="button" id="fleetNew">+ Add vehicle</button><button type="button" id="fleetReload">Refresh</button>
 <a target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/1ymVv31rJtMT3pTnmApmyDplqHkmwPulnbNlXV1k3OLs/edit">Open Fleet Sheet</a></div>
-<div id="fleetCars"></div><div id="fleetInfo"></div><div id="fleetWarning"></div>
+<nav id="fleetSections" aria-label="Fleet sections"></nav><div id="fleetCars"></div><div id="fleetInfo"></div><div id="fleetWarning"></div><div id="fleetTasks"></div>
 <form id="fleetForm" hidden><label id="fleetTypeLabel">Entry type<select id="fleetType"></select></label><div class="fields" id="fleetFields"></div><button type="submit" id="fleetSave" class="primary">Save to Fleet Sheet</button></form>
-<p id="fleetMsg" role="status"></p><div id="fleetHistory"></div></div></dialog>
+<p id="fleetMsg" role="status"></p><div id="fleetHistory"></div><section id="payArea" hidden></section></div></dialog>
 <script>
 (()=>{
   const el=id=>document.getElementById(id),box=el('fleetBox'),form=el('fleetForm');
   const types={Daily:'Daily collection / parked',Reading:'Odometer reading',Start:'Start driver duty',Advance:'Pay driver advance',End:'End driver duty',Service:'Record service',Remark:'Update pending work'};
   const money=n=>'₹'+Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
   let list=[],days=[],history=[],today='',reg='',adding=false,serial=0,saving=false,loading=false,lastRequest=null;
+  const sections={collections:'Vehicle payments',drivers:'Driver & salary',service:'Service & KM',office:'Office staff & salary'};
+  let section='collections',accounts={people:[],entries:[]},salaryMonth='',personKey='',payTask='',payBusy=false;
   const registrationKey='fleet-registration-v1';
   let draft;
   try{draft=JSON.parse(sessionStorage.getItem(registrationKey));}catch{}
@@ -7464,23 +7587,28 @@ document.getElementById('dutyForm').addEventListener('submit',event=>{
     const outstanding=list.filter(v=>v.missing).map(v=>v.reg);
     const names=outstanding.slice(0,3).join(', ')+(outstanding.length>3?' +'+(outstanding.length-3):'');
     el('fleetAlerts').textContent=missing+' daily entries missing'+(names?' ('+names+')':'')+' · '+rd+' KM readings due · '+svc+' services due';
-    el('fleetTile').classList.toggle('attention',!!(missing||rd||svc));
+    el('fleetAlerts').textContent=missing+' missing daily entries'+(names?' ('+names+')':'');
+    el('fleetServiceAlert').textContent=svc+' services due · '+rd+' KM readings due';
+    el('fleetTile').classList.toggle('attention',!!missing);
+    el('fleetServiceAlert').parentElement.classList.toggle('attention',!!(svc||rd));
   }
   async function refresh(target='',show=false){
     const seq=++serial;loading=true;el('fleetSave').disabled=true;
-    if(show){msg('Loading Fleet Sheet…');form.hidden=true;}
+    if(show){msg('Loading Fleet Sheet…');form.hidden=true;el('payArea').hidden=true;el('fleetTasks').replaceChildren();}
     try{
-      const r=await tourPackageRequest('data=fleet-register&reg='+encodeURIComponent(target));
+      const needsPay=show&&['drivers','office'].includes(section);
+      const r=await tourPackageRequest('data=fleet-register&reg='+encodeURIComponent(target)+(needsPay?'&accounts=1':''));
       if(seq!==serial)return;
       list=r.vehicles;today=r.today;tile();
+      if(needsPay){if(!r.accounts)throw Error('Update the Fleet Accounts API and Apps Script.');accounts=r.accounts;}
       if(show && box.open){
-        if(!target&&draft?.fields){
+        if(section!=='office'&&!target&&draft?.fields){
           const match=list.find(v=>registrationMatches(v,draft.fields));
           if(match&&draft.request){keepDraft(null);adding=false;return await refresh(match.reg,true);}
           adding=true;
         }
-        if(!target&&list.length&&!adding)return await refresh(list[0].reg,true);
-        reg=target;days=r.days||[];history=r.history||[];adding=adding||!list.length;
+        if(section!=='office'&&!target&&list.length&&!adding)return await refresh(list[0].reg,true);
+        reg=target;days=r.days||[];history=r.history||[];adding=section!=='office'&&(adding||!list.length);
         render();msg(adding&&draft?'Registration form restored. Check the details before saving.':'');
       }
       return true;
@@ -7489,32 +7617,41 @@ document.getElementById('dutyForm').addEventListener('submit',event=>{
       return false;
     }finally{if(seq===serial){loading=false;el('fleetSave').disabled=saving;}}
   }
-  function choose(target){if(saving)return;adding=false;lastRequest=null;refresh(target,true);}
+  function choose(target){if(saving||payBusy)return;adding=false;lastRequest=null;personKey='';payTask='';refresh(target,true);}
   function render(){
     const v=selected(),cars=el('fleetCars'),info=el('fleetInfo'),warn=el('fleetWarning');
     cars.replaceChildren(...list.map(car=>action(car.reg+(car.missing||car.serviceDue||car.readingDue?' •':''),()=>choose(car.reg),!adding&&car.reg===reg)));
-    info.replaceChildren();warn.replaceChildren();el('fleetHistory').replaceChildren();form.hidden=false;el('fleetTypeLabel').hidden=adding;
+    info.replaceChildren();warn.replaceChildren();el('fleetHistory').replaceChildren();form.hidden=false;el('fleetTypeLabel').hidden=true;
+    el('fleetTitle').textContent=sections[section];el('fleetSections').replaceChildren(...Object.entries(sections).map(([key,title])=>action(title,()=>openSection(key),section===key)));
+    el('fleetNew').hidden=section==='office';cars.hidden=section==='office';el('fleetTasks').replaceChildren();el('payArea').hidden=true;
+    if(section==='office'){form.hidden=true;renderPay();return;}
     if(adding){info.append(node('h3','Register a vehicle'));drawFields();return;}
     if(!v){form.hidden=true;return;}
     info.append(node('h3',[v.reg,v.model].filter(Boolean).join(' · ')));
     const driver=v.driver?v.driver.name+(v.driver.mobile?' · '+v.driver.mobile:'')+' · Since '+v.driver.start+' at '+v.driver.startKm+' km · Office advances '+money(v.driver.advance):'No current driver';
-    info.append(node('div',[driver,'Tracking from '+v.start+' at '+v.openingKm+' km · Latest '+v.km+' km on '+v.kmDay+' · Next reading '+v.nextReading,
+    const summary=section==='collections'?'Cash '+money(v.totals[0])+' · Online '+money(v.totals[1])+' · Petrol '+money(v.totals[2])+' · CNG '+money(v.totals[3])+' · Net '+money(v.totals[4]):
+      section==='drivers'?driver.split(' · Office advances')[0]:[
+      'Latest reading '+v.km+' km on '+v.kmDay+' · Next reading '+v.nextReading,
       v.serviceDate?'Last service '+v.serviceDate+' at '+v.serviceKm+' km · Next '+v.nextDate+' or '+v.nextKm+' km':'Last service not recorded',
-      'Service expenditure '+money(v.serviceCost)+' · Pending work: '+(v.pending||'None'),
-      'All dates · Cash '+money(v.totals[0])+' · Online '+money(v.totals[1])+' · Petrol '+money(v.totals[2])+' · CNG '+money(v.totals[3])+' · Net '+money(v.totals[4])].join('\n'),'summary'));
-    const warnings=[v.missing?v.missing+' missing daily entries, first '+v.firstMissing:'',v.readingDue?'Odometer reading due':'',v.serviceDue?'Service due'+(v.pending?' · '+v.pending:''):''].filter(Boolean);
+      'Service cost '+money(v.serviceCost)+' · Pending work: '+(v.pending||'None')].join('\n');
+    info.append(node('div',summary,'summary'));
+    const warnings=[section==='collections'&&v.missing?v.missing+' missing daily entries, first '+v.firstMissing:'',section==='service'&&v.readingDue?'Odometer reading due':'',section==='service'&&v.serviceDue?'Service due':''].filter(Boolean);
     if(warnings.length)warn.append(node('p',warnings.join(' | '),'warn'));
     const type=el('fleetType');type.replaceChildren();
-    for(const [key,label] of Object.entries(types)){
-      if((key==='Start'&&v.driver)||(['Advance','End'].includes(key)&&!v.driver))continue;
-      type.add(new Option(label,key));
+    const keys=section==='collections'?['Daily']:section==='service'?['Service','Reading','Remark']:v.driver?['End']:['Start'];
+    for(const k of keys)type.add(new Option(types[k],k));
+    const showTask=k=>{if(saving||payBusy||loading)return;type.value=k;form.hidden=false;drawFields();};
+    if(section==='collections'){drawFields();table('Daily account',['Date','Status','Cash','Online','Petrol','CNG','Net','Remark'],days.map(r=>[r[0],r[1],...r.slice(2,7).map(money),r[7]]));}
+    else{
+      form.hidden=true;
+      keys.forEach(k=>el('fleetTasks').append(action(types[k],()=>showTask(k))));
+      if(section==='drivers'){renderPay();table('Driver duty history',['Date','Entry','Details'],history.filter(r=>r[1].startsWith('Driver')));}
+      else table('Service & KM history',['Date','Entry','Details'],history.filter(r=>!r[1].startsWith('Driver')));
     }
-    drawFields();table('Daily account', ['Date','Status','Cash','Online','Petrol','CNG','Net','Remark'],days.map(r=>[r[0],r[1],...r.slice(2,7).map(money),r[7]]));
-    table('Driver, KM and service history',['Date','Entry','Details'],history);
   }
-  function table(title,headers,rows){
+  function table(title,headers,rows,container=el('fleetHistory')){
     if(!rows.length)return;
-    const container=el('fleetHistory'),scroll=node('div',null,'scroll'),t=node('table'),head=t.createTHead().insertRow();
+    const scroll=node('div',null,'scroll'),t=node('table'),head=t.createTHead().insertRow();
     for(const h of headers)head.append(node('th',h));
     const body=t.createTBody();
     for(const row of rows){const tr=body.insertRow();for(const val of row)tr.insertCell().textContent=val;}
@@ -7559,16 +7696,89 @@ document.getElementById('dutyForm').addEventListener('submit',event=>{
     el('fleetSave').textContent='Save to Fleet Sheet';
     if(kind==='Start'){field('driver','Driver name','text','',true);field('mobile','Driver mobile','tel');}
     if(['Start','End','Service','Reading'].includes(kind))field('km',kind==='Start'?'Joining km':kind==='End'?'Leaving km':'Odometer (km)','number','',true);
-    if(['Start','Advance'].includes(kind))field('advance','Advance paid by office (₹)','number',kind==='Start'?'0':'',true);
     if(kind==='Service'){field('cost','Service cost (₹)','number','',true);field('work','Service work completed','note','',true);}
     const pending=['Service','Remark'].includes(kind);
     field('note',pending?'Work still pending for next service (clear when done)':'Remark','note',pending?v.pending:'');
   }
-  el('fleetTile').onclick=()=>{if(!box.open)box.showModal();adding=false;refresh(reg,true);};
-  el('fleetReload').onclick=()=>{if(!saving)refresh(reg,true);};
+  function renderPay(){
+    const area=el('payArea'),office=section==='office';
+    area.replaceChildren();area.hidden=false;
+    area.append(node('h3',office?'Office salary account':'Driver salary account'));
+    const people=accounts.people.filter(p=>office?p.role!=='Driver':p.assignments.some(a=>a.reg===reg));
+    const p=people.find(p=>p.key===personKey)||people.find(p=>p.assignments.some(a=>a.reg===reg&&!a.end))||people[0];
+    personKey=p?.key||'';salaryMonth=salaryMonth||today.slice(0,7);
+    if(p&&salaryMonth<p.joined.slice(0,7))salaryMonth=today.slice(0,7);
+    const filters=node('div');filters.id='payFilters';area.append(filters);
+    function control(parent,label,name,type,value,options){
+      const wrap=node('label',label),input=node(options?'select':'input');input.name=name;
+      if(options)for(const [key,title] of options)input.add(new Option(title,key));else input.type=type;
+      input.value=value;wrap.append(input);parent.append(wrap);return input;
+    }
+    if(p){
+      const picker=control(filters,office?'Employee':'Driver','person','',personKey,people.map(p=>[p.key,[p.name,p.role,p.mobile,p.joined].filter(Boolean).join(' · ')]));
+      const month=control(filters,'Salary month','month','month',salaryMonth);
+      month.min=p.joined.slice(0,7);
+      picker.onchange=()=>{personKey=picker.value;payTask='';renderPay();};
+      month.onchange=()=>{if(month.value){salaryMonth=month.value;payTask='';renderPay();}};
+      area.append(node('p','Joined '+p.joined+(p.mobile?' · '+p.mobile:'')));
+      for(const a of p.assignments.filter(a=>a.reg===reg))area.append(node('p',a.reg+' · '+a.start+' ('+a.km+' km) — '+(a.end?a.end+' ('+a.endKm+' km)':'On duty')));
+      const rows=accounts.entries.filter(e=>e.key===personKey&&e.month===salaryMonth);
+      const salary=rows.filter(e=>e.type==='Monthly salary').at(-1);
+      const sum=kind=>rows.filter(e=>e.type===kind).reduce((n,e)=>n+Math.round(e.amount*100),0)/100;
+      const advances=sum('Advance'),paid=sum('Salary payment'),received=(Math.round(advances*100)+Math.round(paid*100))/100;
+      area.append(node('p',['Salary '+(salary?money(salary.amount):'not set'),'Advances '+money(advances),'Salary paid '+money(paid),'Total received '+money(received),...(salary?[salary.amount>=received?'Balance '+money(salary.amount-received):'Excess paid '+money(received-salary.amount)]:[])].join(' · '),'summary'));
+      const payments=rows.filter(e=>e.type!=='Monthly salary').sort((a,b)=>b.date.localeCompare(a.date));
+      if(!payments.length)area.append(node('p','No payments for this month.'));
+      table('Payment history',['Date','Type','Amount','Mode','Note'],payments.map(e=>[e.date,e.type,money(e.amount),e.mode,e.note]),area);
+    }
+    const tasks=node('div');tasks.id='payTasks';area.append(tasks);
+    const choices=office?[['StaffJoin','Add office staff']]:[];
+    if(p)choices.push(['Monthly salary','Set monthly salary'],['Advance','Record advance'],['Salary payment','Record salary payment']);
+    for(const [key,title] of choices)tasks.append(action(title,()=>{if(!payBusy){payTask=key;renderPay();}},payTask===key));
+    if(!payTask)return;
+    const f=node('form'),fields=node('div',null,'fields');f.append(node('h3',choices.find(([key])=>key===payTask)[1]),fields);area.append(f);
+    function add(label,name,type,value='',options,required=true){const c=control(fields,label,name,type,value,options);c.required=required;return c;}
+    const join=payTask==='StaffJoin',setting=payTask==='Monthly salary';
+    if(join){add('Employee name','name','text').maxLength=100;add('Role','role','','Staff',[['Staff','Staff'],['Admin','Admin']]);add('Mobile','mobile','tel','',null,false);}
+    const date=add(join?'Joining date':'Entry date','date','date',today);date.max=today;if(!join)date.min=p.joined;
+    if(!join){
+      const amount=add('Amount (₹)','amount','number');amount.min='.01';amount.step='.01';
+      if(!setting)add('Paid by','mode','','Cash',['Cash','UPI','Bank transfer','Cheque'].map(m=>[m,m]));
+      add('Note','note','text','',null,false).maxLength=600;
+    }
+    const save=node('button','Save to Fleet Sheet','primary');save.type='submit';f.append(save);
+    f.onsubmit=async event=>{
+      event.preventDefault();if(payBusy||loading||saving)return;
+      const entry={...Object.fromEntries(new FormData(f)),reg:'',kind:join?'StaffJoin':setting?'Monthly salary':'Person payment'};
+      if(!join){entry.person=p.key;entry.month=salaryMonth;if(!setting)entry.payType=payTask;}
+      const revision=join?'':p.version,signature=JSON.stringify([entry,revision]);
+      let pending;
+      try{pending=JSON.parse(sessionStorage.getItem('fleetPayrollRequest'));}catch{}
+      if(pending?.signature!==signature)pending={signature,id:crypto.randomUUID()};
+      try{sessionStorage.setItem('fleetPayrollRequest',JSON.stringify(pending));}catch{}
+      payBusy=true;const controls=[...box.querySelectorAll('input,select,button,textarea')].filter(c=>!c.disabled);controls.forEach(c=>c.disabled=true);
+      msg('Saving to Fleet Sheet.');
+      try{
+        let saveError='';
+        try{await tourPackageRequest('action=save-fleet-entry',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:pending.id,revision,entry})});}catch(error){saveError=error.message;}
+        const data=await tourPackageRequest('data=fleet-register&accounts=1&reg='+encodeURIComponent(reg));
+        const verified=join?data.accounts.people.some(p=>p.key==='S-'+pending.id):data.accounts.entries.some(e=>e.id.startsWith(pending.id+'.'));
+        if(!verified)throw Error(saveError||'Could not verify the entry. Refresh the account before retrying.');
+        accounts=data.accounts;if(join)personKey='S-'+pending.id;
+        payTask='';renderPay();try{sessionStorage.removeItem('fleetPayrollRequest');}catch{}
+        msg('Saved to Fleet Sheet.');
+      }catch(error){msg(error.message);}
+      finally{payBusy=false;controls.forEach(c=>c.disabled=false);}
+    };
+  }
+
+
+  function openSection(key){if(saving||payBusy)return;section=key;personKey='';payTask='';if(!box.open)box.showModal();adding=false;refresh(reg,true);}
+  for(const b of document.querySelectorAll('#fleetShortcuts button'))b.onclick=()=>openSection(b.dataset.section);
+  el('fleetReload').onclick=()=>{if(!saving&&!payBusy)refresh(reg,true);};
   el('fleetNew').onclick=()=>{if(saving||loading)return;adding=true;el('fleetSave').textContent='Save to Fleet Sheet';render();};
-  el('fleetClose').onclick=()=>{if(!saving)box.close();};
-  box.addEventListener('cancel',e=>{if(saving)e.preventDefault();});
+  el('fleetClose').onclick=()=>{if(!saving&&!payBusy)box.close();};
+  box.addEventListener('cancel',e=>{if(saving||payBusy)e.preventDefault();});
   el('fleetType').onchange=drawFields;
   form.onsubmit=async event=>{
     event.preventDefault();if(saving||loading)return;
