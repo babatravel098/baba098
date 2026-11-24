@@ -9,10 +9,12 @@ const sheetId = '1I6cFI9mU3z8EPc5cRxNZy25cj3E4sO6xVnXHBFqUQsE';
 const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbw4OfLzT9WCE4eQXPblPO1pu1br4U716qqIID_IBn3nsGjfBaE4etem0coCpY1tWUl5/exec';
 const google = new OAuth2Client(clientId);
 const readActions = new Map([
+  ['social-inbox','socialInbox'],
   ['session-status','sessionStatus'], ['fleet-register','fleetList'],
   ['gst-invoices', 'listGstInvoices'], ['tour-health', 'health'], ['tour-packages', 'listPackages'], ['tour-quotations', 'listQuotations'], ['tour-photos', 'listPhotos'], ['tour-photo', 'getPhoto'], ['tour-hotels', 'listHotels'], ['tour-vehicles', 'listVehicles']
 ]);
 const writeActions = new Map([
+  ['social-save-lead','socialSaveLead'], ['social-reply','socialReply'], ['social-messages','socialMessages'],
   ['logout-all','revokeSessions'], ['save-fleet-entry','fleetSave'],
   ['save-quotation-followup','setQuotationFollowup'], ['save-booking-payment', 'saveBookingPayment'], ['save-gst-invoice', 'saveGstInvoice'], ['cancel-gst-invoice', 'cancelGstInvoice'], ['save-tour-package', 'savePackage'], ['save-tour-quotation', 'saveQuotation'],
   ['set-tour-quotation-status', 'setQuotationStatus'], ['save-tour-photo', 'savePhoto'], ['save-tour-hotel', 'saveHotel'], ['save-tour-vehicle', 'saveVehicle'], ['delete-tour-package', 'deletePackage'], ['delete-tour-photo', 'deletePhoto']
@@ -222,6 +224,9 @@ async function handleTourStorage(req, res, action) {
   }
 
   const payload = {action, secret};
+  if (action === 'socialSaveLead') payload.lead = req.body?.lead;
+  if (action === 'socialMessages' || action === 'socialReply') payload.thread = req.body?.thread;
+  if (action === 'socialReply') Object.assign(payload,{text:req.body?.text,replyId:req.body?.replyId});
   if(action==='setQuotationFollowup'){payload.id=req.body?.id;payload.followup=req.body?.followup;}
   const deleting = action === 'deletePackage' || action === 'deletePhoto';
   if (deleting) {
@@ -281,6 +286,9 @@ async function handleTourStorage(req, res, action) {
       signal: AbortSignal.timeout(15000)
     });
     const result = response.ok ? await response.json() : null;
+    if (action.startsWith('social')) {
+      return result?.ok === true ? sendJson(res,200,result) : sendJson(res,502,{error:result?.error || 'Enquiry request failed.'});
+    }
     if (result?.ok !== true) {
       const errors = new Map([
         ['Invalid follow-up',400], ['Invalid item ID', 400], ['Photo is in use by a saved package or quotation', 409], ['Invalid hotel', 400], ['Invalid vehicle', 400], ['Invalid photo', 400], ['Photo not found', 404], ['Invalid package', 400], ['Package is too large', 400],
