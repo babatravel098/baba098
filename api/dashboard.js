@@ -9,11 +9,11 @@ const sheetId = '1I6cFI9mU3z8EPc5cRxNZy25cj3E4sO6xVnXHBFqUQsE';
 const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbw4OfLzT9WCE4eQXPblPO1pu1br4U716qqIID_IBn3nsGjfBaE4etem0coCpY1tWUl5/exec';
 const google = new OAuth2Client(clientId);
 const readActions = new Map([
-  ['fleet-register','fleetList'],
+  ['session-status','sessionStatus'], ['fleet-register','fleetList'],
   ['gst-invoices', 'listGstInvoices'], ['tour-health', 'health'], ['tour-packages', 'listPackages'], ['tour-quotations', 'listQuotations'], ['tour-photos', 'listPhotos'], ['tour-photo', 'getPhoto'], ['tour-hotels', 'listHotels'], ['tour-vehicles', 'listVehicles']
 ]);
 const writeActions = new Map([
-  ['save-fleet-entry','fleetSave'],
+  ['logout-all','revokeSessions'], ['save-fleet-entry','fleetSave'],
   ['save-quotation-followup','setQuotationFollowup'], ['save-booking-payment', 'saveBookingPayment'], ['save-gst-invoice', 'saveGstInvoice'], ['cancel-gst-invoice', 'cancelGstInvoice'], ['save-tour-package', 'savePackage'], ['save-tour-quotation', 'saveQuotation'],
   ['set-tour-quotation-status', 'setQuotationStatus'], ['save-tour-photo', 'savePhoto'], ['save-tour-hotel', 'saveHotel'], ['save-tour-vehicle', 'saveVehicle'], ['delete-tour-package', 'deletePackage'], ['delete-tour-photo', 'deletePhoto']
 ]);
@@ -62,12 +62,13 @@ function readSession(token) {
   const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString());
   const now = Math.floor(Date.now() / 1000);
   if (payload.email !== allowedEmail || !Number.isInteger(payload.exp) || payload.exp <= now ||
-      payload.exp > dailyExpiry() || !Number.isInteger(payload.iat) || payload.iat > now || now - payload.iat > 86400) throw new Error('Expired session');
+      payload.exp > dailyExpiry() || !Number.isInteger(payload.iat) || payload.iat > now || now - payload.iat > 86400 ||
+      (payload.iatMs != null && (!Number.isSafeInteger(payload.iatMs) || payload.iatMs > Date.now()))) throw new Error('Expired session');
   return payload;
 }
 function setDailyCookie(res) {
   const now = Math.floor(Date.now() / 1000), exp = dailyExpiry();
-  const token = signSession({email: allowedEmail, iat: now, exp});
+  const token = signSession({email: allowedEmail, iat: now, iatMs: Date.now(), exp});
   res.setHeader('Set-Cookie', 'baba_google=' + token + '; Path=/api/dashboard; HttpOnly; Secure; SameSite=Strict; Max-Age=' + (exp - now));
 }
 function bookingVersion(row) {
@@ -166,6 +167,7 @@ async function handleFleetRegister(req,res,action) {
     Object.assign(payload,{id,revision,entry});
   }else{
     payload.reg=new URL(req.url,'https://crm.invalid').searchParams.get('reg')||'';
+    payload.accounts=new URL(req.url,'https://crm.invalid').searchParams.get('accounts')==='1';
     if(payload.reg&&!/^[A-Z0-9]{4,16}$/.test(payload.reg))return sendJson(res,400,{error:'Invalid vehicle number.'});
   }
   try{
@@ -186,12 +188,23 @@ async function handleFleetRegister(req,res,action) {
       return sendJson(res,200,{ok:true,id:result.id,reg:result.reg});
     }
     if(!Array.isArray(result.vehicles)||!Array.isArray(result.history)||!Array.isArray(result.days)||!/^\d{4}-\d\d-\d\d$/.test(result.today))throw Error('Invalid list');
-    return sendJson(res,200,{ok:true,today:result.today,vehicles:result.vehicles,history:result.history,days:result.days});
+    if(payload.accounts&&(!Array.isArray(result.accounts?.people)||!Array.isArray(result.accounts?.entries)))return sendJson(res,502,{error:'Deploy the Fleet Accounts Apps Script version to open salary accounts.'});
+    return sendJson(res,200,{ok:true,today:result.today,vehicles:result.vehicles,history:result.history,days:result.days,...(payload.accounts?{accounts:result.accounts}:{})});
   }catch(error){
     const timedOut=['AbortError','TimeoutError'].includes(error?.name);
     return sendJson(res,timedOut?504:502,{error:timedOut?'Apps Script took too long to respond. Check the register before retrying.':
       write?'Could not reach Apps Script to confirm the write. Check the register before retrying.':'Fleet Sheet could not be loaded. Check the Apps Script deployment.'});
   }
+}
+
+async function checkGlobalSession(issuedAtMs, revoke = false) {
+  const url=process.env.TOUR_API_URL, secret=process.env.TOUR_API_SECRET;
+  if (!url || !secret || !/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url)) throw new Error('Session storage is not configured.');
+  const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:revoke?'revokeCrmSessions':'checkCrmSession',secret,issuedAtMs}),signal:AbortSignal.timeout(12000)});
+  if(!response.ok)throw new Error('Session storage is unavailable.');
+  const result=await response.json();
+  if(result?.ok!==true)throw new Error('Session storage is unavailable.');
+  return result;
 }
 
 async function handleTourStorage(req, res, action) {
@@ -470,19 +483,22 @@ module.exports = async (req, res) => {
   const data = params.get('data');
   const action = params.get('action');
   const wantsBookings = req.method === 'GET' && data === 'bookings';
+  const wantsSessionStatus = req.method === 'GET' && data === 'session-status';
+  const wantsLogoutAll = req.method === 'POST' && action === 'logout-all';
   const wantsDelete = req.method === 'POST' && action === 'delete';
   const tourAction = req.method === 'GET' ? readActions.get(data) : writeActions.get(action);
   const wantsUpdate = req.method === 'POST' && action === 'update-booking';
   const wantsGstLookup = req.method === 'POST' && action === 'lookup-gstin';
   const isLogin = req.method === 'POST' && !action;
-  if (req.method === 'POST' && !isLogin && !wantsDelete && !wantsUpdate && !wantsGstLookup && !tourAction) return sendJson(res, 400, {error: 'Unknown action.'});
+  if (req.method === 'POST' && !isLogin && !wantsDelete && !wantsUpdate && !wantsGstLookup && !wantsLogoutAll && !tourAction) return sendJson(res, 400, {error: 'Unknown action.'});
   const credential = isLogin ? req.body?.credential
     : /(?:^|;\s*)baba_google=([^;]+)/.exec(req.headers.cookie || '')?.[1];
 
+  let sessionPayload=null;
   try {
     if (typeof credential !== 'string' || credential.length > 3500) throw new Error('Invalid credential');
     if (!isLogin && credential.split('.').length === 2) {
-      readSession(credential);
+      sessionPayload=readSession(credential);
     } else {
       const ticket = await google.verifyIdToken({idToken: credential, audience: clientId});
       const identity = ticket.getPayload();
@@ -490,10 +506,33 @@ module.exports = async (req, res) => {
       setDailyCookie(res);
     }
   } catch {
-    if (wantsBookings || wantsDelete || wantsUpdate || wantsGstLookup || tourAction) return sendJson(res, 401, {error: 'Please sign in again. Your unsaved form is still open.'});
+    if (wantsBookings || wantsSessionStatus || wantsLogoutAll || wantsDelete || wantsUpdate || wantsGstLookup || tourAction) return sendJson(res, 401, {error: 'Please sign in again. Your unsaved form is still open.'});
     return res.redirect(303, '/?login=denied');
   }
   if (isLogin) return res.redirect(303, '/api/dashboard');
+  if (sessionPayload) {
+    try {
+      const status=await checkGlobalSession(sessionPayload.iatMs||sessionPayload.iat*1000);
+      if(status.revoked) {
+        res.setHeader('Set-Cookie','baba_google=; Path=/api/dashboard; HttpOnly; Secure; SameSite=Strict; Max-Age=0');
+        return sendJson(res,401,{error:'This CRM session was signed out from another device. Sign in again.'});
+      }
+    } catch(error) {
+      console.error('CRM session check failed',error.message);
+      return sendJson(res,503,{error:'Could not confirm the CRM login. Refresh and try again.'});
+    }
+  }
+  if (wantsLogoutAll) {
+    try {
+      await checkGlobalSession(sessionPayload.iatMs||sessionPayload.iat*1000,true);
+      res.setHeader('Set-Cookie','baba_google=; Path=/api/dashboard; HttpOnly; Secure; SameSite=Strict; Max-Age=0');
+      return sendJson(res,200,{ok:true});
+    } catch(error) {
+      console.error('CRM logout-all failed',error.message);
+      return sendJson(res,503,{error:'Could not sign out all devices. Please retry.'});
+    }
+  }
+  if(wantsSessionStatus)return sendJson(res,200,{ok:true});
   if (wantsGstLookup) return lookupGstin(req,res);
   if (wantsUpdate) return updateBooking(req, res);
   if (wantsDelete) return deleteBooking(req, res);
