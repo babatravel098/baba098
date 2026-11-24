@@ -136,6 +136,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
                 <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold hidden sm:inline-block">CRM · Operations v10</span>
                 <button onclick="openFreshGstModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">📄 Create Fresh GST Invoice</button> <button type="button" onclick="openHotelBill()" class="bg-red-700 text-white px-3 py-2 rounded text-sm">Hotel Bill</button>
                 
+                <button type="button" onclick="logoutAllDevices()" class="bg-red-800 hover:bg-red-900 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">Logout all devices</button>
                 <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow transition cursor-pointer">🚪 Logout</button>
             </div>
         </header>
@@ -148,7 +149,7 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
                 <button type="button" onclick="openOperations('scheduled')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Upcoming follow-ups</span><strong id="opsScheduled" class="text-2xl text-blue-900">–</strong><small id="opsNextContact" class="block text-slate-600"></small></button>
                 <button type="button" onclick="openOperations('collections')" class="bg-white border rounded-xl p-4 text-left hover:border-blue-500"><span class="block text-sm text-slate-600">Pending collections</span><strong id="opsCollections" class="text-2xl text-blue-900">—</strong></button>
             </div>
-<button type="button" id="fleetTile" class="w-full text-left bg-white border rounded-xl px-4 py-3"><strong>Vehicle Register</strong> · <b id="fleetSize">Loading…</b><span id="fleetAlerts" class="text-sm"></span></button>
+<div id="fleetShortcuts"><button type="button" id="fleetTile" data-section="collections"><strong>Vehicle payments</strong><span id="fleetSize"></span><small id="fleetAlerts"></small></button><button type="button" data-section="drivers"><strong>Driver &amp; salary</strong></button><button type="button" data-section="service"><strong>Service &amp; KM</strong><small id="fleetServiceAlert"></small></button><button type="button" data-section="office"><strong>Office staff &amp; salary</strong></button></div>
             <div class="crm-actions flex flex-wrap gap-2">
                 <button type="button" onclick="openEntry('booking')" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">+ New Booking</button><a href="https://script.google.com/macros/s/AKfycbzXu77bmooy2cXFh7vCPr5BuGZ0N25ZknBdyo20agSCM5JzmnlIfWGReP1HX4O9RUmTsA/exec" target="_blank" rel="noopener noreferrer" class="inline-block px-4 py-2 rounded-lg bg-emerald-700 text-white font-bold">New Sheet Bookings</a>
                 <button type="button" onclick="openEntry('lead')" class="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">+ Add Lead</button>
@@ -675,7 +676,27 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
     fetchLeads();
     loadLastInvoiceNumber();
 };
-function handleLogout() { const form = document.createElement('form'); form.method = 'POST'; form.action = '/api/logout'; document.body.appendChild(form); form.submit(); }
+function handleLogout() { const form = document.createElement('form'); form.method = 'POST'; form.action = '/api/logout'; document.body.appendChild(form); form.submit(); }async function logoutAllDevices() {
+  if(!confirm('Sign out of Baba Tour & Travels CRM on every computer? Every user will need to sign in again with the authorised email.'))return;
+  const button=document.querySelector('[onclick="logoutAllDevices()"]');
+  if(button){button.disabled=true;button.textContent='Signing out…';}
+  try {
+    const response=await fetch('/api/dashboard?action=logout-all',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},cache:'no-store',body:'{}'});
+    if(!response.ok)throw Error();
+    window.location.replace('/');
+  } catch {
+    if(button){button.disabled=false;button.textContent='Logout all devices';}
+    alert('All-device sign-out could not be confirmed. Check your connection and try again.');
+  }
+}
+async function refreshGlobalCrmSession() {
+  try {
+    const response=await fetch('/api/dashboard?data=session-status',{credentials:'same-origin',cache:'no-store'});
+    if(response.status===401)window.location.replace('/');
+  } catch {}
+}
+refreshGlobalCrmSession();
+window.setInterval(refreshGlobalCrmSession,60000);
 function openEntry(type) {
             switchForm(type);
             document.getElementById('crmEntry').scrollIntoView({ block: 'nearest' });
@@ -7515,18 +7536,29 @@ document.getElementById('dutyForm').addEventListener('submit',event=>{
 #fleetBox th{background:#f0f5f5} #fleetBox .scroll{overflow:auto;max-height:230px} #fleetMsg{min-height:1.6em;color:#174e5b;margin:6px 0}
 #fleetTile.attention{background:#fff3d8;border-color:#df9e34} #fleetTile span{display:block}
 </style>
+<style>
+#fleetShortcuts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+#fleetShortcuts button{background:white;border:1px solid #b6cbd0;border-radius:10px;padding:12px 14px;text-align:left;color:#164d50}
+#fleetShortcuts button.attention{background:#fff4dd} #fleetShortcuts small,#fleetShortcuts span{display:block;font-size:.8rem}
+#fleetBox [hidden]{display:none!important}
+#fleetBox #fleetSections,#fleetTasks,#payTasks,#payFilters{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+#fleetBox #payFilters{align-items:end} #payFilters label{min-width:150px}
+#payArea{border-top:1px solid #c7d9d7;margin-top:15px;padding-top:6px}
+</style>
 <dialog id="fleetBox" aria-labelledby="fleetTitle"><header><h2 id="fleetTitle">Vehicle Register</h2><button type="button" id="fleetClose">Close</button></header>
 <div class="fleetbody"><div class="toolbar"><button type="button" id="fleetNew">+ Add vehicle</button><button type="button" id="fleetReload">Refresh</button>
 <a target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/1ymVv31rJtMT3pTnmApmyDplqHkmwPulnbNlXV1k3OLs/edit">Open Fleet Sheet</a></div>
-<div id="fleetCars"></div><div id="fleetInfo"></div><div id="fleetWarning"></div>
+<nav id="fleetSections" aria-label="Fleet sections"></nav><div id="fleetCars"></div><div id="fleetInfo"></div><div id="fleetWarning"></div><div id="fleetTasks"></div>
 <form id="fleetForm" hidden><label id="fleetTypeLabel">Entry type<select id="fleetType"></select></label><div class="fields" id="fleetFields"></div><button type="submit" id="fleetSave" class="primary">Save to Fleet Sheet</button></form>
-<p id="fleetMsg" role="status"></p><div id="fleetHistory"></div></div></dialog>
+<p id="fleetMsg" role="status"></p><div id="fleetHistory"></div><section id="payArea" hidden></section></div></dialog>
 <script>
 (()=>{
   const el=id=>document.getElementById(id),box=el('fleetBox'),form=el('fleetForm');
   const types={Daily:'Daily collection / parked',Reading:'Odometer reading',Start:'Start driver duty',Advance:'Pay driver advance',End:'End driver duty',Service:'Record service',Remark:'Update pending work'};
   const money=n=>'₹'+Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
   let list=[],days=[],history=[],today='',reg='',adding=false,serial=0,saving=false,loading=false,lastRequest=null;
+  const sections={collections:'Vehicle payments',drivers:'Driver & salary',service:'Service & KM',office:'Office staff & salary'};
+  let section='collections',accounts={people:[],entries:[]},salaryMonth='',personKey='',payTask='',payBusy=false;
   const registrationKey='fleet-registration-v1';
   let draft;
   try{draft=JSON.parse(sessionStorage.getItem(registrationKey));}catch{}
@@ -7555,23 +7587,28 @@ document.getElementById('dutyForm').addEventListener('submit',event=>{
     const outstanding=list.filter(v=>v.missing).map(v=>v.reg);
     const names=outstanding.slice(0,3).join(', ')+(outstanding.length>3?' +'+(outstanding.length-3):'');
     el('fleetAlerts').textContent=missing+' daily entries missing'+(names?' ('+names+')':'')+' · '+rd+' KM readings due · '+svc+' services due';
-    el('fleetTile').classList.toggle('attention',!!(missing||rd||svc));
+    el('fleetAlerts').textContent=missing+' missing daily entries'+(names?' ('+names+')':'');
+    el('fleetServiceAlert').textContent=svc+' services due · '+rd+' KM readings due';
+    el('fleetTile').classList.toggle('attention',!!missing);
+    el('fleetServiceAlert').parentElement.classList.toggle('attention',!!(svc||rd));
   }
   async function refresh(target='',show=false){
     const seq=++serial;loading=true;el('fleetSave').disabled=true;
-    if(show){msg('Loading Fleet Sheet…');form.hidden=true;}
+    if(show){msg('Loading Fleet Sheet…');form.hidden=true;el('payArea').hidden=true;el('fleetTasks').replaceChildren();}
     try{
-      const r=await tourPackageRequest('data=fleet-register&reg='+encodeURIComponent(target));
+      const needsPay=show&&['drivers','office'].includes(section);
+      const r=await tourPackageRequest('data=fleet-register&reg='+encodeURIComponent(target)+(needsPay?'&accounts=1':''));
       if(seq!==serial)return;
       list=r.vehicles;today=r.today;tile();
+      if(needsPay){if(!r.accounts)throw Error('Update the Fleet Accounts API and Apps Script.');accounts=r.accounts;}
       if(show && box.open){
-        if(!target&&draft?.fields){
+        if(section!=='office'&&!target&&draft?.fields){
           const match=list.find(v=>registrationMatches(v,draft.fields));
           if(match&&draft.request){keepDraft(null);adding=false;return await refresh(match.reg,true);}
           adding=true;
         }
-        if(!target&&list.length&&!adding)return await refresh(list[0].reg,true);
-        reg=target;days=r.days||[];history=r.history||[];adding=adding||!list.length;
+        if(section!=='office'&&!target&&list.length&&!adding)return await refresh(list[0].reg,true);
+        reg=target;days=r.days||[];history=r.history||[];adding=section!=='office'&&(adding||!list.length);
         render();msg(adding&&draft?'Registration form restored. Check the details before saving.':'');
       }
       return true;
@@ -7580,32 +7617,41 @@ document.getElementById('dutyForm').addEventListener('submit',event=>{
       return false;
     }finally{if(seq===serial){loading=false;el('fleetSave').disabled=saving;}}
   }
-  function choose(target){if(saving)return;adding=false;lastRequest=null;refresh(target,true);}
+  function choose(target){if(saving||payBusy)return;adding=false;lastRequest=null;personKey='';payTask='';refresh(target,true);}
   function render(){
     const v=selected(),cars=el('fleetCars'),info=el('fleetInfo'),warn=el('fleetWarning');
     cars.replaceChildren(...list.map(car=>action(car.reg+(car.missing||car.serviceDue||car.readingDue?' •':''),()=>choose(car.reg),!adding&&car.reg===reg)));
-    info.replaceChildren();warn.replaceChildren();el('fleetHistory').replaceChildren();form.hidden=false;el('fleetTypeLabel').hidden=adding;
+    info.replaceChildren();warn.replaceChildren();el('fleetHistory').replaceChildren();form.hidden=false;el('fleetTypeLabel').hidden=true;
+    el('fleetTitle').textContent=sections[section];el('fleetSections').replaceChildren(...Object.entries(sections).map(([key,title])=>action(title,()=>openSection(key),section===key)));
+    el('fleetNew').hidden=section==='office';cars.hidden=section==='office';el('fleetTasks').replaceChildren();el('payArea').hidden=true;
+    if(section==='office'){form.hidden=true;renderPay();return;}
     if(adding){info.append(node('h3','Register a vehicle'));drawFields();return;}
     if(!v){form.hidden=true;return;}
     info.append(node('h3',[v.reg,v.model].filter(Boolean).join(' · ')));
     const driver=v.driver?v.driver.name+(v.driver.mobile?' · '+v.driver.mobile:'')+' · Since '+v.driver.start+' at '+v.driver.startKm+' km · Office advances '+money(v.driver.advance):'No current driver';
-    info.append(node('div',[driver,'Tracking from '+v.start+' at '+v.openingKm+' km · Latest '+v.km+' km on '+v.kmDay+' · Next reading '+v.nextReading,
+    const summary=section==='collections'?'Cash '+money(v.totals[0])+' · Online '+money(v.totals[1])+' · Petrol '+money(v.totals[2])+' · CNG '+money(v.totals[3])+' · Net '+money(v.totals[4]):
+      section==='drivers'?driver.split(' · Office advances')[0]:[
+      'Latest reading '+v.km+' km on '+v.kmDay+' · Next reading '+v.nextReading,
       v.serviceDate?'Last service '+v.serviceDate+' at '+v.serviceKm+' km · Next '+v.nextDate+' or '+v.nextKm+' km':'Last service not recorded',
-      'Service expenditure '+money(v.serviceCost)+' · Pending work: '+(v.pending||'None'),
-      'All dates · Cash '+money(v.totals[0])+' · Online '+money(v.totals[1])+' · Petrol '+money(v.totals[2])+' · CNG '+money(v.totals[3])+' · Net '+money(v.totals[4])].join('\n'),'summary'));
-    const warnings=[v.missing?v.missing+' missing daily entries, first '+v.firstMissing:'',v.readingDue?'Odometer reading due':'',v.serviceDue?'Service due'+(v.pending?' · '+v.pending:''):''].filter(Boolean);
+      'Service cost '+money(v.serviceCost)+' · Pending work: '+(v.pending||'None')].join('\n');
+    info.append(node('div',summary,'summary'));
+    const warnings=[section==='collections'&&v.missing?v.missing+' missing daily entries, first '+v.firstMissing:'',section==='service'&&v.readingDue?'Odometer reading due':'',section==='service'&&v.serviceDue?'Service due':''].filter(Boolean);
     if(warnings.length)warn.append(node('p',warnings.join(' | '),'warn'));
     const type=el('fleetType');type.replaceChildren();
-    for(const [key,label] of Object.entries(types)){
-      if((key==='Start'&&v.driver)||(['Advance','End'].includes(key)&&!v.driver))continue;
-      type.add(new Option(label,key));
+    const keys=section==='collections'?['Daily']:section==='service'?['Service','Reading','Remark']:v.driver?['End']:['Start'];
+    for(const k of keys)type.add(new Option(types[k],k));
+    const showTask=k=>{if(saving||payBusy||loading)return;type.value=k;form.hidden=false;drawFields();};
+    if(section==='collections'){drawFields();table('Daily account',['Date','Status','Cash','Online','Petrol','CNG','Net','Remark'],days.map(r=>[r[0],r[1],...r.slice(2,7).map(money),r[7]]));}
+    else{
+      form.hidden=true;
+      keys.forEach(k=>el('fleetTasks').append(action(types[k],()=>showTask(k))));
+      if(section==='drivers'){renderPay();table('Driver duty history',['Date','Entry','Details'],history.filter(r=>r[1].startsWith('Driver')));}
+      else table('Service & KM history',['Date','Entry','Details'],history.filter(r=>!r[1].startsWith('Driver')));
     }
-    drawFields();table('Daily account', ['Date','Status','Cash','Online','Petrol','CNG','Net','Remark'],days.map(r=>[r[0],r[1],...r.slice(2,7).map(money),r[7]]));
-    table('Driver, KM and service history',['Date','Entry','Details'],history);
   }
-  function table(title,headers,rows){
+  function table(title,headers,rows,container=el('fleetHistory')){
     if(!rows.length)return;
-    const container=el('fleetHistory'),scroll=node('div',null,'scroll'),t=node('table'),head=t.createTHead().insertRow();
+    const scroll=node('div',null,'scroll'),t=node('table'),head=t.createTHead().insertRow();
     for(const h of headers)head.append(node('th',h));
     const body=t.createTBody();
     for(const row of rows){const tr=body.insertRow();for(const val of row)tr.insertCell().textContent=val;}
@@ -7650,16 +7696,89 @@ document.getElementById('dutyForm').addEventListener('submit',event=>{
     el('fleetSave').textContent='Save to Fleet Sheet';
     if(kind==='Start'){field('driver','Driver name','text','',true);field('mobile','Driver mobile','tel');}
     if(['Start','End','Service','Reading'].includes(kind))field('km',kind==='Start'?'Joining km':kind==='End'?'Leaving km':'Odometer (km)','number','',true);
-    if(['Start','Advance'].includes(kind))field('advance','Advance paid by office (₹)','number',kind==='Start'?'0':'',true);
     if(kind==='Service'){field('cost','Service cost (₹)','number','',true);field('work','Service work completed','note','',true);}
     const pending=['Service','Remark'].includes(kind);
     field('note',pending?'Work still pending for next service (clear when done)':'Remark','note',pending?v.pending:'');
   }
-  el('fleetTile').onclick=()=>{if(!box.open)box.showModal();adding=false;refresh(reg,true);};
-  el('fleetReload').onclick=()=>{if(!saving)refresh(reg,true);};
+  function renderPay(){
+    const area=el('payArea'),office=section==='office';
+    area.replaceChildren();area.hidden=false;
+    area.append(node('h3',office?'Office salary account':'Driver salary account'));
+    const people=accounts.people.filter(p=>office?p.role!=='Driver':p.assignments.some(a=>a.reg===reg));
+    const p=people.find(p=>p.key===personKey)||people.find(p=>p.assignments.some(a=>a.reg===reg&&!a.end))||people[0];
+    personKey=p?.key||'';salaryMonth=salaryMonth||today.slice(0,7);
+    if(p&&salaryMonth<p.joined.slice(0,7))salaryMonth=today.slice(0,7);
+    const filters=node('div');filters.id='payFilters';area.append(filters);
+    function control(parent,label,name,type,value,options){
+      const wrap=node('label',label),input=node(options?'select':'input');input.name=name;
+      if(options)for(const [key,title] of options)input.add(new Option(title,key));else input.type=type;
+      input.value=value;wrap.append(input);parent.append(wrap);return input;
+    }
+    if(p){
+      const picker=control(filters,office?'Employee':'Driver','person','',personKey,people.map(p=>[p.key,[p.name,p.role,p.mobile,p.joined].filter(Boolean).join(' · ')]));
+      const month=control(filters,'Salary month','month','month',salaryMonth);
+      month.min=p.joined.slice(0,7);
+      picker.onchange=()=>{personKey=picker.value;payTask='';renderPay();};
+      month.onchange=()=>{if(month.value){salaryMonth=month.value;payTask='';renderPay();}};
+      area.append(node('p','Joined '+p.joined+(p.mobile?' · '+p.mobile:'')));
+      for(const a of p.assignments.filter(a=>a.reg===reg))area.append(node('p',a.reg+' · '+a.start+' ('+a.km+' km) — '+(a.end?a.end+' ('+a.endKm+' km)':'On duty')));
+      const rows=accounts.entries.filter(e=>e.key===personKey&&e.month===salaryMonth);
+      const salary=rows.filter(e=>e.type==='Monthly salary').at(-1);
+      const sum=kind=>rows.filter(e=>e.type===kind).reduce((n,e)=>n+Math.round(e.amount*100),0)/100;
+      const advances=sum('Advance'),paid=sum('Salary payment'),received=(Math.round(advances*100)+Math.round(paid*100))/100;
+      area.append(node('p',['Salary '+(salary?money(salary.amount):'not set'),'Advances '+money(advances),'Salary paid '+money(paid),'Total received '+money(received),...(salary?[salary.amount>=received?'Balance '+money(salary.amount-received):'Excess paid '+money(received-salary.amount)]:[])].join(' · '),'summary'));
+      const payments=rows.filter(e=>e.type!=='Monthly salary').sort((a,b)=>b.date.localeCompare(a.date));
+      if(!payments.length)area.append(node('p','No payments for this month.'));
+      table('Payment history',['Date','Type','Amount','Mode','Note'],payments.map(e=>[e.date,e.type,money(e.amount),e.mode,e.note]),area);
+    }
+    const tasks=node('div');tasks.id='payTasks';area.append(tasks);
+    const choices=office?[['StaffJoin','Add office staff']]:[];
+    if(p)choices.push(['Monthly salary','Set monthly salary'],['Advance','Record advance'],['Salary payment','Record salary payment']);
+    for(const [key,title] of choices)tasks.append(action(title,()=>{if(!payBusy){payTask=key;renderPay();}},payTask===key));
+    if(!payTask)return;
+    const f=node('form'),fields=node('div',null,'fields');f.append(node('h3',choices.find(([key])=>key===payTask)[1]),fields);area.append(f);
+    function add(label,name,type,value='',options,required=true){const c=control(fields,label,name,type,value,options);c.required=required;return c;}
+    const join=payTask==='StaffJoin',setting=payTask==='Monthly salary';
+    if(join){add('Employee name','name','text').maxLength=100;add('Role','role','','Staff',[['Staff','Staff'],['Admin','Admin']]);add('Mobile','mobile','tel','',null,false);}
+    const date=add(join?'Joining date':'Entry date','date','date',today);date.max=today;if(!join)date.min=p.joined;
+    if(!join){
+      const amount=add('Amount (₹)','amount','number');amount.min='.01';amount.step='.01';
+      if(!setting)add('Paid by','mode','','Cash',['Cash','UPI','Bank transfer','Cheque'].map(m=>[m,m]));
+      add('Note','note','text','',null,false).maxLength=600;
+    }
+    const save=node('button','Save to Fleet Sheet','primary');save.type='submit';f.append(save);
+    f.onsubmit=async event=>{
+      event.preventDefault();if(payBusy||loading||saving)return;
+      const entry={...Object.fromEntries(new FormData(f)),reg:'',kind:join?'StaffJoin':setting?'Monthly salary':'Person payment'};
+      if(!join){entry.person=p.key;entry.month=salaryMonth;if(!setting)entry.payType=payTask;}
+      const revision=join?'':p.version,signature=JSON.stringify([entry,revision]);
+      let pending;
+      try{pending=JSON.parse(sessionStorage.getItem('fleetPayrollRequest'));}catch{}
+      if(pending?.signature!==signature)pending={signature,id:crypto.randomUUID()};
+      try{sessionStorage.setItem('fleetPayrollRequest',JSON.stringify(pending));}catch{}
+      payBusy=true;const controls=[...box.querySelectorAll('input,select,button,textarea')].filter(c=>!c.disabled);controls.forEach(c=>c.disabled=true);
+      msg('Saving to Fleet Sheet.');
+      try{
+        let saveError='';
+        try{await tourPackageRequest('action=save-fleet-entry',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:pending.id,revision,entry})});}catch(error){saveError=error.message;}
+        const data=await tourPackageRequest('data=fleet-register&accounts=1&reg='+encodeURIComponent(reg));
+        const verified=join?data.accounts.people.some(p=>p.key==='S-'+pending.id):data.accounts.entries.some(e=>e.id.startsWith(pending.id+'.'));
+        if(!verified)throw Error(saveError||'Could not verify the entry. Refresh the account before retrying.');
+        accounts=data.accounts;if(join)personKey='S-'+pending.id;
+        payTask='';renderPay();try{sessionStorage.removeItem('fleetPayrollRequest');}catch{}
+        msg('Saved to Fleet Sheet.');
+      }catch(error){msg(error.message);}
+      finally{payBusy=false;controls.forEach(c=>c.disabled=false);}
+    };
+  }
+
+
+  function openSection(key){if(saving||payBusy)return;section=key;personKey='';payTask='';if(!box.open)box.showModal();adding=false;refresh(reg,true);}
+  for(const b of document.querySelectorAll('#fleetShortcuts button'))b.onclick=()=>openSection(b.dataset.section);
+  el('fleetReload').onclick=()=>{if(!saving&&!payBusy)refresh(reg,true);};
   el('fleetNew').onclick=()=>{if(saving||loading)return;adding=true;el('fleetSave').textContent='Save to Fleet Sheet';render();};
-  el('fleetClose').onclick=()=>{if(!saving)box.close();};
-  box.addEventListener('cancel',e=>{if(saving)e.preventDefault();});
+  el('fleetClose').onclick=()=>{if(!saving&&!payBusy)box.close();};
+  box.addEventListener('cancel',e=>{if(saving||payBusy)e.preventDefault();});
   el('fleetType').onchange=drawFields;
   form.onsubmit=async event=>{
     event.preventDefault();if(saving||loading)return;
