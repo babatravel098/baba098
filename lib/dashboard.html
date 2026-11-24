@@ -481,21 +481,21 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
 <div class="flex flex-wrap items-end gap-2">
 <label>Package <select id="nepalPackage" onchange="document.getElementById('loadNepalPackage').click()" class="block rounded border p-2"></select></label>
 </div><label class="block">Package title<input name="title" maxlength="200" class="block w-full rounded border p-2" placeholder="Enter the name to save this package"></label><div class="flex flex-wrap gap-2"><button type="button" id="loadNepalPackage" class="rounded bg-teal-800 px-3 py-2 text-white">Load package</button>
-<button type="button" id="saveNepalPackage" class="rounded border px-3 py-2">Save as package</button><button type="button" id="deleteSharedTourPackage" class="rounded border border-red-300 px-3 py-2 text-red-700" onclick="deleteSelectedTourPackage()">Delete saved package</button>
+<button type="button" id="saveNepalPackage" class="rounded border px-3 py-2">Save day-wise package</button><button type="button" id="deleteSharedTourPackage" class="rounded border border-red-300 px-3 py-2 text-red-700" onclick="deleteSelectedTourPackage()">Delete saved package</button>
 </div>
-<section id="nightPanel" hidden><h3 class="font-bold">Night-wise hotels</h3><p class="text-sm">Choose or type a city and hotel for each night. Adjust route and activities in Trip days when changing a destination.</p><datalist id="overnightCityOptions"></datalist><div id="nightStays" class="grid gap-2"></div></section>
+<section id="nightPanel" class="grid gap-3"><h3 class="font-bold">Hotel directory · All destinations</h3><div class="grid gap-2 sm:grid-cols-2"><label>City<select id="directoryCity" class="block w-full min-w-0 border rounded p-2"></select></label><label>Search hotel<input id="directorySearch" class="block w-full min-w-0 border rounded p-2" type="search" autocomplete="off"></label><label>Property type<select id="directoryType" class="block w-full min-w-0 border rounded p-2"><option value="">All types</option></select></label><label>Listed stars<select id="directoryStars" class="block w-full min-w-0 border rounded p-2"><option value="">All star classes</option></select></label><label>Hotel<select id="directoryHotel" class="block w-full min-w-0 border rounded p-2"></select></label><label>Use for night<select id="directoryNight" class="block w-full min-w-0 border rounded p-2"></select></label></div><p id="hotelSource" class="text-sm"></p><div class="flex flex-wrap gap-2"><button id="useDirectoryHotel" type="button" class="rounded bg-teal-800 text-white px-3 py-2">Use for selected night</button><button id="addDirectoryNight" type="button" class="rounded border px-3 py-2">Add 1 night before last day</button></div><p id="directoryMessage" role="status" class="text-sm"></p><h3 class="font-bold">Night-wise hotels</h3><div id="nightStays" class="grid gap-2"></div></section>
 <div class="flex flex-wrap gap-3">
-<label>Kathmandu hotel <select id="nepalKathmandu" class="block rounded border p-2"></select></label>
-<label>Pokhara hotel <select id="nepalPokhara" class="block rounded border p-2"></select></label>
-<label>Janakpur hotel <select id="nepalJanakpur" class="block rounded border p-2"></select></label><label>Muktinath / Jomsom hotel <select id="nepalJomsom" class="block rounded border p-2"></select></label><label>Chitwan hotel <select id="nepalChitwan" class="block rounded border p-2"></select></label><label>Vehicle <select id="nepalVehicle" class="block rounded border p-2"></select></label>
+<label hidden style="display:none">Kathmandu hotel <select id="nepalKathmandu" class="block rounded border p-2"></select></label>
+<label hidden style="display:none">Pokhara hotel <select id="nepalPokhara" class="block rounded border p-2"></select></label>
+<label hidden style="display:none">Janakpur hotel <select id="nepalJanakpur" class="block rounded border p-2"></select></label><label hidden style="display:none">Muktinath / Jomsom hotel <select id="nepalJomsom" class="block rounded border p-2"></select></label><label hidden style="display:none">Chitwan hotel <select id="nepalChitwan" class="block rounded border p-2"></select></label><label>Vehicle <select id="nepalVehicle" class="block rounded border p-2"></select></label>
 <label>Meal plan <select id="nepalMeal" class="block rounded border p-2"><option value="">Select meal plan</option><option>EP - Room only</option><option>BB - Breakfast</option><option>MAP - Breakfast and one main meal</option><option>AP - Breakfast, lunch and dinner</option></select></label>
 </div>
 
 <details class="border rounded p-3"><summary>Add hotel to library</summary>
 <div class="flex flex-wrap items-end gap-2">
-<label>City<select id="quoteHotelCity" class="block border rounded p-2"><option>Kathmandu</option><option>Pokhara</option><option>Janakpur</option><option>Jomsom</option><option>Chitwan</option></select></label>
+<label>City<select id="quoteHotelCity" class="block border rounded p-2"><option>Ayodhya</option><option>Bhairahawa</option><option>Butwal</option><option>Chitwan</option><option>Gorakhpur</option><option>Janakpur</option><option>Jomsom</option><option>Kathmandu</option><option>Lumbini</option><option>Muktinath</option><option>Pokhara</option><option>Prayagraj</option><option>Varanasi</option><option>Vindhyachal</option></select></label>
 <label>Hotel name<input id="quoteHotelName" class="block border rounded p-2"></label>
-<label>Category<select id="quoteHotelCategory" class="block border rounded p-2"><option value="">Choose category</option><option>2-star</option><option>3-star</option><option>4-star</option><option>5-star</option><option>Unrated</option></select></label>
+<label>Category<select id="quoteHotelCategory" class="block border rounded p-2"><option value="">Choose category</option><option>2-star</option><option>3-star</option><option>4-star</option><option>5-star</option><option>Unrated</option><option>Resort</option><option>Guest house</option><option>Lodge</option><option>Homestay</option></select></label>
 <button type="button" id="quoteAddHotel" class="border rounded p-2">Save hotel</button></div><p id="quoteHotelStatus" role="status"></p></details><details class="rounded border p-3"><summary>Add vehicle to library</summary><label>Vehicle name<input id="quoteVehicleName" maxlength="120" class="block rounded border p-2"></label><button id="quoteAddVehicle" type="button" class="rounded border p-2">Save vehicle</button><p id="quoteVehicleStatus" role="status"></p></details>
 <div class="flex gap-3 flex-wrap"><label>Rooms<input name="roomCount" type="number" min="1" step="1" class="block border rounded p-2"></label>
 <label>Sharing<select name="roomSharing" class="block border rounded p-2"><option value="">Select sharing</option><option>Double sharing</option><option>Triple sharing</option><option>Four sharing</option><option>Mixed sharing</option></select></label></div>
@@ -676,7 +676,8 @@ body.font-sans{font-family:"Instrument Sans",system-ui,sans-serif;background:var
     fetchLeads();
     loadLastInvoiceNumber();
 };
-function handleLogout() { const form = document.createElement('form'); form.method = 'POST'; form.action = '/api/logout'; document.body.appendChild(form); form.submit(); }async function logoutAllDevices() {
+function handleLogout() { const form = document.createElement('form'); form.method = 'POST'; form.action = '/api/logout'; document.body.appendChild(form); form.submit(); }
+async function logoutAllDevices() {
   if(!confirm('Sign out of Baba Tour & Travels CRM on every computer? Every user will need to sign in again with the authorised email.'))return;
   const button=document.querySelector('[onclick="logoutAllDevices()"]');
   if(button){button.disabled=true;button.textContent='Signing out…';}
@@ -2713,6 +2714,7 @@ async function deleteCrmBooking(button, bookingId) {
 }
 </script>
 <script>
+let packageDayChoices = [];
 const itineraryLibraryKey = 'baba_itinerary_library_v1';
 const quoteControl = id => document.getElementById(id);
 const itineraryLibrary = JSON.parse(localStorage.getItem(itineraryLibraryKey) || 'null') ||
@@ -2741,7 +2743,7 @@ function refreshItineraryLibrary() {
     for (const [kind, id] of [['hotel','tripHotels'], ['vehicle','tripVehicles']]) {
         quoteControl(id).replaceChildren(...itineraryLibrary[kind].map(value => new Option(value, value)));
     }
-    setItineraryOptions(quoteControl('tripTemplates'), itineraryLibrary.templates.map(day => [day.id, day.title]), 'Choose a saved day');
+    refreshPackageDayMenu();
     refreshItineraryPhotos();
 }
 let sharedTourPhotos = [];
@@ -3011,8 +3013,20 @@ function addItineraryDay(day = {}, reveal = false) {
         card.querySelector('input').focus({preventScroll: true});
     }
 }
+function refreshPackageDayMenu() {
+    const menu = quoteControl('tripTemplates'), previous = menu.value;
+    setItineraryOptions(menu, itineraryLibrary.templates.map(day => [day.id, day.title]), 'Choose a saved day');
+    for (const group of packageDayChoices) {
+        const options = document.createElement('optgroup');
+        options.label = group.title;
+        group.days.forEach((day, index) => options.append(new Option('Day ' + (index + 1) + ' · ' + day.title, day.id)));
+        menu.append(options);
+    }
+    if ([...menu.options].some(o => o.value === previous)) menu.value = previous;
+}
 function useItineraryTemplate() {
-    const day = itineraryLibrary.templates.find(item => item.id === quoteControl('tripTemplates').value);
+    const selected = quoteControl('tripTemplates').value;
+    const day = itineraryLibrary.templates.find(item => item.id === selected) || packageDayChoices.flatMap(group => group.days).find(item => item.id === selected);
     if (day) addItineraryDay(day, true);
 }
 async function downloadBookingPackagePdf() {
@@ -3556,6 +3570,424 @@ const nepalPackages = [
         terms: nepalTerms
     };
 });
+nepalPackages.push(...[
+  {
+    "id": "baba-pkg-01",
+    "title": "Package 01 – Pokhara Tour | 3 Days / 2 Nights",
+    "itineraryOnly": true,
+    "domestic": false,
+    "days": [
+      {
+        "title": "Gorakhpur to Pokhara",
+        "route": "Gorakhpur - Pokhara",
+        "activities": "Pickup from Gorakhpur.\nProceed towards Pokhara, Nepal.\nHotel check-in.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara Local Sightseeing",
+        "route": "Pokhara",
+        "activities": "Visit Bindhyabasini Temple.\nVisit Devi's Fall.\nVisit Gupteshwar Mahadev Cave.\nExplore Phewa Lake and Lakeside.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara to Gorakhpur",
+        "route": "Pokhara - Gorakhpur",
+        "activities": "Drive back to Gorakhpur.\nTour concludes.",
+        "stay": ""
+      }
+    ]
+  },
+  {
+    "id": "baba-pkg-02",
+    "title": "Package 02 – Pokhara & Lumbini Tour | 3 Days / 2 Nights",
+    "itineraryOnly": true,
+    "domestic": false,
+    "days": [
+      {
+        "title": "Gorakhpur – Lumbini – Pokhara",
+        "route": "Gorakhpur - Lumbini - Pokhara",
+        "activities": "Pickup from Gorakhpur.\nProceed to Lumbini.\nLumbini sightseeing by E-Rickshaw.\nVisit Maya Devi Temple and Sacred Garden.\nContinue journey towards Pokhara.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara Local Sightseeing",
+        "route": "Pokhara",
+        "activities": "Visit Bindhyabasini Temple.\nVisit Devi's Fall.\nVisit Gupteshwar Mahadev Cave.\nExplore Phewa Lake and Lakeside.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara to Gorakhpur",
+        "route": "Pokhara - Gorakhpur",
+        "activities": "Drive back to Gorakhpur.\nTour concludes.",
+        "stay": ""
+      }
+    ]
+  },
+  {
+    "id": "baba-pkg-03",
+    "title": "Package 03 – Pokhara Tour | 4 Days / 3 Nights",
+    "itineraryOnly": true,
+    "domestic": false,
+    "days": [
+      {
+        "title": "Gorakhpur to Pokhara",
+        "route": "Gorakhpur - Pokhara",
+        "activities": "Pickup from Gorakhpur.\nDrive towards Pokhara.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara Local Sightseeing",
+        "route": "Pokhara",
+        "activities": "Visit Bindhyabasini Temple.\nVisit Devi's Fall.\nVisit Gupteshwar Mahadev Cave.\nExplore Lakeside.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Sarangkot & Pokhara Sightseeing",
+        "route": "Pokhara - Sarangkot - Pokhara",
+        "activities": "Visit Sarangkot via Annapurna Cable Car.\nEnjoy panoramic Himalayan views.\nEnjoy boating at Phewa Lake.\nVisit World Peace Pagoda and Hanging Bridge by local vehicle.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara to Gorakhpur",
+        "route": "Pokhara - Gorakhpur",
+        "activities": "Drive back to Gorakhpur.\nTour concludes.",
+        "stay": ""
+      }
+    ]
+  },
+  {
+    "id": "baba-pkg-04",
+    "title": "Package 04 – Kathmandu, Manakamana & Pokhara Tour | 5 Days / 4 Nights",
+    "itineraryOnly": true,
+    "domestic": false,
+    "days": [
+      {
+        "title": "Gorakhpur – Lumbini – Kathmandu",
+        "route": "Gorakhpur - Lumbini - Kathmandu",
+        "activities": "Pickup from Gorakhpur.\nVisit Lumbini. Sightseeing by E-Rickshaw.\nContinue journey towards Kathmandu.",
+        "stay": "Kathmandu"
+      },
+      {
+        "title": "Kathmandu Local Sightseeing",
+        "route": "Kathmandu",
+        "activities": "Visit Pashupatinath Temple.\nVisit Gujeshwari Devi Temple.\nVisit Buddha Neelkanth Temple.\nVisit Swayambhunath Temple.",
+        "stay": "Kathmandu"
+      },
+      {
+        "title": "Kathmandu – Manakamana – Pokhara",
+        "route": "Kathmandu - Manakamana - Pokhara",
+        "activities": "Proceed towards Pokhara.\nEn route, visit Manakamana Temple by cable car.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara Local Sightseeing",
+        "route": "Pokhara",
+        "activities": "Visit Bindhyabasini Temple.\nVisit Devi's Fall.\nVisit Gupteshwar Mahadev Cave.\nExplore Phewa Lake and Lakeside.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara to Gorakhpur",
+        "route": "Pokhara - Gorakhpur",
+        "activities": "Drive back to Gorakhpur.\nTour concludes.",
+        "stay": ""
+      }
+    ]
+  },
+  {
+    "id": "baba-pkg-05",
+    "title": "Package 05 – Pokhara & Muktinath Tour | 5 Days / 4 Nights",
+    "itineraryOnly": true,
+    "domestic": false,
+    "days": [
+      {
+        "title": "Gorakhpur – Lumbini – Pokhara",
+        "route": "Gorakhpur - Lumbini - Pokhara",
+        "activities": "Pickup from Gorakhpur.\nVisit Lumbini by E-Rickshaw.\nContinue journey towards Pokhara.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara Local Sightseeing",
+        "route": "Pokhara",
+        "activities": "Visit Bindhyabasini Temple.\nVisit Devi's Fall.\nVisit Gupteshwar Mahadev Cave.\nExplore Phewa Lake and Lakeside.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara – Jomsom",
+        "route": "Pokhara - Marpha Village - Jomsom",
+        "activities": "Drive towards Jomsom via scenic mountain roads.\nVisit Marpha Village.",
+        "stay": "Jomsom"
+      },
+      {
+        "title": "Jomsom – Muktinath – Pokhara",
+        "route": "Jomsom - Muktinath - Pokhara",
+        "activities": "Early morning drive to Muktinath Temple.\nDarshan at Muktinath Temple.\nReturn towards Pokhara.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara to Gorakhpur",
+        "route": "Pokhara - Gorakhpur",
+        "activities": "Drive back to Gorakhpur.\nTour concludes.",
+        "stay": ""
+      }
+    ]
+  },
+  {
+    "id": "baba-pkg-06",
+    "title": "Package 06 – Kathmandu, Manakamana & Pokhara Tour | 5 Days / 4 Nights",
+    "itineraryOnly": true,
+    "domestic": false,
+    "days": [
+      {
+        "title": "Gorakhpur – Lumbini – Kathmandu",
+        "route": "Gorakhpur - Lumbini - Kathmandu",
+        "activities": "Pickup from Gorakhpur.\nVisit Lumbini by E-Rickshaw.\nProceed towards Kathmandu.",
+        "stay": "Kathmandu"
+      },
+      {
+        "title": "Kathmandu Local Sightseeing",
+        "route": "Kathmandu",
+        "activities": "Visit Pashupatinath Temple.\nVisit Gujeshwari Devi Temple.\nVisit Buddha Neelkanth Temple.\nVisit Swayambhunath Temple.",
+        "stay": "Kathmandu"
+      },
+      {
+        "title": "Kathmandu – Manakamana – Pokhara",
+        "route": "Kathmandu - Manakamana - Pokhara",
+        "activities": "Drive towards Pokhara.\nEn route, visit Manakamana Temple by cable car.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara Local Sightseeing",
+        "route": "Pokhara",
+        "activities": "Visit Bindhyabasini Temple.\nVisit Devi's Fall.\nVisit Gupteshwar Mahadev Cave.\nExplore Phewa Lake and Lakeside.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara to Gorakhpur",
+        "route": "Pokhara - Gorakhpur",
+        "activities": "Drive back to Gorakhpur.\nTour concludes.",
+        "stay": ""
+      }
+    ]
+  },
+  {
+    "id": "baba-pkg-07",
+    "title": "Package 07 – Pokhara, Muktinath & Kathmandu Tour | 7 Days / 6 Nights",
+    "itineraryOnly": true,
+    "domestic": false,
+    "days": [
+      {
+        "title": "Gorakhpur to Pokhara",
+        "route": "Gorakhpur - Pokhara",
+        "activities": "Pickup from Gorakhpur.\nProceed towards Pokhara.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara Local Sightseeing",
+        "route": "Pokhara",
+        "activities": "Visit Bindhyabasini Temple.\nVisit Devi's Fall.\nVisit Gupteshwar Mahadev Cave.\nExplore Phewa Lake and Lakeside.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara – Jomsom",
+        "route": "Pokhara - Marpha Village - Jomsom",
+        "activities": "Drive towards Jomsom via Marpha Village.\nEnjoy beautiful mountain scenery.",
+        "stay": "Jomsom"
+      },
+      {
+        "title": "Jomsom – Muktinath – Pokhara",
+        "route": "Jomsom - Muktinath - Pokhara",
+        "activities": "Early morning visit to Muktinath Temple.\nReturn towards Pokhara.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara – Manakamana – Kathmandu",
+        "route": "Pokhara - Manakamana - Kathmandu",
+        "activities": "Drive towards Kathmandu.\nEn route, visit Manakamana Temple by cable car.",
+        "stay": "Kathmandu"
+      },
+      {
+        "title": "Kathmandu Local Sightseeing",
+        "route": "Kathmandu",
+        "activities": "Visit Pashupatinath Temple.\nVisit Gujeshwari Devi Temple.\nVisit Buddha Neelkanth Temple.\nVisit Swayambhunath Temple.",
+        "stay": "Kathmandu"
+      },
+      {
+        "title": "Kathmandu to Gorakhpur",
+        "route": "Kathmandu - Gorakhpur",
+        "activities": "Drive back to Gorakhpur.\nTour concludes.",
+        "stay": ""
+      }
+    ]
+  },
+  {
+    "id": "baba-pkg-08",
+    "title": "Package 08 – Kathmandu, Pokhara & Muktinath Tour | 7 Days / 6 Nights",
+    "itineraryOnly": true,
+    "domestic": false,
+    "days": [
+      {
+        "title": "Gorakhpur to Kathmandu",
+        "route": "Gorakhpur – Kathmandu",
+        "activities": "Pickup from Gorakhpur.\nProceed towards Kathmandu.",
+        "stay": "Kathmandu"
+      },
+      {
+        "title": "Kathmandu Local Sightseeing",
+        "route": "Kathmandu",
+        "activities": "Visit Pashupatinath Temple.\nVisit Gujeshwari Devi Temple.\nVisit Buddha Neelkanth Temple.\nVisit Swayambhunath Temple.",
+        "stay": "Kathmandu"
+      },
+      {
+        "title": "Kathmandu – Manakamana – Pokhara",
+        "route": "Kathmandu – Manakamana – Pokhara",
+        "activities": "Drive towards Pokhara.\nEn route, visit Manakamana Temple by cable car.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara Local Sightseeing",
+        "route": "Pokhara",
+        "activities": "Visit Bindhyabasini Temple.\nVisit Devi’s Fall.\nVisit Gupteshwar Mahadev Cave.\nExplore Phewa Lake and Lakeside.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara – Jomsom",
+        "route": "Pokhara – Marpha Village – Jomsom",
+        "activities": "Drive towards Jomsom via Marpha Village.",
+        "stay": "Jomsom"
+      },
+      {
+        "title": "Jomsom – Muktinath – Pokhara",
+        "route": "Jomsom – Muktinath – Pokhara",
+        "activities": "Visit Muktinath Temple.\nReturn to Pokhara.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara to Gorakhpur",
+        "route": "Pokhara – Gorakhpur",
+        "activities": "Drive back to Gorakhpur.\nTour concludes.",
+        "stay": ""
+      }
+    ]
+  },
+  {
+    "id": "baba-pkg-09",
+    "title": "Package 09 – Pokhara, Muktinath, Kathmandu & Janakpur Tour | 8 Days / 7 Nights",
+    "itineraryOnly": true,
+    "domestic": false,
+    "days": [
+      {
+        "title": "Gorakhpur – Pokhara",
+        "route": "Gorakhpur – Lumbini – Pokhara",
+        "activities": "Pickup from Gorakhpur.\nProceed towards Pokhara via Lumbini.\nLumbini sightseeing by E-Rickshaw.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara Local Sightseeing",
+        "route": "Pokhara",
+        "activities": "Visit Bindhyabasini Temple.\nVisit Devi’s Fall.\nVisit Gupteshwar Mahadev Cave.\nExplore Phewa Lake and Lakeside.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara – Jomsom",
+        "route": "Pokhara – Marpha Village – Jomsom",
+        "activities": "Drive towards Jomsom via Marpha Village.\nEnjoy scenic mountain views.",
+        "stay": "Jomsom"
+      },
+      {
+        "title": "Jomsom – Muktinath – Pokhara",
+        "route": "Jomsom – Muktinath – Pokhara",
+        "activities": "Visit Muktinath Temple.\nReturn to Pokhara.\nOptional visit to Kushma, subject to time and route feasibility.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara – Manakamana – Kathmandu",
+        "route": "Pokhara – Manakamana – Kathmandu",
+        "activities": "Drive towards Kathmandu.\nEn route, visit Manakamana Temple by cable car.",
+        "stay": "Kathmandu"
+      },
+      {
+        "title": "Kathmandu Local Sightseeing",
+        "route": "Kathmandu",
+        "activities": "Visit Pashupatinath Temple.\nVisit Gujeshwari Devi Temple.\nVisit Buddha Neelkanth Temple.\nVisit Swayambhunath Temple.",
+        "stay": "Kathmandu"
+      },
+      {
+        "title": "Kathmandu – Janakpur",
+        "route": "Kathmandu – Janakpur",
+        "activities": "Drive towards Janakpur.",
+        "stay": "Janakpur"
+      },
+      {
+        "title": "Janakpur – Gorakhpur",
+        "route": "Janakpur – Gorakhpur",
+        "activities": "Visit Janaki Temple.\nProceed towards Gorakhpur.\nTour concludes.",
+        "stay": ""
+      }
+    ]
+  },
+  {
+    "id": "baba-pkg-10",
+    "title": "Package 10 – Janakpur, Chitwan, Kathmandu, Pokhara & Muktinath Tour | 9 Days / 8 Nights",
+    "itineraryOnly": true,
+    "domestic": false,
+    "days": [
+      {
+        "title": "Gorakhpur – Janakpur",
+        "route": "Gorakhpur – Janakpur",
+        "activities": "Pickup from Gorakhpur.\nProceed towards Janakpur.\nVisit Janaki Temple.",
+        "stay": "Janakpur"
+      },
+      {
+        "title": "Janakpur – Chitwan",
+        "route": "Janakpur – Chitwan",
+        "activities": "Drive towards Chitwan.\nHotel check-in.",
+        "stay": "Chitwan"
+      },
+      {
+        "title": "Chitwan – Kathmandu",
+        "route": "Chitwan National Park – Kathmandu",
+        "activities": "Enjoy Chitwan Jungle Safari / activities as per selected package.\nProceed towards Kathmandu.",
+        "stay": "Kathmandu"
+      },
+      {
+        "title": "Kathmandu Local Sightseeing",
+        "route": "Kathmandu",
+        "activities": "Visit Pashupatinath Temple.\nVisit Gujeshwari Devi Temple.\nVisit Buddha Neelkanth Temple.\nVisit Swayambhunath Temple.",
+        "stay": "Kathmandu"
+      },
+      {
+        "title": "Kathmandu – Manakamana – Pokhara",
+        "route": "Kathmandu – Manakamana – Pokhara",
+        "activities": "Drive towards Pokhara.\nEn route, visit Manakamana Temple by cable car.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara – Jomsom",
+        "route": "Pokhara – Jomsom",
+        "activities": "Drive towards Jomsom.\nEnjoy scenic mountain views.",
+        "stay": "Jomsom"
+      },
+      {
+        "title": "Jomsom – Muktinath – Pokhara",
+        "route": "Jomsom – Muktinath – Pokhara",
+        "activities": "Visit Muktinath Temple.\nReturn to Pokhara.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara Local Sightseeing",
+        "route": "Pokhara",
+        "activities": "Visit Bindhyabasini Temple.\nVisit Devi’s Fall.\nVisit Gupteshwar Mahadev Cave.\nExplore Phewa Lake and Lakeside.",
+        "stay": "Pokhara"
+      },
+      {
+        "title": "Pokhara to Gorakhpur",
+        "route": "Pokhara – Gorakhpur",
+        "activities": "Early morning departure towards Gorakhpur.\nTour concludes.",
+        "stay": ""
+      }
+    ]
+  }
+]);
 const quoteCancellationCommon = 'Please submit cancellation requests in writing. Requests received on Sundays are processed on the next working day. Payments for the 20 December to 5 January holiday period are non-refundable. After departure, any refund depends on amounts recoverable from suppliers. Unused accommodation, chartered transport and missed meals are not refundable.';
 const quoteCancellationPolicies = {
     departure: 'Minimum cancellation charge: 10% or INR 3,000 per person per tour, whichever is higher.\n45 to 31 days before departure: 25% of total tour cost.\n30 to 16 days: 50%.\n15 to 5 days: 75%.\n4 days or fewer, same-day cancellation or no-show: 100%.\n' + quoteCancellationCommon,
@@ -3603,7 +4035,7 @@ async function loadSharedTourPackages() {
 async function deleteSelectedTourPackage() {
     const select = quoteControl('nepalPackage');
     const pack = sharedTourPackages.find(item => item.id === select.value);
-    if (!pack) return nepalStatus('Choose a saved custom package to delete.');
+    if (!pack || nepalPackages.some(p => p.id === pack.id)) return nepalStatus('Choose a saved custom package to delete.');
     if (!confirm('Permanently delete "' + pack.title + '" from the Tour Sheet?')) return;
     const button = quoteControl('deleteSharedTourPackage');
     button.disabled = true;
@@ -3621,8 +4053,16 @@ async function deleteSelectedTourPackage() {
     finally { button.disabled = false; }
 }
 
+function packageChoices() {
+    return [...new Map([...nepalPackages, ...sharedTourPackages].map(pack => [pack.id, pack])).values()];
+}
 function refreshNepalPackages() {
-    setItineraryOptions(quoteControl('nepalPackage'), [...nepalPackages, ...sharedTourPackages].map(p => [p.id,p.title]), 'Choose a saved package');
+    const menu = quoteControl('nepalPackage'), previous = menu.value;
+    const packages = packageChoices();
+    setItineraryOptions(menu, packages.map(p => [p.id,p.title]), 'Choose a saved package');
+    if (packages.some(p => p.id === previous)) menu.value = previous;
+    packageDayChoices = packages.map(pack => ({title:pack.title, days:pack.days.map(({title, route, activities, stay},i) => ({title,route,activities,stay:stayParts(stay || '').city,id:'package-day:' + pack.id + ':' + i}))}));
+    refreshPackageDayMenu();
 }
 function getNepalOptions() {
     return {domestic: nepalOptionsDomestic, values: nepalFields.map(id => quoteControl(id).value), extras: [...quoteControl('nepalExtras').querySelectorAll('input:checked')].map(input => input.value)};
@@ -3643,15 +4083,12 @@ for (const [id, values] of [
     ['nepalVehicle', ['Sedan','SUV','Innova','Innova Crysta','Scorpio','Bolero','Hiace','Tempo Traveller - 12 seats','Tempo Traveller - 17 seats','Tempo Traveller - 20 seats','Tempo Traveller - 26 seats','Mini bus','Coach']]
 ]) setItineraryOptions(quoteControl(id),values.map(value => [value,value]),'Choose an option');
 const quoteHotelKey = 'baba_quote_hotels_v1';
-function appendQuoteHotel({city, name, category}) {
-    const select = quoteControl('nepal' + city);
-    const value = name + ' (' + category + ')';
-    if (select && ![...select.options].some(option => option.value === value)) {
-        select.add(new Option(value, value));
-        drawNightStays();
-    }
+function appendQuoteHotel({city,name,category}) {
+    if(!city||!name)return;
+    agencyHotels.set((city+'|'+name).toLowerCase(),{city,name,category:category||''});
+    const select=quoteControl('nepal'+city),value=name+' ('+category+')';
+    if(select?.tagName==='SELECT'&&![...select.options].some(o=>o.value===value))select.add(new Option(value,value));
 }
-
 function appendQuoteVehicle({name}) {
     const select = quoteControl('nepalVehicle');
     if (![...select.options].some(option => option.value === name)) {
@@ -3664,6 +4101,7 @@ async function loadSharedTourOptions() {
         tourPackageRequest('data=tour-hotels'), tourPackageRequest('data=tour-vehicles')
     ]);
     hotels.hotels.forEach(appendQuoteHotel);
+    refreshDirectoryCities();filterDirectory();drawNightStays();
     vehicles.vehicles.forEach(appendQuoteVehicle);
 }
 
@@ -3690,6 +4128,7 @@ function bindTourOptionSave(kind, id, getDetails, append) {
             });
             if (result.id !== record.id) throw new Error('Save could not be confirmed.');
             append(record);
+            if(kind==='hotel'){refreshDirectoryCities();filterDirectory();drawNightStays();}
             pending = undefined;
             status.textContent = 'Saved to the Tour Sheet.';
         } catch (error) {
@@ -3714,21 +4153,13 @@ for (const value of nepalOptional) {
     quoteControl('nepalExtras').append(label);
 }
 quoteControl('applyNepalOptions').addEventListener('click', () => {
-    const {values:[kathmandu,pokhara,vehicle,meal,janakpur,jomsom,chitwan],extras} = getNepalOptions();
-    if (vehicle) nepalValue('vehicle').value = vehicle;
-    const hotels = {Kathmandu:kathmandu, Pokhara:pokhara, Janakpur:janakpur, Jomsom:jomsom, Chitwan:chitwan};
-    const selectedHotels = Object.entries(hotels).filter(([,hotel]) => hotel && !hotel.startsWith('Enter a '));
-    const changing = activeTourOption;
-    for (const card of quoteControl('tripDays').children) {
-        const stay = card.querySelector('[data-day="stay"]');
-        const city = stayParts(stay.value).city;
-        const hotel = selectedHotels.find(([name]) => name.toLowerCase() === city.toLowerCase() && (!changing || changing==='nepal'+name))?.[1];
-        if (hotel) stay.value = city + ': ' + hotel;
-        if (meal && stay.value && (!changing || changing==='nepalMeal')) card.querySelector('[data-day="meals"]').value = meal;
+    const {values,extras}=getNepalOptions(),vehicle=values[2],meal=values[3],changing=activeTourOption;
+    if(vehicle)nepalValue('vehicle').value=vehicle;
+    if(meal&&(!changing||changing==='nepalMeal'))for(const card of quoteControl('tripDays').children){
+        if(card.querySelector('[data-day="stay"]').value)card.querySelector('[data-day="meals"]').value=meal;
     }
     const base = nepalOptionsDomestic ? nepalBase.filter(item => item !== 'Nepal road taxes') : nepalBase;
     nepalValue('inclusions').value = [...base,...extras.map(value => value === 'Selected hotel meal plan' && meal ? meal : value)].join('\n');
-    if ((!changing || changing.startsWith('nepal') && !['nepalExtras','nepalVehicle','nepalMeal'].includes(changing)) && [...quoteControl('tripDays').children].some(card=>stayParts(card.querySelector('[data-day="stay"]').value).hotel))updateHotelSummary();
     drawNightStays();
     nepalStatus('Selected options applied to the quotation.');
 });
@@ -3738,7 +4169,7 @@ for (const id of [...nepalFields,'nepalExtras']) quoteControl(id).addEventListen
 });
 quoteControl('loadNepalPackage').addEventListener('click', () => {
     const selected = quoteControl('nepalPackage').value;
-    const pack = [...nepalPackages, ...sharedTourPackages].find(p => p.id === selected);
+    const pack = packageChoices().find(p => p.id === selected);
     if (!pack) return nepalStatus('Choose a package first.');
     if (quoteControl('tripDays').childElementCount && !confirm('Replace the current trip days and package details?')) return;
     for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms','pricing','amount']) nepalValue(key).value = key === 'amount' || key === 'pricing' ? '' : (pack[key] || '');
@@ -3749,6 +4180,7 @@ quoteControl('loadNepalPackage').addEventListener('click', () => {
     nepalValue('specialTransport').value = pack.specialTransport || '';
     nepalValue('bankDetails').value = '';
     for (const key of ['pickupLocation','dropLocation']) nepalValue(key).value = pack[key] || 'Gorakhpur';
+    if (pack.itineraryOnly) for (const key of ['terms','cancellation','travelNotes']) nepalValue(key).value = '';
     resetItinerary(pack);
     resetNepalOptions({...pack.nepalOptions, domestic: pack.domestic ?? pack.nepalOptions?.domestic});
     syncQuoteRoute(true);
@@ -3763,11 +4195,8 @@ quoteControl('saveNepalPackage').addEventListener('click', async event => {
         return nepalStatus('Enter a package title and name each trip day.');
     }
     const button = event.currentTarget;
-    const details = {...fields, domestic: nepalOptionsDomestic, nepalOptions: getNepalOptions()};
-    for (const key of ['title','highlights','vehicle','hotel','itinerary','inclusions','exclusions','terms','rooming','roomCount','roomSharing','singleRooms','doubleRooms','tripleRooms','fourSharingRooms','specialTransport','cancellation','travelNotes','pickupLocation','dropLocation']) {
-        details[key] = nepalValue(key).value.trim();
-    }
-    details.termsOverride = details.terms;
+    const days = fields.days.map(({title, route, activities, stay}) => ({title, route, activities, stay: stayParts(stay).city}));
+    const details = {title, domestic: nepalOptionsDomestic, itineraryOnly: true, days};
     const signature = JSON.stringify(details);
     if (pendingPackageSave?.signature !== signature) {
         pendingPackageSave = {signature, id: crypto.randomUUID()};
@@ -3795,66 +4224,155 @@ quoteControl('saveNepalPackage').addEventListener('click', async event => {
     }
 });
 // The existing day.stay field is also used by saved quotations and the PDF.
-const overnightCities = ['Kathmandu','Pokhara','Chitwan','Janakpur','Jomsom','Lumbini','Ayodhya','Varanasi','Prayagraj','Vindhyachal'];
+const researchedHotels = [{"city":"Ayodhya","url":"https://upstdc.co.in/website/ContactAddress.aspx","stars":0,"name":"Hotel Saket"},{"city":"Ayodhya","url":"https://upstdc.co.in/website/ContactAddress.aspx","stars":0,"name":"Saryu Atithi Grah"},{"city":"Bhairahawa","name":"Amrit International Hotel","stars":1,"url":"https://yatraforfun.com/hotels/bhairahawa"},{"city":"Bhairahawa","url":"https://infomericsnepal.com/wp-content/uploads/2026/01/PR-Asian-Hotel-Limited.pdf","stars":4,"name":"Asian Buddha Hotel"},{"city":"Bhairahawa","url":"https://www.nrb.org.np/contents/uploads/2026/05/FX-Licensed-Entities-2082_Chaitra-End.pdf","stars":0,"name":"Bhairahawa Garden Resort"},{"city":"Bhairahawa","url":"https://www.careratingsnepal.com/upload/CompanyFiles/PR/202508050810_Bodhi_Redsun_Hotel_Private_Limited_-_Bank_Facilities_Rating_Assigned.pdf","stars":4,"name":"Bodhi Redsun Hotel"},{"city":"Bhairahawa","name":"Buddha Regency Hotel","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Bhairahawa","url":"https://yatraforfun.com/hotels/bhairahawa","stars":0,"name":"Hotel Airport CenterPoint"},{"city":"Bhairahawa","url":"https://yatraforfun.com/hotels/bhairahawa","stars":0,"name":"Hotel Castle"},{"city":"Bhairahawa","url":"https://yatraforfun.com/hotels/bhairahawa","stars":0,"name":"Hotel Cross Road"},{"city":"Bhairahawa","url":"https://yatraforfun.com/hotels/bhairahawa","stars":0,"name":"Hotel Happy Home"},{"city":"Bhairahawa","name":"Hotel Lacoul","stars":2,"url":"https://yatraforfun.com/hotels/bhairahawa"},{"city":"Bhairahawa","url":"https://yatraforfun.com/hotels/bhairahawa","stars":0,"name":"Hotel Nepal Plaza"},{"city":"Bhairahawa","name":"Hotel Nirvana By Luxury International","stars":4,"url":"https://hotelassociationnepal.org.np/hotels/fourstar"},{"city":"Bhairahawa","url":"https://yatraforfun.com/hotels/bhairahawa","stars":0,"name":"Hotel Pauwa Bhairahawa"},{"city":"Bhairahawa","url":"https://yatraforfun.com/hotels/bhairahawa","stars":0,"name":"Hotel Sunstar International"},{"city":"Bhairahawa","url":"https://yatraforfun.com/hotels/bhairahawa","stars":0,"name":"Hotel Tanahun"},{"city":"Bhairahawa","name":"Siddhartha Vilasa","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Bhairahawa","name":"Tiger Palace Resort (Tilottama)","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Butwal","name":"Club De Novo","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard"},{"city":"Butwal","name":"Hotel Butwal Crown Plazza","stars":2,"url":"https://yatraforfun.com/hotels/butwal"},{"city":"Butwal","url":"https://www.expedia.co.in/Butwal-Hotels.d3000003467.Travel-Guide-Hotels","stars":3.5,"name":"Hotel Da Flamingo"},{"city":"Butwal","name":"Hotel Himalayan Yak","stars":3,"url":"https://yatraforfun.com/hotels/butwal"},{"city":"Butwal","name":"HOTEL KAIROS","stars":3,"url":"https://yatraforfun.com/hotels/butwal"},{"city":"Butwal","name":"Hotel Kohinoor Restaurant and Lodge","stars":3,"url":"https://yatraforfun.com/hotels/butwal"},{"city":"Butwal","url":"https://betabookings.com/en/asia/nepal/butwal","stars":0,"name":"Hotel New Era"},{"city":"Butwal","url":"https://betabookings.com/en/asia/nepal/butwal","stars":0,"name":"Hotel Palm International by Pipal"},{"city":"Butwal","name":"Hotel Prime International","stars":2,"url":"https://yatraforfun.com/hotels/butwal"},{"city":"Butwal","name":"HOTEL THE BUTWAL VIEW","stars":3,"url":"https://yatraforfun.com/hotels/butwal"},{"city":"Butwal","name":"Hotel The Star","stars":3,"url":"https://yatraforfun.com/hotels/butwal"},{"city":"Butwal","name":"Hyatt Place Butwal","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Butwal","name":"KAYARA HOTEL","stars":3,"url":"https://yatraforfun.com/hotels/butwal"},{"city":"Butwal","name":"Maharaja Resort","stars":3,"url":"https://yatraforfun.com/hotels/butwal"},{"city":"Chitwan","name":"Annapurna View Lodge","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Baba Lodge","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Chitwan Adventure Resort","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Chitwan Forest Resort","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Chitwan Gaida Lodge","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Chitwan MidTown Hotel","stars":3,"url":"https://hotelassociationnepal.org.np/hotels/threestar"},{"city":"Chitwan","name":"Chitwan Paradise Hotel","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Chitwan Park Cottage","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Chitwan Resort Camp","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Chitwan River Side Resort","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Chitwan Tiger Camp","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Chitwan Village Resort","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Eco- Adventure Resort","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Eden Jungle Resort","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Elephant Camp","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Family Guest House","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Fewa Wildlife Resort","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Gaida Island Camp","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Ghorkha Hamlet Resort","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Green Mension Jungle Resort","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","url":"https://www.google.com/travel/hotels/landingpage/chitwan-district-hotels","stars":5,"name":"Green Park Chitwan"},{"city":"Chitwan","name":"Hamro Hotel","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Holiday Safari Jungle Lodge","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Holly Lodge","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel Butterfly","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel Chitwan by The Fern Residency","stars":3,"url":"https://hotelassociationnepal.org.np/hotels/threestar"},{"city":"Chitwan","name":"Hotel Hermitage","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel Jungle Crown","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel Jungle Lodge","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel Jungle Nature","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel Jungle Vista","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel Monalisa","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel Nature Heritage","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel Orchid","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel Parkland","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel Parkside","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel Peacock","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel Rain Forest","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel River Side","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel Royal Safari","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel seven star","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel Shiva's Dream","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel Siraichuli Ltd.","stars":4,"url":"https://hotelassociationnepal.org.np/hotels/fourstar"},{"city":"Chitwan","name":"Hotel Star Chitwan","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel West Wood","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Hotel Wildlife Camp","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Jungle Nepal Resort","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Jungle Resort","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Jungle Safari Lodge","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Jungle Safari Resort","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Jungle Sunset Camp","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Jungle Tourist Camp","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Jungle Wildlife Camp","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","url":"https://www.google.com/travel/hotels/landingpage/chitwan-district-hotels","stars":5,"name":"Royal Tulip Chitwan Nepal"},{"city":"Chitwan","url":"https://www.google.com/travel/hotels/landingpage/chitwan-district-hotels","stars":3,"name":"Sapana Village Lodge"},{"city":"Chitwan","name":"Sauraha Resort","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"The Rhino Residency Resort","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Tiger Residency Resort","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Tiger Wildlife Camp","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Traveler's Jungle Camp","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Unique Wild Resort","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Wendy's Lodge","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Wild Horizon Guest House","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Chitwan","name":"Wildlife Adventure Resort","stars":0,"url":"https://hanchitwan.org/about/hotel-members-contacts/"},{"city":"Gorakhpur","url":"https://www.cleartrip.com/hotels/hotels-in-gorakhpur","stars":5,"name":"Courtyard by Marriott Gorakhpur"},{"city":"Gorakhpur","url":"https://www.cleartrip.com/hotels/hotels-in-gorakhpur","stars":4,"name":"Nirvana Sarovar Portico"},{"city":"Gorakhpur","url":"https://www.cleartrip.com/hotels/hotels-in-gorakhpur","stars":5,"name":"Radisson Blu Gorakhpur"},{"city":"Janakpur","name":"Anjani Suite","stars":5,"url":"https://yatraforfun.com/hotels/janakpur"},{"city":"Janakpur","name":"Hotel City Palace","stars":3,"url":"https://yatraforfun.com/hotels/janakpur"},{"city":"Janakpur","name":"Hotel Janaki Darshan","stars":5,"url":"https://yatraforfun.com/hotels/janakpur"},{"city":"Janakpur","url":"https://www.google.com/travel/hotels/landingpage/janakpur-hotels","stars":0,"name":"Hotel JanakpurInn"},{"city":"Janakpur","name":"Hotel Manaki","stars":5,"url":"https://yatraforfun.com/hotels/janakpur"},{"city":"Janakpur","url":"https://www.google.com/travel/hotels/landingpage/janakpur-hotels","stars":3,"name":"Hotel Mystic Mithila"},{"city":"Janakpur","url":"https://www.google.com/travel/hotels/landingpage/janakpur-hotels","stars":0,"name":"Hotel Rajdurbar Navrang Resort"},{"city":"Janakpur","name":"Hotel Ram Janaki","stars":3,"url":"https://yatraforfun.com/hotels/janakpur"},{"city":"Janakpur","name":"Hotel Ramayan","stars":5,"url":"https://yatraforfun.com/hotels/janakpur"},{"city":"Janakpur","name":"Hotel Royal Mithila","stars":2,"url":"https://yatraforfun.com/hotels/janakpur"},{"city":"Janakpur","name":"Hotel Sita Palace","stars":3,"url":"https://yatraforfun.com/hotels/janakpur"},{"city":"Janakpur","name":"Hotel Sitasharan","stars":2,"url":"https://hotelassociationnepal.org.np/hotels/twostar"},{"city":"Janakpur","url":"https://www.google.com/travel/hotels/landingpage/janakpur-hotels","stars":0,"name":"Hotel Skyline"},{"city":"Janakpur","name":"Hotel Vrindavan Palace","stars":2,"url":"https://yatraforfun.com/hotels/janakpur"},{"city":"Janakpur","url":"https://www.google.com/travel/hotels/landingpage/janakpur-hotels","stars":3,"name":"Hotel Welcome"},{"city":"Janakpur","name":"Janaki Star Hotel","stars":2,"url":"https://yatraforfun.com/hotels/janakpur"},{"city":"Janakpur","url":"https://www.google.com/travel/hotels/landingpage/janakpur-hotels","stars":4,"name":"Mithila Yatri Niwas"},{"city":"Janakpur","name":"Sagun Galaxy Hotel","stars":3,"url":"https://yatraforfun.com/hotels/janakpur"},{"city":"Jomsom","url":"https://www.booking.com/city/np/jomosom.html","stars":0,"name":"Bön Valley"},{"city":"Jomsom","url":"https://searchnepal.biz/region/jomsom/","stars":0,"name":"Hotel Jomsom Inn"},{"city":"Jomsom","url":"https://www.journeum.com/dst/Asia/Nepal/Himalayas/Jomsom/Sleep","stars":0,"name":"Hotel Om's Home"},{"city":"Jomsom","url":"https://www.journeum.com/dst/Asia/Nepal/Himalayas/Jomsom/Sleep","stars":0,"name":"Hotel Trekkers-Inn"},{"city":"Jomsom","url":"https://www.journeum.com/dst/Asia/Nepal/Himalayas/Jomsom/Sleep","stars":0,"name":"Jomsom Mountain Resort"},{"city":"Jomsom","url":"https://www.journeum.com/dst/Asia/Nepal/Himalayas/Jomsom/Sleep","stars":0,"name":"Krishnu Guest House"},{"city":"Jomsom","url":"https://searchnepal.biz/region/jomsom/","stars":0,"name":"Lumbini Guest House & Restaurant"},{"city":"Kathmandu","name":"Airport Hotel","stars":3,"url":"https://hotelassociationnepal.org.np/hotels/threestar"},{"city":"Kathmandu","name":"Akama Hotel","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Kathmandu","name":"Aloft Kathmandu","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Kathmandu","name":"Apsara Boutique Hotel","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard"},{"city":"Kathmandu","name":"Aryatara Kathmandu Hotel","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard"},{"city":"Kathmandu","name":"Baber Mahal Vilas","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard"},{"city":"Kathmandu","name":"Backyard Hotel","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard"},{"city":"Kathmandu","name":"Basera Boutique Hotel","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Kathmandu","name":"Chandragiri Hills Resort","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Kathmandu","name":"Dalai-la Boutique Hotel","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard"},{"city":"Kathmandu","name":"Dusit Princess Kathmandu","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Kathmandu","name":"Fairfield by Marriott Kathmandu","stars":3,"url":"https://hotelassociationnepal.org.np/hotels/threestar"},{"city":"Kathmandu","name":"Fuji Hotel (P) Ltd","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard"},{"city":"Kathmandu","name":"Gokarna Forest Resort (Luxury Resort)","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Kathmandu","name":"Grand Hotel Kathmandu","stars":4,"url":"https://hotelassociationnepal.org.np/hotels/fourstar"},{"city":"Kathmandu","name":"Grand Norling Hotels and Resort","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard"},{"city":"Kathmandu","name":"Holiday Inn Resort Kathmandu Budhanilkantha","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Kathmandu","name":"Hotel Ambassador by ACE Hotels","stars":3,"url":"https://hotelassociationnepal.org.np/hotels/threestar"},{"city":"Kathmandu","name":"Hotel Arts Kathmandu","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard"},{"city":"Kathmandu","name":"Hotel Bagmati","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard"},{"city":"Kathmandu","name":"Hotel Blue Diamond","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=2"},{"city":"Kathmandu","name":"Hotel Blue Horizon","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=2"},{"city":"Kathmandu","name":"Hotel Brihaspati","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=2"},{"city":"Kathmandu","name":"Hotel Crowne Imperial","stars":4,"url":"https://hotelassociationnepal.org.np/hotels/fourstar"},{"city":"Kathmandu","name":"Hotel Crystal Pashupati","stars":2,"url":"https://hotelassociationnepal.org.np/hotels/twostar"},{"city":"Kathmandu","name":"Hotel Encounter Nepal","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=2"},{"city":"Kathmandu","name":"Hotel Everest Mount Holiday","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=2"},{"city":"Kathmandu","name":"Hotel Everest Nepal","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=2"},{"city":"Kathmandu","name":"Hotel Excelsior","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=2"},{"city":"Kathmandu","name":"Hotel Family Home","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=2"},{"city":"Kathmandu","name":"Hotel Holiday Taj","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=2"},{"city":"Kathmandu","name":"Hotel Holy Himalaya","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=2"},{"city":"Kathmandu","name":"Hotel Jampa","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=3"},{"city":"Kathmandu","name":"Hotel Kailash Kutee","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=3"},{"city":"Kathmandu","name":"Hotel Kamal","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=3"},{"city":"Kathmandu","name":"Hotel Kido House","stars":2,"url":"https://hotelassociationnepal.org.np/hotels/twostar"},{"city":"Kathmandu","name":"Hotel Lapha","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=3"},{"city":"Kathmandu","name":"Hotel Le Himalaya","stars":3,"url":"https://hotelassociationnepal.org.np/hotels/threestar"},{"city":"Kathmandu","name":"Hotel Manang","stars":4,"url":"https://hotelassociationnepal.org.np/hotels/fourstar"},{"city":"Kathmandu","name":"Hotel Manaslu","stars":4,"url":"https://hotelassociationnepal.org.np/hotels/fourstar"},{"city":"Kathmandu","name":"Hotel Marshyangdi","stars":3,"url":"https://hotelassociationnepal.org.np/hotels/threestar"},{"city":"Kathmandu","name":"Hotel Metropolitan Kantipur","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=3"},{"city":"Kathmandu","name":"Hotel Mirage Regency- Kathmandu","stars":3,"url":"https://hotelassociationnepal.org.np/hotels/threestar"},{"city":"Kathmandu","name":"Hotel Monty's","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=3"},{"city":"Kathmandu","name":"Hotel Moonlight","stars":3,"url":"https://hotelassociationnepal.org.np/hotels/threestar"},{"city":"Kathmandu","name":"Hotel Mulberry","stars":3,"url":"https://hotelassociationnepal.org.np/hotels/threestar"},{"city":"Kathmandu","name":"Hotel Narayana","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=3"},{"city":"Kathmandu","name":"Hotel Nepalaya","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=3"},{"city":"Kathmandu","name":"Hotel Readers Inn","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=4"},{"city":"Kathmandu","name":"Hotel River Holiday Inn","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=4"},{"city":"Kathmandu","name":"Hotel Royal Airport","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=4"},{"city":"Kathmandu","name":"Hotel Royal Singi","stars":3,"url":"https://hotelassociationnepal.org.np/hotels/threestar"},{"city":"Kathmandu","name":"Hotel Sabrina","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=4"},{"city":"Kathmandu","name":"Hotel Shanker","stars":4,"url":"https://hotelassociationnepal.org.np/hotels/fourstar"},{"city":"Kathmandu","name":"Hotel Shiva Shankar","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=4"},{"city":"Kathmandu","name":"Hotel Sunset View","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=4"},{"city":"Kathmandu","name":"Hotel Tayoma","stars":2,"url":"https://hotelassociationnepal.org.np/hotels/twostar"},{"city":"Kathmandu","name":"Hotel Thamel","stars":2,"url":"https://hotelassociationnepal.org.np/hotels/twostar"},{"city":"Kathmandu","name":"Hotel Thamel Lily","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=4"},{"city":"Kathmandu","name":"Hotel Thamel Park","stars":0,"url":"https://hotelassociationnepal.org.np/hotels/touriststandard?page=4"},{"city":"Kathmandu","name":"Hotel Tibet","stars":3,"url":"https://hotelassociationnepal.org.np/hotels/threestar"},{"city":"Kathmandu","name":"Hotel Vaishali","stars":3,"url":"https://hotelassociationnepal.org.np/hotels/threestar"},{"city":"Kathmandu","name":"Hotel Vajra","stars":2,"url":"https://hotelassociationnepal.org.np/hotels/twostar"},{"city":"Kathmandu","name":"Hotel Yak & Yeti","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Kathmandu","name":"Kathmandu Marriott Hotel","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Kathmandu","name":"Landmark Kathmandu (Sankalpa Hospitality)","stars":2,"url":"https://hotelassociationnepal.org.np/hotels/twostar"},{"city":"Kathmandu","name":"Lemon Tree Premier, Budhanilkantha, Kathmandu, Nepal","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Kathmandu","name":"Mercure Kathmandu Sukedhara Heights","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Kathmandu","name":"Nagarjun Resort","stars":4,"url":"https://hotelassociationnepal.org.np/hotels/fourstar"},{"city":"Kathmandu","name":"Nomad Hotel","stars":2,"url":"https://hotelassociationnepal.org.np/hotels/twostar"},{"city":"Kathmandu","name":"Norbulinka Boutique Hotel","stars":2,"url":"https://hotelassociationnepal.org.np/hotels/twostar"},{"city":"Kathmandu","name":"Radisson Hotel Kathmandu","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Kathmandu","name":"Surya Heritage Hotel","stars":4,"url":"https://hotelassociationnepal.org.np/hotels/fourstar"},{"city":"Kathmandu","name":"Thamel Plaza Hotels & Suites (Ramada Encore)","stars":4,"url":"https://hotelassociationnepal.org.np/hotels/fourstar"},{"city":"Kathmandu","name":"The Dwarika's Hotel","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Kathmandu","name":"The Everest Hotel","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Kathmandu","name":"The Malla Hotel","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Kathmandu","name":"Tibet Guest House","stars":2,"url":"https://hotelassociationnepal.org.np/hotels/twostar"},{"city":"Kathmandu","name":"Varnabas Museum Hotel","stars":5,"url":"https://hotelassociationnepal.org.np/hotels/fivestar"},{"city":"Lumbini","url":"https://trade.ntb.gov.np/wp-content/uploads/2023/04/lumbini-booklet-2020.pdf","stars":0,"name":"Buddha Maya Garden"},{"city":"Lumbini","url":"https://trade.ntb.gov.np/wp-content/uploads/2023/04/lumbini-booklet-2020.pdf","stars":0,"name":"Gautam Buddha Lodge"},{"city":"Lumbini","url":"https://trade.ntb.gov.np/wp-content/uploads/2023/04/lumbini-booklet-2020.pdf","stars":0,"name":"Hokke Hotel"},{"city":"Lumbini","name":"Hotel Aloka Inn","stars":3,"url":"https://yatraforfun.com/hotels/lumbini"},{"city":"Lumbini","name":"Hotel Ananda Inn","stars":2,"url":"https://yatraforfun.com/hotels/lumbini"},{"city":"Lumbini","name":"Hotel Kailash Inn Lumbini","stars":3,"url":"https://yatraforfun.com/hotels/lumbini"},{"city":"Lumbini","url":"https://trade.ntb.gov.np/wp-content/uploads/2023/04/lumbini-booklet-2020.pdf","stars":0,"name":"Hotel Lumbini Garden New Crystal"},{"city":"Lumbini","name":"Hotel Lumbini Heritage","stars":3,"url":"https://yatraforfun.com/hotels/lumbini"},{"city":"Lumbini","name":"Hotel Peaceland Lumbini","stars":3,"url":"https://yatraforfun.com/hotels/lumbini"},{"city":"Lumbini","name":"Hotel Ratnasambhava","stars":4,"url":"https://yatraforfun.com/hotels/lumbini"},{"city":"Lumbini","name":"Hotel Suramma","stars":3,"url":"https://yatraforfun.com/hotels/lumbini"},{"city":"Lumbini","url":"https://www.expedia.com/All-Lumbini-Hotels.d6130942.Travel-Guide-City-All-Hotels","stars":0,"name":"Little Buddha Hotel"},{"city":"Lumbini","url":"https://www.expedia.com/All-Lumbini-Hotels.d6130942.Travel-Guide-City-All-Hotels","stars":0,"name":"Lumbini Buddha Garden Resort"},{"city":"Lumbini","url":"https://trade.ntb.gov.np/wp-content/uploads/2023/04/lumbini-booklet-2020.pdf","stars":0,"name":"Lumbini Buddha Hotel"},{"city":"Lumbini","url":"https://www.expedia.com/All-Lumbini-Hotels.d6130942.Travel-Guide-City-All-Hotels","stars":0,"name":"Lumbini Five Elements Hotel"},{"city":"Lumbini","url":"https://trade.ntb.gov.np/wp-content/uploads/2023/04/lumbini-booklet-2020.pdf","stars":0,"name":"Lumbini Garden Lodge"},{"city":"Lumbini","name":"Lumbini Guest House","stars":3,"url":"https://yatraforfun.com/hotels/lumbini"},{"city":"Lumbini","url":"https://trade.ntb.gov.np/wp-content/uploads/2023/04/lumbini-booklet-2020.pdf","stars":0,"name":"Lumbini Village Lodge"},{"city":"Lumbini","url":"https://www.expedia.com/All-Lumbini-Hotels.d6130942.Travel-Guide-City-All-Hotels","stars":0,"name":"Lumbini Zambala Hotel"},{"city":"Lumbini","url":"https://www.expedia.com/All-Lumbini-Hotels.d6130942.Travel-Guide-City-All-Hotels","stars":0,"name":"Mirage Inn"},{"city":"Lumbini","name":"Namaste Lumbini Tandoori and Guest House","stars":3,"url":"https://yatraforfun.com/hotels/lumbini"},{"city":"Lumbini","name":"President Hotel Lumbini","stars":3,"url":"https://yatraforfun.com/hotels/lumbini"},{"city":"Lumbini","name":"Rose Guest House & Resturant","stars":3,"url":"https://yatraforfun.com/hotels/lumbini"},{"city":"Lumbini","name":"Seven Steps Guest House","stars":3,"url":"https://yatraforfun.com/hotels/lumbini"},{"city":"Lumbini","url":"https://trade.ntb.gov.np/wp-content/uploads/2023/04/lumbini-booklet-2020.pdf","stars":0,"name":"Siddhartha Guest House"},{"city":"Lumbini","url":"https://www.expedia.com/All-Lumbini-Hotels.d6130942.Travel-Guide-City-All-Hotels","stars":0,"name":"Tathagata Homestay"},{"city":"Muktinath","name":"Hotel Annapurna Inn","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Best Step Inn","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Bob Marley","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Buddha","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Carvana","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel De Purang","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Dolma Inn","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Dream Home","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Eurika Inn","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Four Season","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Golden Leaf","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Grand Shambala","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Hidden Heaven","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel High Desert","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Himalayan Paradise","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Holyland","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Lali Guras","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Mandala","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Monalisa","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Mount Kailash","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Mukti Villa","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Nightengle","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Norling","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel North Pole","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Path of Dream","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Pema","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Royal Mustang","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Shri Muktinath","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Siddharth","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Temple Side","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Hotel Town House","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Lo Mustang Himalayan Resort","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"The Face Resort","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Muktinath","name":"Valley View Hotel","stars":0,"url":"https://hotelassociationmuktinath.com/hotels-in-muktinath/"},{"city":"Pokhara","name":"Atrium Hotel","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Basundhara Resort","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Beach Bar And Lodge","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Cove inn Guest House","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Da Yatra Courtyard","stars":4,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Fish Tail Lodge","stars":5,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Garden Of Dreams Resort And Spa Private Limited","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Himalayan Hidden Treasure Guest House","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Himalayan Hideaway Resort Pokhara- The Centara Collection","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Alpine Villa (Kamana Hotel)","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Arhant Inn","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Barahi","stars":4,"url":"https://hotelassociationnepal.org.np/hotels/fourstar"},{"city":"Pokhara","name":"Hotel Benju Pokhara","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Brisha","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Cross Border","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Deeps Home","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Dejavu","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Donosti Pokhara","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Dream Inn","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Fewa Holiday","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Gantabya Inn","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Golden Gate Pokhara","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Green Tara","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Haven O' Ganga","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Highland Comfort","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Homeland","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel KC","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Laliguras","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Landmark Pokhara","stars":4,"url":"https://hotelassociationnepal.org.np/hotels/fourstar"},{"city":"Pokhara","name":"Hotel Mandala","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Middle Path &Spa","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Middle Star","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Middle Town","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Middle way","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Mount View Pokhara","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Mountain suite","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Mystic Mountain Pokhara","stars":4,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Noble Inn","stars":2,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","url":"https://hotelassociationnepal.org.np/hotels/hotel-pokhara-grande","stars":5,"name":"Hotel Pokhara Grande"},{"city":"Pokhara","name":"Hotel Pokhara Village","stars":4,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel President","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Raniban Arcade","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Rise Inn","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Romantica","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Secret View","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel The Lake","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Hotel Visit Pokhara","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Kamero Pokhara Hotel","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Kavya Hotel & Restaurant","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Kings Hotel Rajkuti Pvt .Ltd","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Kuti Resort","stars":4,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Lake House","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Majestic Lake Front Hotel And Suits","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Mums Graden Resort","stars":1,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"New Hotel Nature Land","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"New United Hotel","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Pauwa Pokhara","stars":2,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Pleasant Home","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Rosemary Homes","stars":2,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Suite Inn Lodge","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Teeka Resort","stars":4,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"The Lakeside Retreat Resort by IME Hospitality","stars":4,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Pokhara","name":"Three Jewels Hotel","stars":3,"url":"https://yatraforfun.com/hotels/pokhara"},{"city":"Prayagraj","url":"https://prayagraj.nic.in/accommodation/","stars":0,"name":"Hotel Kanha Shyam"},{"city":"Prayagraj","url":"https://prayagraj.nic.in/accommodation/","stars":0,"name":"Hotel Rahi Ilawart"},{"city":"Varanasi","url":"https://www.tajhotels.com/en-in/destination/hotels-in-varanasi","stars":5,"name":"Taj Ganges"},{"city":"Varanasi","url":"https://www.tajhotels.com/en-in/destination/hotels-in-varanasi","stars":5,"name":"Taj Nadesar Palace"},{"city":"Vindhyachal","url":"https://vindhyachalmata.com/plan-a-journey/hotels-list/","stars":0,"name":"Hotel Gayatri Palace"},{"city":"Vindhyachal","url":"https://vindhyachalmata.com/plan-a-journey/hotels-list/","stars":0,"name":"Hotel Vindhya Residency"}];
+const overnightCities = ['Kathmandu','Pokhara','Chitwan','Muktinath','Jomsom','Janakpur','Lumbini','Bhairahawa','Butwal','Gorakhpur','Ayodhya','Varanasi','Prayagraj','Vindhyachal'];
+const agencyHotels = new Map();
+const hotelCategories = ['Hotel','Resort','Guest house','Lodge','Homestay','Camp','Hostel'];
 function stayParts(value) {
-    const parts = value.trim().split(':');
-    return {city:parts.shift().trim(), hotel:parts.join(':').trim()};
+    const parts=value.trim().split(':');
+    return {city:parts.shift().trim(),hotel:parts.join(':').trim()};
 }
-function hotelChoices(city) {
-    const known = overnightCities.find(name => name.toLowerCase() === city.toLowerCase());
-    const hotelSelect = known && quoteControl('nepal' + known);
-    return hotelSelect ? Array.from(hotelSelect.options, opt => opt.value).filter(Boolean) : [];
+function propertyKind(name, category='') {
+    return hotelCategories.slice(1).find(kind=>new RegExp(kind.replace(' ','\\s*'),'i').test(category+' '+name))||'Hotel';
 }
-function updateHotelSummary() {
-    const stays = Array.from(quoteControl('tripDays').querySelectorAll('[data-day="stay"]'), input => input.value.trim());
-    nepalValue('hotel').value = Array.from(new Set(stays.filter(value => stayParts(value).hotel))).join('\n');
-}
-function updateCityHotelControls(cards) {
-    const cities=new Set(cards.map(card=>stayParts(card.querySelector('[data-day="stay"]').value).city.toLowerCase()));
-    for(const id of nepalFields.filter(id=>!['nepalVehicle','nepalMeal'].includes(id))){
-        quoteControl(id).closest('label').hidden=cards.length>0&&!cities.has(id.slice(5).toLowerCase());
+function listedHotels(city) {
+    const key=city.toLowerCase(), options=new Map();
+    function add(name,stars,type,url,origin) {
+        const id=name.toLowerCase();
+        if(name&&!options.has(id))options.set(id,{name,stars,type,url,origin});
     }
+    for(const h of researchedHotels)if(h.city.toLowerCase()===key)add(h.name,h.stars,propertyKind(h.name),h.url,'Directory');
+    for(const h of agencyHotels.values())if(h.city.toLowerCase()===key)add(h.name,Number(/([1-5])-star/i.exec(h.category)?.[1])||0,propertyKind(h.name,h.category),'','Agency library');
+    // The old Jomsom selector also contained Muktinath properties.
+    const legacy=quoteControl('nepal'+(city==='Muktinath'?'Jomsom':city));
+    for(const o of legacy?.options||[]){
+        if(!o.value||/Enter a /.test(o.value))continue;
+        if(city==='Jomsom'&&/muktinath/i.test(o.value)||city==='Muktinath'&&!/muktinath/i.test(o.value))continue;
+        const name=o.value.replace(/\s*\([^)]*\)\s*$/,'').trim();
+        if(!options.has(name.toLowerCase()))add(name,0,propertyKind(o.value),'','Existing CRM');
+    }
+    return [...options.values()].sort((a,b)=>a.name.localeCompare(b.name));
 }
-function drawNightStays() {
-    const area = quoteControl('nightStays'), cards = [...quoteControl('tripDays').children];
+function hotelChoices(city){return listedHotels(city).map(h=>h.name);}
+function updateHotelSummary(){
+    const stays=Array.from(quoteControl('tripDays').querySelectorAll('[data-day="stay"]'),i=>i.value.trim());
+    nepalValue('hotel').value=[...new Set(stays.filter(s=>stayParts(s).hotel))].join('\n');
+}
+function hotelLabel(h){return h.name+' — '+h.type+(h.stars?' · '+h.stars+'★':'');}
+function hotelForQuote(city,name){
+    const item=listedHotels(city).find(h=>h.name===name);
+    return item?name+' ('+[item.type,item.stars?item.stars+'-star':''].filter(Boolean).join(', ')+')':name;
+}
+function editStay(card,city,hotel) {
+    card.querySelector('[data-day="stay"]').value=city+(city&&hotel?': '+hotel:'');
+    updateHotelSummary();
+}
+function hotelField(row,label,tag='select') {
+    const wrap=document.createElement('label'),input=document.createElement(tag);
+    wrap.textContent=label;input.className='block w-full min-w-0 border rounded p-2';wrap.append(input);row.append(wrap);return input;
+}
+function knownStayCities(){
+    return [...new Set([...overnightCities,...Array.from(agencyHotels.values(),h=>h.city)])];
+}
+function refreshNightTargets(){
+    const t=quoteControl('directoryNight'),old=t.value,cards=[...quoteControl('tripDays').children];
+    t.replaceChildren(...cards.flatMap((card,i)=>{
+        const stay=card.querySelector('[data-day="stay"]').value;
+        return i<cards.length-1||stay?[new Option('Night '+(i+1)+(stay?' · '+stayParts(stay).city:''),String(i))]:[];
+    }));
+    if([...t.options].some(o=>o.value===old))t.value=old;
+    quoteControl('useDirectoryHotel').disabled=!t.options.length;
+    quoteControl('addDirectoryNight').disabled=!cards.length;
+}
+function drawNightStays(){
+    const area=quoteControl('nightStays'),cards=[...quoteControl('tripDays').children];
     area.replaceChildren();
-    for (const [index, card] of cards.entries()) {
-        const stay = card.querySelector('[data-day="stay"]');
-        if (index === cards.length-1 && !stay.value) continue;
-        const {city,hotel} = stayParts(stay.value);
-        const row = document.createElement('div');
-        row.className = 'grid gap-2 sm:grid-cols-2 rounded border p-2';
-        const title = document.createElement('strong');
-        title.className = 'sm:col-span-2';
-        title.textContent = 'Night ' + (index+1) + (card.querySelector('[data-day="title"]').value ? ' · '+card.querySelector('[data-day="title"]').value : '');
-        row.append(title);
-        function input(label,value,list) {
-            const wrap = document.createElement('label'), control = document.createElement('input');
-            wrap.textContent = label; control.value = value; control.setAttribute('list',list);
-            control.className = 'block w-full rounded border p-2'; wrap.append(control);row.append(wrap);return control;
+    for(const [i,card] of cards.entries()){
+        const {city,hotel}=stayParts(card.querySelector('[data-day="stay"]').value);
+        if(i===cards.length-1&&!city)continue;
+        const row=document.createElement('div');row.className='grid gap-2 sm:grid-cols-2 rounded border p-2';
+        const title=document.createElement('strong');title.className='sm:col-span-2';
+        title.textContent='Night '+(i+1)+' · '+card.querySelector('[data-day="title"]').value;row.append(title);
+        const cities=hotelField(row,'Overnight city');cities.dataset.nightCity='';
+        cities.add(new Option('Choose city',''));
+        const names=knownStayCities();if(city&&!names.includes(city))names.push(city);
+        for(const name of names)cities.add(new Option(name,name));
+        cities.add(new Option('Other city…','__other'));cities.value=city;
+        const pick=hotelField(row,'Hotel');pick.dataset.nightHotel='';
+        const customCity=hotelField(row,'City name','input'),customHotel=hotelField(row,'Hotel name','input');
+        customCity.maxLength=80;customHotel.maxLength=120;customCity.parentElement.hidden=true;customHotel.parentElement.hidden=true;
+        const currentCity=()=>cities.value==='__other'?customCity.value.trim():cities.value;
+        function fillHotels(saved=''){
+            pick.replaceChildren(new Option('Choose hotel',''));
+            for(const h of listedHotels(currentCity())){
+                pick.add(new Option(hotelLabel(h),h.name));
+                if(saved.startsWith(h.name+' (')&&saved.endsWith(')'))saved=h.name;
+            }
+            if(saved&&![...pick.options].some(o=>o.value===saved))pick.add(new Option(saved,saved));
+            pick.add(new Option('Other hotel…','__other'));pick.value=saved;pick.disabled=!currentCity();
         }
-        const cityInput=input('Overnight city',city,'overnightCityOptions');
-        const list=document.createElement('datalist');list.id='nightHotelOptions'+index;
-        const hotelInput=input('Hotel (choose or type)',hotel,list.id);
-        hotelInput.disabled=!city;
-        const fillHotels=()=>list.replaceChildren(...hotelChoices(cityInput.value.trim()).map(value=>new Option(value,value)));
-        function storeStay() {
-            const city=cityInput.value.trim(), hotel=hotelInput.value.trim();
-            stay.value=city+(city&&hotel?': '+hotel:'');updateHotelSummary();
-        }
-        cityInput.oninput=()=>{
-            if (cityInput.value.trim().toLowerCase()!==stayParts(stay.value).city.toLowerCase())hotelInput.value='';
-            hotelInput.disabled=!cityInput.value.trim();fillHotels();storeStay();
+        function store(){editStay(card,currentCity(),pick.value==='__other'?customHotel.value.trim():hotelForQuote(currentCity(),pick.value));refreshNightTargets();}
+        cities.onchange=()=>{customCity.parentElement.hidden=cities.value!=='__other';customCity.value='';customHotel.value='';customHotel.parentElement.hidden=true;fillHotels();store();};
+        customCity.oninput=()=>{pick.disabled=!currentCity();store();};customCity.onchange=()=>{fillHotels();store();};
+        pick.onchange=()=>{customHotel.parentElement.hidden=pick.value!=='__other';if(pick.value==='__other')customHotel.focus();store();};
+        customHotel.oninput=store;
+        const routeButton=document.createElement('button');routeButton.type='button';routeButton.className='underline justify-self-start';routeButton.textContent='Edit day '+(i+1)+' route and sightseeing';
+        routeButton.onclick=()=>{
+            for(let p=card.parentElement;p;p=p.parentElement)if(p.tagName==='DETAILS')p.open=true;
+            const input=card.querySelector('[data-day="route"]');input.focus();input.scrollIntoView({block:'center'});
         };
-        cityInput.onchange=()=>updateCityHotelControls(cards);
-        hotelInput.oninput=storeStay;
-        fillHotels();row.append(list);area.append(row);
+        row.append(routeButton);fillHotels(hotel);area.append(row);
     }
-    updateCityHotelControls(cards);
-    quoteControl('nightPanel').hidden=!area.children.length;
+    refreshNightTargets();
 }
-quoteControl('overnightCityOptions').replaceChildren(...overnightCities.map(city=>new Option(city,city)));
-
+const directoryCity=quoteControl('directoryCity'),directoryHotel=quoteControl('directoryHotel');
+function refreshDirectoryCities(){
+    const old=directoryCity.value;
+    const cities=knownStayCities();directoryCity.replaceChildren(...cities.map(c=>new Option(c,c)));
+    if(cities.includes(old))directoryCity.value=old;
+}
+function showHotelSource(){
+    const selected=listedHotels(directoryCity.value).find(h=>h.name===directoryHotel.value),out=quoteControl('hotelSource');
+    out.replaceChildren();if(!selected)return;
+    out.append(selected.type+' · '+(selected.stars?selected.stars+'-star (listed)':'Star class unconfirmed')+' · ');
+    if(selected.url){const a=document.createElement('a');a.href=selected.url;a.target='_blank';a.rel='noopener noreferrer';a.className='underline';a.textContent='Source';out.append(a);}
+    else out.append(selected.origin);
+}
+function filterDirectory(){
+    const category=quoteControl('directoryType').value,stars=quoteControl('directoryStars').value,query=quoteControl('directorySearch').value.trim().toLowerCase(),previous=directoryHotel.value;
+    const hotels=listedHotels(directoryCity.value).filter(h=>(!category||category===h.type)&&(!stars||String(h.stars)===stars)&&(!query||h.name.toLowerCase().includes(query)));
+    directoryHotel.replaceChildren(new Option(hotels.length?'Choose hotel ('+hotels.length+')':'No matching hotels',''),...hotels.map(h=>new Option(hotelLabel(h),h.name)));
+    if(hotels.some(h=>h.name===previous))directoryHotel.value=previous;
+    showHotelSource();
+}
+function applyDirectoryHotel(extraNight){
+    if(!directoryHotel.value){quoteControl('directoryMessage').textContent='Choose a hotel first.';directoryHotel.focus();return;}
+    const city=directoryCity.value,hotel=hotelForQuote(city,directoryHotel.value),days=quoteControl('tripDays'),cards=[...days.children];
+    if(!cards.length)return;
+    let card;
+    if(extraNight){
+        const last=cards.at(-1),stay=city+': '+hotel;
+        addItineraryDay({title:'Overnight in '+city,route:city,stay,meals:quoteControl('nepalMeal').value});
+        card=days.lastElementChild;last.before(card);numberItineraryDays();
+        const title=nepalValue('title');title.value=title.value.replace(/\b\d+\s*days?\s*\/\s*\d+\s*nights?\b/i,days.children.length+' Days / '+(days.children.length-1)+' Nights');
+        syncQuoteRoute(true);
+    }else{
+        const target=quoteControl('directoryNight');if(target.value==='')return;card=cards[Number(target.value)];
+    }
+    editStay(card,city,hotel);drawNightStays();
+    const number=[...days.children].indexOf(card)+1;quoteControl('directoryNight').value=String(number-1);
+    quoteControl('directoryMessage').textContent=(extraNight?'Extra night added. ':'')+'Night '+number+' · '+city+' · '+hotel+'. Review the travel route for this stop and the following day.';
+}
+refreshDirectoryCities();
+for(const type of hotelCategories)quoteControl('directoryType').add(new Option(type,type));
+for(const n of [...new Set(researchedHotels.map(h=>h.stars))].filter(Boolean).sort((a,b)=>a-b))quoteControl('directoryStars').add(new Option(n+'-star',String(n)));
+quoteControl('directoryStars').add(new Option('Unconfirmed','0'));
+directoryCity.onchange=()=>{for(const id of ['directorySearch','directoryStars','directoryType'])quoteControl(id).value='';filterDirectory();};
+for(const id of ['directoryType','directoryStars'])quoteControl(id).onchange=filterDirectory;
+quoteControl('directorySearch').oninput=filterDirectory;directoryHotel.onchange=showHotelSource;
+quoteControl('useDirectoryHotel').onclick=()=>applyDirectoryHotel(false);
+quoteControl('addDirectoryNight').onclick=()=>applyDirectoryHotel(true);
+filterDirectory();refreshNightTargets();
 
 function syncQuoteRoute(fillEnd = false) {
     const cards = [...quoteControl('tripDays').children];
